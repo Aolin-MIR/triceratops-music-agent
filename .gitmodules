@@ -1,0 +1,3 @@
+[submodule "vst3/vendor/JUCE"]
+	path = vst3/vendor/JUCE
+	url = https://github.com/juce-framework/JUCE.git

@@ -1,0 +1,108 @@
+**/logs/
+.DS_Store
+__MACOSX
+.vscode
+**/test_data
+logs/
+
+# Python-related files
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+
+# Distribution / packaging
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+
+# Installer logs
+pip-log.txt
+pip-delete-this-directory.txt
+
+# Unit test / coverage reports
+htmlcov/
+.tox/
+.nox/
+.coverage
+.coverage.*
+.cache
+nosetests.xml
+coverage.xml
+*.cover
+.hypothesis/
+.pytest_cache/
+
+# Jupyter Notebook
+.ipynb_checkpoints
+
+# Environments
+.env
+.venv
+env/
+venv/
+ENV/
+env.bak/
+venv.bak/
+
+# Spyder project settings
+.spyderproject
+.spyderworkspace
+
+# Rope project settings
+.ropeproject
+
+# mypy
+.mypy_cache/
+.dmypy.json
+dmypy.json
+
+# Pyre type checker
+.pyre/
+
+# pytype static type analyzer
+.pytype/
+
+# Cython debug symbols
+cython_debug/
+
+# Other files
+*.pth
+
+# Output folder
+text2music/data/train_new.jsonl
+text2music/data/validation_new.jsonl
+data/
+text2music/artifacts/agent_runs/
+text2music/artifacts/checkpoints/
+text2music/agent/reaper/*.zip
+text2music/artifacts/agent_runs/
+models/
+vst3/build-*/
+marketing/xiaohongshu/*.png
+marketing/xiaohongshu/*.mp4
+marketing/xiaohongshu/empty-vst/
+marketing/xiaohongshu/reaper-clean.ini
+marketing/xiaohongshu/ColorThemes/
+marketing/xiaohongshu/Effects/
+marketing/xiaohongshu/KeyMaps/
+marketing/xiaohongshu/MIDINoteNames/
+marketing/xiaohongshu/OSC/
+marketing/xiaohongshu/Scripts/
+marketing/xiaohongshu/reaper-*.ini
+marketing/xiaohongshu/reaper-*.txt
+vst3/package/
+vst3/window-*.png

@@ -1,0 +1,22 @@
+=== GLOBAL OBJECTIVE EVALUATION SUMMARY ===
+Total Pieces Processed: 119
+-------------------------------------------------------
+Metric                              | Mean Score (%)
+-------------------------------------------------------
+overall_score                       |        92.76%
+total_playability                   |        90.29%
+total_readability                   |        95.22%
+pitch_range                         |        85.11%
+monophonic_correctness              |        91.00%
+pitch_span                          |        98.74%
+rhythmic_overlap                    |        90.06%
+instrument_utilization              |        90.27%
+instrument_note_density_span        |        88.55%
+rhythmic_complexity                 |        98.51%
+micro_rhythmic_jitter               |        83.30%
+accidental_consistency              |        98.40%
+enharmonic_directionality           |        99.54%
+tempo_match                         |        99.16%
+key_match                           |       100.00%
+time_sig_match                      |       100.00%
+-------------------------------------------------------

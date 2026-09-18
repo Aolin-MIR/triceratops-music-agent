@@ -1,0 +1,31 @@
+=== GLOBAL OBJECTIVE EVALUATION & SIGNIFICANCE REPORT ===
+
+Valid Files Generated:
+- Text2Score_Gemma_31B: 234
+- ablation_Qwen2.5-14B-Instruct: 234
+- text2score_gemma: 234
+- text2score_glm: 231
+
+========================================================================================================================
+Metric                         | Text2Score_Gemma_31B Mean | ablation_Qwen2.5-14B-Instruct Mean (p-val) | text2score_gemma Mean (p-val) | text2score_glm Mean (p-val)
+---------------------------------------------------------------------------------------------------------------------------------------------------------------------
+overall_score                  |              97.21% |   96.58% (p=0.096)         |   95.31% (p<0.001)         |   94.84% (p<0.001)        
+total_playability              |              98.58% |   98.26% (p=0.393)         |   97.14% (p<0.001)         |   97.48% (p=0.004)        
+total_readability              |              95.84% |   94.91% (p=0.112)         |   93.48% (p<0.001)         |   92.21% (p<0.001)        
+pitch_range                    |              97.18% |   97.93% (p=0.138)         |   95.31% (p=0.003)         |   96.14% (p=0.076)        
+monophonic_correctness         |              98.49% |   98.00% (p=0.332)         |   94.57% (p<0.001)         |   95.00% (p<0.001)        
+pitch_span                     |              99.57% |   99.51% (p=0.773)         |   98.76% (p=0.008)         |   98.81% (p=0.018)        
+rhythmic_overlap               |              99.79% |   99.67% (p=0.340)         |   99.36% (p=0.009)         |   99.59% (p=0.119)        
+instrument_utilization         |              78.60% |   72.83% (p<0.001)         |   76.69% (p=0.155)         |   85.38% (p<0.001)        
+instrument_note_density_span   |              74.82% |   70.25% (p<0.001)         |   72.61% (p=0.104)         |   81.46% (p<0.001)        
+rhythmic_complexity            |              95.50% |   96.10% (p=0.302)         |   96.26% (p=0.201)         |   94.90% (p=0.366)        
+micro_rhythmic_jitter          |              97.04% |   98.75% (p<0.001)         |   96.79% (p=0.640)         |   98.10% (p=0.026)        
+accidental_consistency         |              91.73% |   88.99% (p<0.001)         |   86.07% (p<0.001)         |   82.39% (p<0.001)        
+enharmonic_directionality      |              98.94% |   98.58% (p=0.241)         |   98.37% (p=0.036)         |   98.29% (p=0.031)        
+tempo_match                    |              95.73% |   94.44% (p=0.522)         |   92.31% (p=0.120)         |   92.21% (p=0.112)        
+key_match                      |              88.89% |   79.91% (p=0.007)         |   80.34% (p=0.010)         |   69.26% (p<0.001)        
+time_sig_match                 |              99.57% |  100.00% (p=0.318)         |  100.00% (p=0.318)         |  100.00% (p=0.318)        
+========================================================================================================================
+
+Note: p-values are calculated using Welch's independent t-test (unequal variances).
+A p-value < 0.05 generally indicates a statistically significant difference from the Main Model.

@@ -1,0 +1,3 @@
+#!/bin/sh
+export LD_LIBRARY_PATH="/home/liaolin/.local/opt/pkgconf/usr/lib/x86_64-linux-gnu${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}"
+exec /home/liaolin/.local/opt/pkgconf/usr/bin/pkgconf "$@"

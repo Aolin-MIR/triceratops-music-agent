@@ -1,0 +1,39 @@
+[build-system]
+requires = ["setuptools", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "text2music"
+version = "0.1.0"
+description = "Text to music score generation"
+authors = [
+    {name = "Keshav Bhandari", email = "keshavbhandari@gmail.com"}
+]
+readme = "README.md"
+license = {file = "LICENSE"}
+
+# Dependencies
+dependencies = [
+    "transformers",
+    "accelerate",
+    "wandb",
+    "abctoolkit==0.0.6",
+    "openai",
+    "samplings==0.1.7",
+    "pyparsing==3.2.1",
+    "gradio",
+    "partitura==1.6.0",
+    "mido",
+    "music21",
+    "jellyfish",
+    "unidecode",
+    "rapidfuzz",
+    "pyaml"
+]
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["text2music", "text2music.*"]
+
+[tool.setuptools.exclude-package-data]
+"text2music" = ["artifacts/*"]

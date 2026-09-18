@@ -1,0 +1,1 @@
+Get-WinEvent -FilterHashtable @{LogName='Application'; StartTime=(Get-Date).AddMinutes(-40)} -MaxEvents 200 -ErrorAction SilentlyContinue | Where-Object { .Message -match 'Triceratops' -or .ProviderName -in 'Application Error','Application Hang','Windows Error Reporting' } | Select-Object -First 10 TimeCreated,Id,ProviderName,LevelDisplayName,Message | Format-List

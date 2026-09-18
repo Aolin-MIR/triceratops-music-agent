@@ -1,0 +1,40 @@
+T:Fugue No. 1 in 4 voices in C Major
+T:from “Das Wohltemperierte Klavier” Book I BWV 846
+T:Johann Sebastian Bach (1685 - 1750)
+%%score { ( 1 2 6 ) | ( 3 4 5 ) }
+L:1/8
+M:4/4
+K:C
+V:1 treble nm="Piano"
+V:2 treble 
+V:6 treble 
+V:3 bass 
+V:4 bass 
+V:5 bass 
+[V:1]z8|[V:2]z CDE F3/2G/4F/4 EA|[V:3]z8|[V:4]x8|[V:5]x8|[V:6]x8|
+[V:1]z4 z GAB|[V:2]DG- G/A/G/F/ E/F/E/D/ C/D/C/B,/|[V:3]z8|[V:4]x8|[V:5]x8|[V:6]x8|
+[V:1]c3/2d/4c/4 Be Ad- d/e/d/c/|[V:2]A,^F G2- G^F/E/ FD|[V:3]z8|[V:4]x8|[V:5]x8|[V:6]x8|
+[V:1]B/G/A/B/ c/B/c/d/ e/d/e/^f/ gB|[V:2]G=FED C z z G-|[V:3]z8|[V:4]z G,A,B, C3/2D/4C/4 B,E|[V:5]x8|[V:6]x8|
+[V:1]%4 cA d/c/B/A/ G>G F/E/F/G/|[V:2]%4 GF/E/ F2- F/F/E D2|[V:3]A,D- D/E/D/C/ B,C-C_B,|[V:4]x8|[V:5]z4 z C,D,E,|[V:6]x8|
+[V:1]A/G/A/B/ c4 B2|[V:2]CF z/ G/F/E/ FD G2-|[V:3]A,DG,C z/ A,/B,/C/ D2|[V:4]x8|[V:5]F,3/2G,/4F,/4 E,A, D,G,- G,/A,/G,/F,/|[V:6]x8|
+[V:1]z cde f3/2g/4f/4 ea|[V:2]G2 z2 z4|[V:3]G,2 z G, A,B, C3/2D/4C/4|[V:4]x8|[V:5]%6 E,/F,/E,/D,/ C,/D,/C,/B,,/ A,,D,A,^F,|[V:6]x8|
+[V:1]z8|[V:2]x8|[V:3]%7 B,EA,D- D/E/D/=C/ =B,E-|[V:4]x8|[V:5]G,/A,/_B,/G,/ ^C,D, A,2 E,2|[V:6]dg- g/a/g/f/ ea- a/b/a/g/|
+[V:1]f4 e>^f g2-|[V:2]z GAB c3/2d/4c/4 Be|[V:3]E2 D2 C/B,/C/A,/ E/D/C/B,/|[V:4]x8|[V:5]%8 A,/B,/C/D/ C/B,/A,/G,/ C z z2|[V:6]x8|
+[V:1]%9 g2 ^f2 g/=f/e/d/ c/d/c/B/|[V:2]%9 Ad- d/e/d/c/ B z z D|[V:3]C/A,/B,/C/ D/C/B,/A,/ G,2 z2|[V:4]x8|[V:5]z4 z G,,A,,B,,|[V:6]x8|
+[V:1]A/c/B/A/ x z z/ c/B/A/ ^Ge|[V:2]E^F G3/2A/4G/4 FBEA-|[V:3]z8|[V:4]x8|[V:5]C,3/2D,/4C,/4 B,,E, A,,D,- D,/E,/D,/C,/|[V:6]x8|
+[V:1]dc/B/ A/^G/A/B/ c/^F/A/^G/ BA/B/|[V:2]A/B/A/^G/ ^F=F ED- D/E/^F/^G/|[V:3]%11 z E,^F,^G, A,3/2B,/4A,/4 ^G,C|[V:4]x8|[V:5]%11 B,, E,2 D, C, =F,2 E,-|[V:6]x8|
+[V:1]%12 cfed- dc/B/ TB>A|[V:2]%12 A/^G/A/B/ G/^F/G/A/ B z z2|[V:3]^F,B,- B,/C/B,/A,/ ^G, A,2 G,|[V:4]x8|[V:5]E, D,2 E, =F,E,/D,/ E,2|[V:6]x8|
+[V:1]A2 z2 F3/2G/4F/4 EA|[V:2]z CDE z4|[V:3]%13 A,2 z G, A,B,[I:staff -1] C3/2D/4C/4|[V:4]x8|[V:5]A,,2 z2 z4|[V:6]x8|
+[V:1]z4 z [EG][^FA][G-B]|[V:2]x8|[V:3]B,EA,D- D[I:staff +1]G,[I:staff -1] D2|[V:4]x8|[V:5]z G,,A,,B,, C,3/2D,/4C,/4 B,,E,|[V:6]%14 DG- G/A/G/F/ E x3|
+[V:1]%15 c3/2d/4c/4 [GB][A-c] de =f3/2g/4f/4|[V:2]x8|[V:3]%15 C[I:staff +1]A,[I:staff -1] E2 D[I:staff +1] z z2|[V:4]%15 x8|[V:5]%15 A,,D,- D,/E,/D,/C,/ B,,_B,,A,,G,,|[V:6]G^F x2 AGAB|
+[V:1]eadg- g/a/g/f/ ea|[V:2]c3/2d/4c/4 Be Ad- d/e/d/c/|[V:3]z A,B,^C D3/2E/4D/4 =CF|[V:4]x8|[V:5]A,,^F,G,E, D,2 E,=F,|[V:6]x8|
+[V:1]d_b ag/f/ g/f/g/e/ f/g/Pg/f/4g/4|[V:2]Bg^cd ecde|[V:3]%17 B,E- E/F/E/D/ ^C z z2|[V:4]x8|[V:5]%17 G,3/2A,/4G,/4 F,_B, E,A,- A,/B,/A,/G,/|[V:6]x8|
+[V:1]%18 a/^c/d/g/ Te>d d z z2|[V:2]%18 A z z E ^FG A3/2B/4A/4|[V:3]z A,B,^C D3/2[I:staff -1]E/4D/4 =C^F|[V:4]x8|[V:5]F,/E,/F,/D,/ G,A, D,4-|[V:6]x8|
+[V:1]z4 z2 z G|[V:2]x8|[V:3]B,E- E/^F/E/D/ C4-|[V:4]x8|[V:5]%19 D,/E,/D,/C,/ B,,/A,,/G,,/^F,,/ E,,E,^F,G,-|[V:6]Gc^FB- B/c/B/A/ G/^F/E/D/|
+[V:1]AB c3/2d/4c/4 BeAd-|[V:2]E2 D2- D/A/G/=F/ E/G/F/A/|[V:3]%20 C/[I:staff +1]D/C/B,/ A,/G,/A,/^F,/xB,CD|[V:4]x8|[V:5]G,A,/G,/ ^F,D, G,4-|[V:6]x8|
+[V:1]d/e/d/c/ B/c/d/e/ f/g/a/g/ f/e/d/c/|[V:2]G2- G/A/_B c2 dG|[V:3]E3/2F/4E/4 DG CF- F/G/F/E/|[V:4]x8|[V:5]G,4 A,2 B,C|[V:6]x8|
+[V:1]%22 B2 cd G c2 B|[V:2]x8|[V:3]%22[I:staff -1] D2 ED- D[I:staff +1]G, G,2-|[V:4]x8|[V:5]%22 F,/A,/G,/F,/ E,/D,/C,/B,,/ C,/D,/E,/F,/ G,G,,|[V:6]%22 G3 F- FE D2|
+[V:1]c2 B_B A d2 c|[V:2]E A2 G- GFGA|[V:3]G,C,D,E, F,3/2G,/4F,/4 E,A,|[V:4]x8|[V:5]C,8-|[V:6]x8|
+[V:1]de f2- f/a/g/f/ e/f/e/d/|[V:2]%24 _B3/2c/4B/4 Ad Gc- c/d/c/_B/|[V:3]%24 D,G,- G,/A,/G,/F,/ E,/D,/E,/F,/ G,/A,/_B,/G,/|[V:4]x8|[V:5]C,8-|[V:6]x8|
+[V:1]c4 z/ G/4A/4=B/c/ d/e/f-|[V:2]A/_B/A/G/ F/G/F/E/ D2- D>G|[V:3]A,/E,/F,/G,/ A,/=B,/C/A,/ B,4|[V:4]x8|[V:5]C,8-|[V:6]x8|
+[V:1]%26 f/4c/4d/4e/4f/g/ a>b !fermata!c'4|][V:2]A2 z/ f/d [eg]4|][V:3]C8|][V:4]x8|][V:5]C,8|][V:6]x8|]

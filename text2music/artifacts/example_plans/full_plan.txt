@@ -1,0 +1,264 @@
+Total Measures: 29
+
+Instruments: Cymbal, Maracas, Pan Flute, Saw Synthesizer, Timpani, Trombone, Violins
+
+Measure: 1
+  Instruments: Violins, Saw Synthesizer
+  Pitch Range: 43–66
+  Note Density: Low
+  Tempo: 124 BPM
+  Time Signature: 4/4
+  Key Signature: -1
+  Chords: [0, 2, 6, 7]
+
+Measure: 2
+  Instruments: Violins, Pan Flute, Trombone, Saw Synthesizer
+  Pitch Range: 24–67
+  Note Density: Moderate
+  Tempo: 124 BPM
+  Time Signature: 4/4
+  Key Signature: -1
+  Chords: [0, 3, 7]
+
+Measure: 3
+  Instruments: Violins, Pan Flute, Trombone, Saw Synthesizer
+  Pitch Range: 24–66
+  Note Density: Moderate
+  Tempo: 124 BPM
+  Time Signature: 4/4
+  Key Signature: -1
+  Chords: [0, 2, 6]
+
+Measure: 4
+  Instruments: Violins, Pan Flute, Trombone, Saw Synthesizer
+  Pitch Range: 24–68
+  Note Density: Moderate
+  Tempo: 124 BPM
+  Time Signature: 4/4
+  Key Signature: -1
+  Chords: [0, 5, 8]
+
+Measure: 5
+  Instruments: Violins, Pan Flute, Trombone, Saw Synthesizer, Timpani
+  Pitch Range: 24–67
+  Note Density: Low
+  Tempo: 124 BPM
+  Time Signature: 4/4
+  Key Signature: -1
+  Chords: [0, 3, 7]
+
+Measure: 6
+  Instruments: Violins, Pan Flute, Trombone, Saw Synthesizer
+  Pitch Range: 24–72
+  Note Density: Moderate
+  Tempo: 124 BPM
+  Time Signature: 4/4
+  Key Signature: -1
+  Chords: [0, 7, 10]
+
+Measure: 7
+  Instruments: Violins, Pan Flute, Trombone, Saw Synthesizer, Timpani
+  Pitch Range: 24–69
+  Note Density: Moderate
+  Tempo: 124 BPM
+  Time Signature: 4/4
+  Key Signature: -1
+  Chords: [0, 6, 9]
+
+Measure: 8
+  Instruments: Violins, Pan Flute, Trombone, Saw Synthesizer
+  Pitch Range: 24–68
+  Note Density: Moderate
+  Tempo: 124 BPM
+  Time Signature: 4/4
+  Key Signature: -1
+  Chords: [0, 5, 8]
+
+Measure: 9
+  Instruments: Violins, Pan Flute, Trombone, Saw Synthesizer, Timpani
+  Pitch Range: 24–72
+  Note Density: Low
+  Tempo: 124 BPM
+  Time Signature: 4/4
+  Key Signature: -1
+  Chords: [0, 3, 7]
+
+Measure: 10
+  Instruments: Violins, Pan Flute, Trombone, Saw Synthesizer
+  Pitch Range: 24–71
+  Note Density: Moderate
+  Tempo: 124 BPM
+  Time Signature: 4/4
+  Key Signature: -1
+  Chords: [0, 3, 6]
+
+Measure: 11
+  Instruments: Violins, Pan Flute, Trombone, Saw Synthesizer
+  Pitch Range: 24–72
+  Note Density: Moderate
+  Tempo: 124 BPM
+  Time Signature: 4/4
+  Key Signature: -1
+  Chords: [0, 1, 6]
+
+Measure: 12
+  Instruments: Violins, Pan Flute, Trombone, Saw Synthesizer
+  Pitch Range: 24–71
+  Note Density: Moderate
+  Tempo: 124 BPM
+  Time Signature: 4/4
+  Key Signature: -1
+  Chords: [0, 3, 6]
+
+Measure: 13
+  Instruments: Violins, Pan Flute, Trombone, Saw Synthesizer, Timpani
+  Pitch Range: 24–72
+  Note Density: Moderate
+  Tempo: 124 BPM
+  Time Signature: 4/4
+  Key Signature: -1
+  Chords: [0, 2, 5]
+
+Measure: 14
+  Instruments: Violins, Saw Synthesizer, Timpani
+  Pitch Range: 24–84
+  Note Density: Moderate
+  Tempo: 124 BPM
+  Time Signature: 4/4
+  Key Signature: -1
+  Chords: None
+
+Measure: 15
+  Instruments: Violins, Saw Synthesizer, Timpani
+  Pitch Range: 24–84
+  Note Density: Moderate
+  Tempo: 124 BPM
+  Time Signature: 4/4
+  Key Signature: -1
+  Chords: None
+
+Measure: 16
+  Instruments: Violins, Pan Flute, Trombone, Saw Synthesizer
+  Pitch Range: 24–67
+  Note Density: Moderate
+  Tempo: 124 BPM
+  Time Signature: 4/4
+  Key Signature: -1
+  Chords: [0, 3, 7]
+
+Measure: 17
+  Instruments: Violins, Pan Flute, Trombone, Saw Synthesizer
+  Pitch Range: 24–66
+  Note Density: Moderate
+  Tempo: 124 BPM
+  Time Signature: 4/4
+  Key Signature: -1
+  Chords: [0, 2, 6]
+
+Measure: 18
+  Instruments: Violins, Pan Flute, Trombone, Saw Synthesizer
+  Pitch Range: 24–68
+  Note Density: Moderate
+  Tempo: 124 BPM
+  Time Signature: 4/4
+  Key Signature: -1
+  Chords: [0, 5, 8]
+
+Measure: 19
+  Instruments: Violins, Pan Flute, Trombone, Saw Synthesizer, Timpani
+  Pitch Range: 24–67
+  Note Density: Low
+  Tempo: 124 BPM
+  Time Signature: 4/4
+  Key Signature: -1
+  Chords: [0, 3, 7]
+
+Measure: 20
+  Instruments: Violins, Pan Flute, Trombone, Saw Synthesizer
+  Pitch Range: 24–72
+  Note Density: Moderate
+  Tempo: 124 BPM
+  Time Signature: 4/4
+  Key Signature: -1
+  Chords: [0, 7, 10]
+
+Measure: 21
+  Instruments: Violins, Pan Flute, Trombone, Saw Synthesizer, Timpani
+  Pitch Range: 24–69
+  Note Density: Moderate
+  Tempo: 124 BPM
+  Time Signature: 4/4
+  Key Signature: -1
+  Chords: [0, 6, 9]
+
+Measure: 22
+  Instruments: Violins, Pan Flute, Trombone, Saw Synthesizer
+  Pitch Range: 24–68
+  Note Density: Moderate
+  Tempo: 124 BPM
+  Time Signature: 4/4
+  Key Signature: -1
+  Chords: [0, 5, 8]
+
+Measure: 23
+  Instruments: Violins, Pan Flute, Trombone, Saw Synthesizer, Timpani
+  Pitch Range: 24–72
+  Note Density: Low
+  Tempo: 124 BPM
+  Time Signature: 4/4
+  Key Signature: -1
+  Chords: [0, 3, 7]
+
+Measure: 24
+  Instruments: Violins, Pan Flute, Trombone, Saw Synthesizer
+  Pitch Range: 24–71
+  Note Density: Moderate
+  Tempo: 124 BPM
+  Time Signature: 4/4
+  Key Signature: -1
+  Chords: [0, 3, 6]
+
+Measure: 25
+  Instruments: Violins, Pan Flute, Trombone, Saw Synthesizer
+  Pitch Range: 24–72
+  Note Density: Moderate
+  Tempo: 124 BPM
+  Time Signature: 4/4
+  Key Signature: -1
+  Chords: [0, 1, 6]
+
+Measure: 26
+  Instruments: Violins, Pan Flute, Trombone, Saw Synthesizer
+  Pitch Range: 24–71
+  Note Density: Moderate
+  Tempo: 124 BPM
+  Time Signature: 4/4
+  Key Signature: -1
+  Chords: [0, 3, 6]
+
+Measure: 27
+  Instruments: Violins, Pan Flute, Trombone, Saw Synthesizer, Timpani
+  Pitch Range: 24–72
+  Note Density: Moderate
+  Tempo: 124 BPM
+  Time Signature: 4/4
+  Key Signature: -1
+  Chords: [0, 1, 4, 6]
+
+Measure: 28
+  Instruments: Violins, Saw Synthesizer, Timpani
+  Pitch Range: 24–84
+  Note Density: Moderate
+  Tempo: 124 BPM
+  Time Signature: 4/4
+  Key Signature: -1
+  Chords: None
+
+Measure: 29
+  Instruments: Violins, Saw Synthesizer, Timpani
+  Pitch Range: 24–84
+  Note Density: Moderate
+  Tempo: 124 BPM
+  Time Signature: 4/4
+  Key Signature: -1
+  Chords: None

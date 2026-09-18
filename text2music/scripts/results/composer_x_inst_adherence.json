@@ -1,0 +1,1747 @@
+{
+    "summary": {
+        "total_files_evaluated": 144,
+        "average_score_out_of_10": 5.51,
+        "percentage_score": 55.07
+    },
+    "detailed_results": [
+        {
+            "id": "4",
+            "filepath": "/gpfs/scratch/acw769/text2score/composer_x/4/xml/Grand_Orchestral_March_in_C_\u2013_Main_Theme_A_(Instrumented,_8-bar_Version).xml",
+            "prompt": "Grand orchestral march in C major at 120 BPM. It needs a steady 4/4 pulse with bold brass and soaring strings.",
+            "extracted_instruments": [
+                "Melody (Trumpets/Violins)"
+            ],
+            "llm_reasoning": "The generated instruments include 'Melody (Trumpets/Violins)', which partially addresses the requested 'bold brass and soaring strings'. However, a grand orchestral march typically requires a full ensemble including percussion for the steady 4/4 pulse, which is entirely missing. The grouping of instruments into a single part also violates the expected ensemble structure.",
+            "llm_score": 5
+        },
+        {
+            "id": "5",
+            "filepath": "/gpfs/scratch/acw769/text2score/composer_x/5/xml/Gentle_E_Major_Waltz_(Final).xml",
+            "prompt": "Gentle acoustic guitar arpeggios in E major. Keep it around 84 BPM in a light 3/4 waltz feel.",
+            "extracted_instruments": [
+                "dummy"
+            ],
+            "llm_reasoning": "The prompt explicitly requested a solo acoustic guitar, but the generated instrument is 'dummy', which does not correspond to any valid instrument. This is a complete mismatch as the required instrument is entirely absent.",
+            "llm_score": 1
+        },
+        {
+            "id": "6",
+            "filepath": "/gpfs/scratch/acw769/text2score/composer_x/6/xml/Somber_Quintet_in_B\u266d_Major_-_I.xml",
+            "prompt": "A somber string quintet in Bb major. The movement is a slow and spacious 60 BPM in common time.",
+            "extracted_instruments": [
+                "Violin I",
+                "Violin II"
+            ],
+            "llm_reasoning": "The prompt requested a string quintet, which requires five string instruments (typically two violins, viola, cello, and double bass). The generated output includes only two violins, missing three essential instruments (viola, cello, bass), resulting in a significant structural omission.",
+            "llm_score": 3
+        },
+        {
+            "id": "8",
+            "filepath": "/gpfs/scratch/acw769/text2score/composer_x/8/xml/Lux_Aeterna_(Sanctus).xml",
+            "prompt": "Sacred choral work for SATB in F major. A stately 4/4 meter with a tempo around 66 BPM (very smooth).",
+            "extracted_instruments": [
+                "Soprano",
+                "Tenor"
+            ],
+            "llm_reasoning": "The prompt requested a SATB (Soprano, Alto, Tenor, Bass) choral ensemble, but the generated instruments only include Soprano and Tenor. Two core voices (Alto and Bass) are missing, violating the ensemble structure. No extra instruments were added, but the omission is significant.",
+            "llm_score": 4
+        },
+        {
+            "id": "10",
+            "filepath": "/gpfs/scratch/acw769/text2score/composer_x/10/xml/Dainty_Waltz_in_A.xml",
+            "prompt": "Is it possible to get a harp solo in A major? Make it a dainty 3/4 waltz at 108 BPM\u2014something very light.",
+            "extracted_instruments": [
+                "dummy"
+            ],
+            "llm_reasoning": "The generated instruments list contains 'dummy', which is not a valid instrument and does not match the requested 'harp solo'. The prompt explicitly requires a solo harp, but the generated output fails to include the correct instrument and instead provides an invalid placeholder.",
+            "llm_score": 1
+        },
+        {
+            "id": "11",
+            "filepath": "/gpfs/scratch/acw769/text2score/composer_x/11/xml/Brass_Quintet_Fanfare_in_Bb.xml",
+            "prompt": "Brass quintet fanfare in Bb major. A standard 4/4 march meter at a brisk 112 BPM.",
+            "extracted_instruments": [
+                "Trombone",
+                "Trumpet 2 in Bb",
+                "Horn in F",
+                "Trumpet 1 in Bb",
+                "Tuba"
+            ],
+            "llm_reasoning": "The generated instruments (Trombone, Trumpet 2 in Bb, Horn in F, Trumpet 1 in Bb, Tuba) perfectly match the standard brass quintet structure requested in the prompt. All required instruments are present with no hallucinations or omissions.",
+            "llm_score": 10
+        },
+        {
+            "id": "14",
+            "filepath": "/gpfs/scratch/acw769/text2score/composer_x/14/xml/Garden_Waltz_in_A.xml",
+            "prompt": "A bright chamber ensemble piece in A major for a garden scene. It should be a Viennese waltz in 3/4 time at 150 BPM. The instrumentation includes flute, oboe, and a string quartet. Let the flute take the lead with short staccato quarters while the strings provide the rhythmic foundation. The mood is cheerful and elegant throughout.",
+            "extracted_instruments": [
+                "Violin I",
+                "Viola",
+                "Flute"
+            ],
+            "llm_reasoning": "The prompt requested a string quartet (2 Violins, Viola, Cello) and an oboe, but the generated instruments only include Violin I, Viola, and Flute. The string quartet is incomplete (missing Violin II and Cello), and the oboe is entirely absent. This results in significant omissions of required instruments.",
+            "llm_score": 5
+        },
+        {
+            "id": "16",
+            "filepath": "/gpfs/scratch/acw769/text2score/composer_x/16/xml/Playful_Woodwind_Octet_Study_(Refined).xml",
+            "prompt": "A playful woodwind octet in F major at a brisk 126 BPM. Use a 2/4 march meter with distinct sections for the bassoons and clarinets. The oboes should have the main theme, which is repeated by the flutes later. Keep the texture light and the articulations mostly staccato. It's meant to be a fun, academic-style exercise for students.",
+            "extracted_instruments": [
+                "Flute 1"
+            ],
+            "llm_reasoning": "The prompt requested a woodwind octet with specific sections for bassoons, clarinets, and oboes, but only a single flute is present. The generated score is missing all other required woodwinds (oboes, clarinets, bassoons) and fails to meet the octet instrumentation. This is a complete mismatch.",
+            "llm_score": 1
+        },
+        {
+            "id": "17",
+            "filepath": "/gpfs/scratch/acw769/text2score/composer_x/17/xml/Floating_Light_(Final).xml",
+            "prompt": "This is for a New Age meditation track in G major. Could we use a mix of piano, celesta, and soft violin? The tempo is very slow\u2014around 52 BPM\u2014in a 4/4 time signature. I want gentle arpeggios on the piano that just float in the air... maybe with the celesta providing some high-frequency sparkles? The violins should play only long, sustained notes.",
+            "extracted_instruments": [
+                "dummy"
+            ],
+            "llm_reasoning": "The generated instruments list contains only 'dummy', which does not match any of the requested instruments (piano, celesta, soft violin). This is a complete mismatch as none of the required instruments are present.",
+            "llm_score": 1
+        },
+        {
+            "id": "18",
+            "filepath": "/gpfs/scratch/acw769/text2score/composer_x/18/xml/Baroque_Suite_in_G_Minor_\u2013_I._Adagio.xml",
+            "prompt": "A baroque-inspired suite for a string orchestra in G minor. The first movement is a slow 4/4 at 68 BPM. Focus on a strong contrapuntal texture between the first violins and the cellos. The violas should fill in the middle harmonies with steady eighth-note patterns. It needs to feel academic yet expressive, ending on a strong Picardy third.",
+            "extracted_instruments": [
+                "Violin I",
+                "Violin II",
+                "Viola",
+                "Cello"
+            ],
+            "llm_reasoning": "The generated instruments (Violin I, Violin II, Viola, Cello) align with a standard string orchestra ensemble. The prompt requested a string orchestra, and all core sections are present. The absence of a double bass (common in Baroque continuo) is a minor omission, but no unwarranted instruments are included.",
+            "llm_score": 9
+        },
+        {
+            "id": "20",
+            "filepath": "/gpfs/scratch/acw769/text2score/composer_x/20/xml/Rustic_D-Jig_(Final).xml",
+            "prompt": "A traditional folk-style arrangement in D major for acoustic guitar and mandolin. It's a quick 6/8 jig at 124 BPM. The mandolin takes the lead with fast, repetitive patterns while the guitar provides a strong rhythmic backbone. I'm looking for a clear A-B-A structure where the B section moves briefly to the relative minor. Simple and rustic.",
+            "extracted_instruments": [
+                "Guitar"
+            ],
+            "llm_reasoning": "The generated instruments are missing the mandolin, which was explicitly requested in the prompt. The presence of the acoustic guitar is correct, but the absence of the mandolin constitutes a major omission.",
+            "llm_score": 4
+        },
+        {
+            "id": "21",
+            "filepath": "/gpfs/scratch/acw769/text2score/composer_x/21/xml/Heroic_Eb_Major_Film_Theme.xml",
+            "prompt": "Full orchestral cue in Eb major for a heroic film theme. Set the tempo at 115 BPM in 4/4 time. The theme starts with horns and trumpets, accompanied by low brass and woodwind trills. Strings should play energetic sixteenth-note patterns (no percussion!). Build to a massive climax with the full ensemble before a quiet piano reprise at the very end.",
+            "extracted_instruments": [
+                "Horns & Trumpets"
+            ],
+            "llm_reasoning": "The generated instrument list includes only 'Horns & Trumpets' but the prompt explicitly requires a full orchestral ensemble with low brass, woodwinds, strings, and a piano reprise. The absence of these critical sections (e.g., trombones, tuba, woodwinds, strings) and the lack of a piano for the reprise constitutes a major violation.",
+            "llm_score": 2
+        },
+        {
+            "id": "24",
+            "filepath": "/gpfs/scratch/acw769/text2score/composer_x/24/xml/Dark_Mechanism_(Final_Rev.).xml",
+            "prompt": "Contemporary classical piece for a large chamber ensemble (11 instruments) in B minor. Slow and mysterious tempo at 56 BPM in 4/4. Use long, dissonant clusters in the woodwinds and high harmonic glissandi in the strings. The piano should play occasional low, resonant notes. It's a dark, atmospheric piece for a suspenseful game environment.",
+            "extracted_instruments": [
+                "Flute"
+            ],
+            "llm_reasoning": "The generated instrument list contains only a Flute, while the prompt explicitly requested a large chamber ensemble (11 instruments) with specific sections (woodwinds, strings, piano). The Flute alone does not fulfill the 11-instrument requirement or the specified instrumental roles.",
+            "llm_score": 1
+        },
+        {
+            "id": "26",
+            "filepath": "/gpfs/scratch/acw769/text2score/composer_x/26/xml/Brass_on_the_Green_(Revised_\u2013_Instrumented,_Clean_ABC).xml",
+            "prompt": "How about a brass-focused march in G major? It should be in 4/4 time and have a brisk and lively pace\u2014maybe 118 BPM. Focus on the interplay between the trumpets and the trombones. I need a clear trio section in C major for contrast before coming back to the main theme. (Keep it punchy!)",
+            "extracted_instruments": [
+                "Trumpet in Bb",
+                "Trombone"
+            ],
+            "llm_reasoning": "The generated instruments (Trumpet in Bb and Trombone) align perfectly with the brass-focused march request. The prompt emphasized interplay between these two instruments, and no additional or missing instruments are present. The trio section is a musical structure, not an ensemble size, so it doesn't affect instrument adherence.",
+            "llm_score": 10
+        },
+        {
+            "id": "29",
+            "filepath": "/gpfs/scratch/acw769/text2score/composer_x/29/xml/Wedding_Processional_in_D.xml",
+            "prompt": "A small string ensemble piece for a wedding processional in D major. Stately 4/4 meter at 72 BPM. The first violin has a soaring melody while the other strings provide a rich, homophonic texture. It should feel grand and emotional, moving through a simple chord progression that everyone knows. (Something like that).",
+            "extracted_instruments": [
+                "Violin I",
+                "Violin II",
+                "Viola",
+                "Cello"
+            ],
+            "llm_reasoning": "The generated instruments (Violin I, Violin II, Viola, Cello) perfectly match the standard 'small string ensemble' requested in the prompt. All required parts are present with no hallucinated instruments, and the semantic labels align with typical string quartet instrumentation.",
+            "llm_score": 10
+        },
+        {
+            "id": "30",
+            "filepath": "/gpfs/scratch/acw769/text2score/composer_x/30/xml/Sacred_Anthem_in_Bb_\u2013_Final_Climax_&_Coda_(Refined_Excerpt).xml",
+            "prompt": "Large SATB choir with full orchestra performing a sacred anthem in Bb major. The tempo is a majestic 80 BPM in 4/4 time. There are no lyrics, just 'ah' and 'oh' sounds. The orchestra should double the vocal lines in the climaxes to create a massive wall of sound. End with a long, sustained pedal point on the tonic.",
+            "extracted_instruments": [
+                "Soprano",
+                "Strings"
+            ],
+            "llm_reasoning": "The generated instruments include only 'Soprano' and 'Strings', missing the full SATB choir (Alto, Tenor, Bass) and a complete orchestra. The 'Strings' entry is vague and does not reflect a full orchestral section. This results in a major violation of the prompt's requirements.",
+            "llm_score": 3
+        },
+        {
+            "id": "31",
+            "filepath": "/gpfs/scratch/acw769/text2score/composer_x/31/xml/Whims_of_the_Waltzing_Winds_(Humorous_Waltz_\u2013_Woodwind_Quintet).xml",
+            "prompt": "A light and airy woodwind quintet in Eb major. It\u2019s a fast 3/4 waltz at 144 BPM. The clarinet and flute should trade short, virtuosic runs while the bassoon and horn keep the pulse steady. It's meant to be a humorous and technical piece for a recital. Keep the harmonies mostly traditional but with a few playful surprises.",
+            "extracted_instruments": [
+                "Flute"
+            ],
+            "llm_reasoning": "The prompt requests a woodwind quintet (Flute, Oboe, Clarinet, Bassoon, Horn), but only the Flute is present in the generated instruments. The absence of the other four required instruments constitutes a complete mismatch.",
+            "llm_score": 1
+        },
+        {
+            "id": "32",
+            "filepath": "/gpfs/scratch/acw769/text2score/composer_x/32/xml/Black_Soliloquy.xml",
+            "prompt": "Solo cello piece in C minor at a slow 48 BPM. The meter is a wide 4/4 with long, sustained lines and lots of low-register resonance. It should sound like a deep, mournful soliloquy. Use a lot of double stops and open strings to create a thicker texture despite being a solo instrument. Very dark and moody.",
+            "extracted_instruments": [
+                "Cello"
+            ],
+            "llm_reasoning": "The generated instrument 'Cello' perfectly matches the user's explicit 'Solo cello' request with no additional or missing instruments. The 'Solo' constraint is strictly adhered to, fulfilling all requirements.",
+            "llm_score": 10
+        },
+        {
+            "id": "33",
+            "filepath": "/gpfs/scratch/acw769/text2score/composer_x/33/xml/Serene_Currents_(Final).xml",
+            "prompt": "A modern, New Age chamber piece in E major for piano, harp, and strings. The tempo is a calming 68 BPM in 4/4. Focus on slow, evolving textures where the piano plays simple motifs and the strings provide a lush backdrop. The harp adds occasional glissandi and high-register plucks to keep the listener engaged. Very serene.",
+            "extracted_instruments": [
+                "Piano",
+                "Strings",
+                "Harp"
+            ],
+            "llm_reasoning": "The generated instruments (Piano, Strings, Harp) perfectly match the requested ensemble of piano, harp, and strings. No additional or missing instruments are present, and the semantic mapping aligns with standard instrument naming conventions.",
+            "llm_score": 10
+        },
+        {
+            "id": "34",
+            "filepath": "/gpfs/scratch/acw769/text2score/composer_x/34/xml/Morning_Siciliana_(Flute_&_Harp_Duo).xml",
+            "prompt": "A flute and harp duo in G major, perfect for a peaceful morning scene. It's a slow 6/8 Siciliana at 60 BPM. The flute melody should be very simple and breathy, floating over the harp\u2019s rolling arpeggios. Focus on the beauty of the phrasing and the resonance of the instruments. Warm, but not too sweet.",
+            "extracted_instruments": [
+                "Harp"
+            ],
+            "llm_reasoning": "The prompt requested a flute and harp duo, but the generated score only includes a harp. The flute, a key instrument in the requested ensemble, is entirely missing, violating the user's explicit instruction for a two-instrument arrangement.",
+            "llm_score": 4
+        },
+        {
+            "id": "36",
+            "filepath": "/gpfs/scratch/acw769/text2score/composer_x/36/xml/Hope_Will_Find_a_Way.xml",
+            "prompt": "Small choir (SSA) and piano in F major at 88 BPM in 4/4. The piece is intended for a school chorus, so keep the vocal ranges moderate. The piano part should be supportive, doubling the voices occasionally but also having its own independent melodic lines between the vocal phrases. The mood is hopeful and bright.",
+            "extracted_instruments": [
+                "Soprano 1",
+                "Piano RH"
+            ],
+            "llm_reasoning": "The generated instruments include only Soprano 1 and Piano RH, missing the second Soprano and Alto voices required for the SSA choir. The piano is present but split into RH, which may not be necessary. The choir is incomplete, violating the ensemble structure.",
+            "llm_score": 3
+        },
+        {
+            "id": "39",
+            "filepath": "/gpfs/scratch/acw769/text2score/composer_x/39/xml/Sunrise_Over_The_Range_\u2013_Final_Orchestral_Cue.xml",
+            "prompt": "I need a long, evolving orchestral piece for a nature documentary. Let's start in G major at a slow and spacious 60 BPM in 4/4 time. The instrumentation should be massive: full woodwinds, a large brass section, a full string section, and a choir. The piece begins with a solo flute and gradually adds instruments layer by layer\u2014first the other woodwinds, then the strings, then the brass\u2014until a huge climax at the four-minute mark. The choir should enter during the peak with wordless sustained notes. After the climax, the music should dissolve into a solo violin over a soft piano. Keep the harmonies mostly tonal and expansive. It should feel like a sunrise over a mountain range.",
+            "extracted_instruments": [
+                "Choir Bass",
+                "Violins I",
+                "Solo Violin",
+                "Flute (solo)",
+                "Trumpets",
+                "Choir Alto",
+                "Bassoon",
+                "Choir Tenor",
+                "Violins II",
+                "Trombones/Tuba",
+                "French Horns",
+                "Contrabasses",
+                "Choir Soprano",
+                "Cellos",
+                "Piano Left",
+                "Violas",
+                "Oboe",
+                "Clarinet in Bb",
+                "Piano Right"
+            ],
+            "llm_reasoning": "The generated instruments fully align with the requested orchestral setup, including full woodwinds, brass, strings, and choir. The solo flute and violin are present, and the piano is split into left/right hands, which is acceptable for the soft piano ending. No major omissions or hallucinations.",
+            "llm_score": 10
+        },
+        {
+            "id": "42",
+            "filepath": "/gpfs/scratch/acw769/text2score/composer_x/42/xml/Neo-classical_Piano_Concerto_\u2013_I._Allegro.xml",
+            "prompt": "A neo-classical piano concerto movement in C major. The tempo is a brisk and lively 112 BPM in 2/4 time. Use a chamber orchestra consisting of strings and woodwinds to accompany the solo piano. The piano should have very fast, flowing sixteenth-note patterns throughout the movement, acting as both a melodic and a rhythmic driver. The orchestra provides sharp, staccato chords on the off-beats. I want a clear sonata-form structure with two distinct themes: the first is very energetic and the second is more lyrical and settles into G major. No percussion instruments at all! The goal is to highlight the pianist's technical clarity and the ensemble's balance. Make sure the score is clean and easy to read for the performers.",
+            "extracted_instruments": [
+                "Violin I",
+                "Piano RH"
+            ],
+            "llm_reasoning": "The generated instruments include 'Piano RH' and 'Violin I', but the prompt explicitly requested a chamber orchestra with strings and woodwinds to accompany the solo piano. The absence of woodwinds (e.g., flute, oboe, clarinet) and incomplete string sections (e.g., missing Viola, Cello, Bass, and Violin II) results in a major violation of the ensemble structure. The piano is present, but the orchestral accompaniment is severely underrepresented.",
+            "llm_score": 3
+        },
+        {
+            "id": "45",
+            "filepath": "/gpfs/scratch/acw769/text2score/composer_x/45/xml/Fading_Into_Stillness.xml",
+            "prompt": "I'm looking for a very long, meditative piece for a New Age album in B major. The tempo is a slow 52 BPM in 4/4. The ensemble should be a mix of choir, strings, and a solo English horn. Start with only the strings playing a low, steady drone. Gradually, the choir enters with soft, wordless chords that change very slowly. The English horn should then come in with a mournful, lyrical solo that weaves through the choral texture. This should last for about six minutes, building very slightly in volume but never becoming loud. The piece is about finding peace, so keep the harmonies very consonant. It should end exactly as it started, with a single note in the cellos fading out into nothingness.",
+            "extracted_instruments": [
+                "Violin I"
+            ],
+            "llm_reasoning": "The generated score only includes 'Violin I', missing the required choir, strings (incomplete), and solo English horn. The ensemble is severely underrepresented, violating the prompt's core requirements.",
+            "llm_score": 1
+        },
+        {
+            "id": "46",
+            "filepath": "/gpfs/scratch/acw769/text2score/composer_x/46/xml/Double_Concerto_in_D_minor_(Allegro).xml",
+            "prompt": "A baroque-style double concerto for two violins and a string orchestra in D minor. The tempo is a steady 4/4 at 72 BPM. I want the two solo violins to engage in a lot of imitative counterpoint and decorative trills. The orchestra should provide a solid continuo-style accompaniment with the cellos and double basses playing a consistent bass line. The structure is a standard Ripieno-Solo-Ripieno format. The music should feel formal and academic, but with a lot of emotional depth in the minor key. Make sure the parts are well-balanced so the soloists can always be heard over the ensemble. No modern instruments or electronics! This is strictly for a period-accurate performance. Let the tension build through the use of suspensions and resolutions.",
+            "extracted_instruments": [
+                "Solo Violin I",
+                "Solo Violin II",
+                "Violin II (ripieno)",
+                "Continuo (Cello+Bass)",
+                "Viola",
+                "Violin I (ripieno)"
+            ],
+            "llm_reasoning": "The generated instruments include the two solo violins and a string orchestra with ripieno sections (Violin I/II, Viola) and a continuo (Cello+Bass), aligning with the Baroque concerto structure. The absence of a harpsichord in the continuo is a minor omission, but the prompt explicitly requested cellos and double basses, and the cello+bass combination is a valid period-accurate approximation. No modern instruments or extraneous elements are present.",
+            "llm_score": 9
+        },
+        {
+            "id": "48",
+            "filepath": "/gpfs/scratch/acw769/text2score/composer_x/48/xml/Lost_Signals_(Mystery_Atmosphere)_v4.xml",
+            "prompt": "An atmospheric solo piano piece for a mystery game in F# minor. The tempo is a slow 58 BPM in 4/4 time. I want the left hand to play a low, repeating two-note motif while the right hand plays high, sparse, and dissonant notes. The mood is very dark and uncertain. Use a lot of the sustain pedal to create a wash of sound. Occasionally, add a middle-voice melody that is very slow and sustained. The piece shouldn't have a strong melodic hook; it\u2019s more about the texture and the feeling of being lost. Keep the notation simple and clear. It should be able to loop seamlessly if needed. No other instruments\u2014just the piano and its resonance.",
+            "extracted_instruments": [
+                "Piano RH",
+                "Piano LH"
+            ],
+            "llm_reasoning": "The generated instruments 'Piano RH' and 'Piano LH' correctly adhere to the 'solo piano' constraint by representing the same instrument split into hands, which is standard notation practice. No non-piano instruments are present, fulfilling the 'no other instruments' requirement.",
+            "llm_score": 10
+        },
+        {
+            "id": "50",
+            "filepath": "/gpfs/scratch/acw769/text2score/composer_x/50/xml/Sunny_Salon_Rondo_(Revised,_Orchestrated_&_Clean).xml",
+            "prompt": "A light-hearted chamber suite in G major for a group of 9 instruments. The tempo is a quick 120 BPM in 3/4 time (a very fast waltz). I want the ensemble to include a flute, oboe, clarinet, bassoon, and a string quintet. The flute and first violin should have a playful dialogue, trading short, staccato melodic fragments. The lower strings and bassoon provide the 'oom-pah' rhythmic foundation. It\u2019s a very bright and sunny piece, almost like a 19th-century salon dance. Ensure the key changes are smooth, moving to D major and then back again. The structure should be a simple rondo (A-B-A-C-A). No percussion! Just the clean, acoustic sound of the woodwinds and strings working together in perfect harmony.",
+            "extracted_instruments": [
+                "Cello",
+                "Violin II",
+                "Contrabass",
+                "Viola",
+                "Flute",
+                "Violin I",
+                "Oboe",
+                "Bassoon",
+                "Clarinet in Bb"
+            ],
+            "llm_reasoning": "The generated instruments perfectly match the requested ensemble: flute, oboe, clarinet, bassoon, and a string quintet (2 violins, viola, cello, contrabass). All nine instruments are present with no hallucinations or omissions. The 'Clarinet in Bb' and 'Contrabass' are semantically equivalent to the requested instruments.",
+            "llm_score": 10
+        },
+        {
+            "id": "51",
+            "filepath": "/gpfs/scratch/acw769/text2score/composer_x/51/xml/Staccato_to_Singing_\u2013_Etude_in_G_Major.xml",
+            "prompt": "I need a technical etude for my violin students in a bright G-major world. The tempo should be around 80 BPM in 4/4. Focus on short staccato quarters in the lower half of the bow, then transition to flowing eighth notes. The structure is simple: A section for technique, B section for lyrical expression, and a return to the start.",
+            "extracted_instruments": [
+                "dummy"
+            ],
+            "llm_reasoning": "The prompt explicitly requests a solo violin etude, but the generated instrument list contains 'dummy', which is not a valid or semantically matching instrument. The required solo violin is completely absent.",
+            "llm_score": 1
+        },
+        {
+            "id": "53",
+            "filepath": "/gpfs/scratch/acw769/text2score/composer_x/53/xml/Grand_Ceremonial_March_in_Bb_(harmonized_&_revised,_instrumented).xml",
+            "prompt": "A grand ceremonial march in Bb major, keeping a steady 112 BPM pace in 4/4 time. The orchestration needs to be clear and balanced for a large wind ensemble: two flutes, two oboes, three clarinets, two bassoons, four horns, three trumpets, three trombones, and a tuba. Start with a bold brass fanfare before the woodwinds enter with a playful countermelody. The bassoon and tuba should provide a strong, grounded bass line with short staccato quarters. The middle section shifts to a more lyrical texture with soloistic passages for the flute. I'm looking for clarity in the voicing to ensure the melody isn't buried.",
+            "extracted_instruments": [
+                "Horn 1 in F",
+                "Clarinet 1",
+                "Trombone 1",
+                "Oboe 1",
+                "Trumpet 1 in Bb",
+                "Flute 1",
+                "Tuba",
+                "Bassoon 1"
+            ],
+            "llm_reasoning": "The generated instruments include all the correct types requested (flute, oboe, clarinet, bassoon, horn, trumpet, trombone, tuba), but the quantities are significantly underrepresented (e.g., 1 flute instead of 2, 1 oboe instead of 2, etc.). No hallucinated instruments are present, but the ensemble lacks the specified size and balance required for a 'large wind ensemble.'",
+            "llm_score": 5
+        },
+        {
+            "id": "55",
+            "filepath": "/gpfs/scratch/acw769/text2score/composer_x/55/xml/Spirited_Green_Road.xml",
+            "prompt": "Why not try a spirited folk jig in 6/8? Set the tempo at a brisk 124 BPM in the key of D major. This should be for a trio of mandolin, acoustic guitar, and violin. The mandolin and violin should trade off the main melody with fast, driving eighth notes. Keep the guitar on a steady rhythmic pulse. Does it feel energetic enough?",
+            "extracted_instruments": [
+                "Guitar",
+                "Mandolin"
+            ],
+            "llm_reasoning": "The generated instruments are missing the requested violin, which is essential for the trio. The user explicitly asked for mandolin, acoustic guitar, and violin, but only Guitar and Mandolin were included. This omission violates the ensemble structure specified in the prompt.",
+            "llm_score": 4
+        },
+        {
+            "id": "56",
+            "filepath": "/gpfs/scratch/acw769/text2score/composer_x/56/xml/Timeless_Reverence_\u2013_Opening_Phrase_(Functional_D_minor,_Corrected_Harmony).xml",
+            "prompt": "A sacred, wordless choral piece for a large SATB choir. It should be a slow and spacious 56 BPM in 4/4, settling back into D minor. The altos and tenors provide a soft, humming bed of harmony. The sopranos carry a soaring, angelic melody while the basses move in slow, descending whole notes. The mood is reverent and timeless.",
+            "extracted_instruments": [
+                "Soprano",
+                "Tenor"
+            ],
+            "llm_reasoning": "The prompt requested a SATB (Soprano, Alto, Tenor, Bass) choir, but the generated instruments only include Soprano and Tenor. The Alto and Bass parts are missing, which are essential to the SATB ensemble structure. This results in a significant omission of two core choir sections.",
+            "llm_score": 3
+        },
+        {
+            "id": "57",
+            "filepath": "/gpfs/scratch/acw769/text2score/composer_x/57/xml/Lush_Romantic_String_Waltz.xml",
+            "prompt": "Lush string orchestra underscore for a romantic film. In 3/4 time, let's make it a very slow 48 BPM waltz in Ab major. The first violins play the main theme with a high, singing quality. Cellos and double basses provide a deep, warm cushion. It should follow an A\u2013B\u2013A structure, reaching a peak of intensity in the middle with rich inner-voice counterpoints from the violas.",
+            "extracted_instruments": [
+                "Violin I",
+                "Viola"
+            ],
+            "llm_reasoning": "The generated instruments (Violin I, Viola) omit critical components of a standard string orchestra as requested in the prompt, specifically missing Cellos and Double Basses which were explicitly mentioned as essential for the deep, warm cushion. The absence of these foundational lower strings constitutes a major violation of the ensemble structure.",
+            "llm_score": 5
+        },
+        {
+            "id": "59",
+            "filepath": "/gpfs/scratch/acw769/text2score/composer_x/59/xml/Quiet_Night_in_Bb_(Final,_Clean_ABC).xml",
+            "prompt": "A jazz-lite solo piano ballad in Bb major. The tempo is a relaxed 66 BPM in 4/4. Use lush, spread-out voicings with the left hand playing slow sustained lines. The right hand should play a gentle, standard-like melody with occasional decorative flourishes. It should feel intimate and sophisticated, like a quiet night in a lounge.",
+            "extracted_instruments": [
+                "dummy"
+            ],
+            "llm_reasoning": "The prompt explicitly requested a 'solo piano' piece, but the generated instruments list contains only a placeholder ('dummy') with no actual instruments. The absence of a piano and presence of no valid instruments constitutes a complete mismatch.",
+            "llm_score": 1
+        },
+        {
+            "id": "62",
+            "filepath": "/gpfs/scratch/acw769/text2score/composer_x/62/xml/Wedding_Fanfare_in_C.xml",
+            "prompt": "A celebratory fanfare for a wedding. Stately 4/4 at 92 BPM in C major. Use a brass sextet\u2014three trumpets and three trombones. It should be homophonic and grand, with a clear intro, a middle theme, and a short reprise. (Something like that).",
+            "extracted_instruments": [
+                "Trumpet 1",
+                "Trombone 2",
+                "Trumpet 3",
+                "Trombone 1",
+                "Trombone 3",
+                "Trumpet 2"
+            ],
+            "llm_reasoning": "The generated instruments perfectly match the requested brass sextet with three trumpets and three trombones. All instruments are correctly listed with no omissions or additions.",
+            "llm_score": 10
+        },
+        {
+            "id": "63",
+            "filepath": "/gpfs/scratch/acw769/text2score/composer_x/63/xml/Processional_in_F_Major.xml",
+            "prompt": "Sacred organ solo in F major for a processional. The tempo is a moderate 76 BPM in 4/4 time. It should feature a bold melody on the swell manual with a steady, walking bass line in the pedals. The inner voices should provide rich harmonic textures with slow sustained lines. Build the registration throughout to a triumphant ending.",
+            "extracted_instruments": [
+                "Swell Melody"
+            ],
+            "llm_reasoning": "The prompt specifies a solo organ, but the generated instrument 'Swell Melody' semantically refers only to a part of the organ (the swell manual), not the full organ. The organ as a solo instrument typically includes manuals and pedals, which are not fully represented here. This is a partial match due to significant omissions.",
+            "llm_score": 6
+        },
+        {
+            "id": "64",
+            "filepath": "/gpfs/scratch/acw769/text2score/composer_x/64/xml/Playful_Woodland_Chase.xml",
+            "prompt": "A light woodwind trio for a children's play in G major. It's a brisk and lively 116 BPM in 2/4. For flute, clarinet, and bassoon. The flute carries a bouncy melody using short staccato quarters. The clarinet adds a playful countermelody. Keep the structure simple and repetitive for a lighthearted mood.",
+            "extracted_instruments": [
+                "Bassoon",
+                "Clarinet in Bb",
+                "Flute"
+            ],
+            "llm_reasoning": "The generated instruments (Bassoon, Clarinet in Bb, Flute) perfectly match the requested woodwind trio for a children's play. All three specified instruments are present with no additions or omissions.",
+            "llm_score": 10
+        },
+        {
+            "id": "65",
+            "filepath": "/gpfs/scratch/acw769/text2score/composer_x/65/xml/Barcarolle_of_the_Tides.xml",
+            "prompt": "Large chamber ensemble for a documentary about the ocean. It should be a slow 12/8 barcarolle at 48 BPM in Eb major. The ensemble includes harp, celesta, flute, clarinet, and a string sextet. The harp and celesta create interlocking flowing eighth notes to represent water movement. The strings play very slow sustained lines that evolve over a ten-bar phrase. No high-intensity moments, just a calm, drifting atmosphere.",
+            "extracted_instruments": [
+                "Violin I",
+                "Flute",
+                "Harp"
+            ],
+            "llm_reasoning": "The generated instruments are missing the celesta, clarinet, and a complete string sextet as requested. Only a single violin is present instead of the required six strings, and the ensemble size is significantly smaller than the 'large chamber' specified in the prompt.",
+            "llm_score": 3
+        },
+        {
+            "id": "66",
+            "filepath": "/gpfs/scratch/acw769/text2score/composer_x/66/xml/In_Quiet_Memory.xml",
+            "prompt": "I'm composing a piece for a memorial service in C minor. I'd like a very slow and spacious 42 BPM in 4/4. Use a solo cello accompanied by a soft chamber choir singing wordless 'oo' vowels. The cello should play a deep, mournful line with many slow sustained notes. The choir provides a warm, harmonic pad underneath. It should feel very intimate and respectful.",
+            "extracted_instruments": [
+                "dummy"
+            ],
+            "llm_reasoning": "The generated instruments list contains only 'dummy', which does not correspond to any valid instrument. The prompt explicitly requested a solo cello and chamber choir, neither of which are present. This is a complete mismatch with the requested ensemble.",
+            "llm_score": 1
+        },
+        {
+            "id": "67",
+            "filepath": "/gpfs/scratch/acw769/text2score/composer_x/67/xml/Ensemble_Timing_Etude_in_D.xml",
+            "prompt": "A bright and energetic string quartet etude in D major. Around 120 BPM in 4/4 time. All four instruments should participate in fast, flowing eighth-note passages that move between the voices. The first violin leads, but the cello has a technical countermelody in the middle section. It's meant to be a study in ensemble timing and clarity.",
+            "extracted_instruments": [
+                "Violin I"
+            ],
+            "llm_reasoning": "The generated score includes only 'Violin I', but a string quartet requires two violins, viola, and cello. The missing instruments (Violin II, Viola, Cello) are critical to the ensemble structure, resulting in a major violation.",
+            "llm_score": 2
+        },
+        {
+            "id": "68",
+            "filepath": "/gpfs/scratch/acw769/text2score/composer_x/68/xml/Cozy_Town_Waltz.xml",
+            "prompt": "This is for a cozy video game town... perhaps a soft acoustic guitar and mandolin duet? Set it in a bright G-major world with a brisk and lively tempo of 108 BPM in 3/4. The guitar plays a simple waltz rhythm while the mandolin provides a sweet, folk-like melody. It should be loopable and very gentle on the ears.",
+            "extracted_instruments": [
+                "Guitar",
+                "Mandolin"
+            ],
+            "llm_reasoning": "The generated instruments 'Guitar' and 'Mandolin' perfectly match the user's explicit request for a 'guitar and mandolin duet'. No additional or missing instruments are present, and the semantic mapping aligns directly with the textual prompt.",
+            "llm_score": 10
+        },
+        {
+            "id": "72",
+            "filepath": "/gpfs/scratch/acw769/text2score/composer_x/72/xml/Shifting_Parallels.xml",
+            "prompt": "Contemporary classical piece for a large chamber ensemble (12 instruments). In E major, at a moderate 84 BPM in 4/4. Instrumentation: Flute, Oboe, Clarinet, Bassoon, Horn, Trumpet, Piano, and a String Quintet. The piano plays a repeating motif of flowing eighth notes. The woodwinds enter with long sustained lines that create shifting harmonic clusters. It should build to a dense climax then slowly thin out back to solo piano.",
+            "extracted_instruments": [
+                "Violin I",
+                "Piano RH",
+                "Flute",
+                "Horn"
+            ],
+            "llm_reasoning": "The generated instruments (Violin I, Piano RH, Flute, Horn) are far below the requested 12 instruments. The prompt specified a String Quintet (missing 4 instruments: Violin II, Viola, Cello, Bass), full woodwind section (missing Oboe, Clarinet, Bassoon), and Trumpet (missing). Piano RH may split the piano part but does not fulfill the required 12 instruments.",
+            "llm_score": 3
+        },
+        {
+            "id": "74",
+            "filepath": "/gpfs/scratch/acw769/text2score/composer_x/74/xml/Lurking_in_the_Shadows.xml",
+            "prompt": "A dark, atmospheric film score cue in B minor. Slow and spacious 4/4 at 58 BPM. Use a large string section and a bass clarinet. The bass clarinet plays a low, brooding theme. The strings provide a tense, high-pitched pad of tremolo notes (not percussion). It should feel like something is lurking in the shadows.",
+            "extracted_instruments": [
+                "Bass Clarinet"
+            ],
+            "llm_reasoning": "The generated score includes only the Bass Clarinet, but the prompt explicitly requested a 'large string section' to accompany it. The absence of the string section is a major omission, violating the ensemble structure specified in the prompt.",
+            "llm_score": 3
+        },
+        {
+            "id": "75",
+            "filepath": "/gpfs/scratch/acw769/text2score/composer_x/75/xml/Music_Box_Waltz.xml",
+            "prompt": "Very light. Warm, but not too sweet. This is for a solo harp piece in Bb major. A gentle 3/4 waltz at 90 BPM. Focus on rolling arpeggios and a high-register melody that sounds like a music box. Keep it intimate.",
+            "extracted_instruments": [
+                "Harp Upper (Music\u2011Box Melody)"
+            ],
+            "llm_reasoning": "The prompt requested a solo harp piece. The generated instrument is 'Harp Upper (Music-Box Melody)', which semantically aligns with a harp but includes an unrequested 'Music-Box Melody' descriptor. Since this is a single instrument with a part name (not a separate instrument), it adheres to the solo constraint. However, the music box element is an unrequested addition, but it does not constitute a separate instrument. The core ensemble (solo harp) is preserved.",
+            "llm_score": 9
+        },
+        {
+            "id": "76",
+            "filepath": "/gpfs/scratch/acw769/text2score/composer_x/76/xml/Triumphant_March_in_G.xml",
+            "prompt": "Grand SATB choir and brass ensemble anthem. It\u2019s a bold march in 4/4 at 100 BPM, in a bright G-major world. The brass (2 trumpets, 2 horns, 2 trombones) plays a powerful intro. The choir enters in homophonic blocks with loud, resonant voices. No lyrics, just vowels. It should feel triumphant and uplifting.",
+            "extracted_instruments": [
+                "Trumpet 1",
+                "Soprano",
+                "Tenor",
+                "Trombone 2",
+                "Horn 1 in F",
+                "Alto",
+                "Trombone 1",
+                "Bass",
+                "Horn 2 in F",
+                "Trumpet 2"
+            ],
+            "llm_reasoning": "The generated instruments perfectly match the requested SATB choir (Soprano, Alto, Tenor, Bass) and brass ensemble (2 Trumpets, 2 Horns, 2 Trombones). All required instruments are present with no hallucinations or omissions.",
+            "llm_score": 10
+        },
+        {
+            "id": "78",
+            "filepath": "/gpfs/scratch/acw769/text2score/composer_x/78/xml/Lively_Rondo_in_A.xml",
+            "prompt": "A lively chamber orchestra piece in A major. Set the tempo at 132 BPM in 2/4 time. The ensemble includes flute, oboe, and strings. Focus on crisp articulations and short staccato quarters. The structure is a fast rondo. It needs to be very clear and balanced for an orchestra librarian to archive easily.",
+            "extracted_instruments": [
+                "Flute"
+            ],
+            "llm_reasoning": "The prompt requests a chamber orchestra with flute, oboe, and strings, but the generated score only includes a flute. The oboe and string section (violins, viola, cello, etc.) are entirely missing, which violates the ensemble constraints. The absence of the full chamber orchestra structure is a major violation.",
+            "llm_score": 3
+        },
+        {
+            "id": "79",
+            "filepath": "/gpfs/scratch/acw769/text2score/composer_x/79/xml/Reflective_Elevation_in_E_Major.xml",
+            "prompt": "I'm looking for a solo organ work in E major. A very slow 4/4 at 44 BPM. Use long, slow sustained lines that build in registration. It should settle back into E major after a brief excursion into C# minor. This is for a reflective moment in a church service.",
+            "extracted_instruments": [
+                "dummy"
+            ],
+            "llm_reasoning": "The prompt explicitly requested a solo organ work, but the generated instrument list contains 'dummy', which is not a valid or relevant instrument. This completely fails to adhere to the solo organ constraint.",
+            "llm_score": 1
+        },
+        {
+            "id": "82",
+            "filepath": "/gpfs/scratch/acw769/text2score/composer_x/82/xml/Precision_Drill_(Final).xml",
+            "prompt": "Short woodwind octet in Eb major. A brisk and lively 112 BPM march in 2/4. 2 flutes, 2 oboes, 2 clarinets, 2 bassoons. It should have a playful, military character with very clear staccato rhythms. It's an exercise in ensemble precision.",
+            "extracted_instruments": [
+                "Clarinet 1 in Bb (concert pitch here)",
+                "Flute 1",
+                "Oboe 1",
+                "Bassoon 1"
+            ],
+            "llm_reasoning": "The prompt requested a woodwind octet with 2 flutes, 2 oboes, 2 clarinets, and 2 bassoons. The generated instruments only include one of each (Flute 1, Oboe 1, Clarinet 1, Bassoon 1), missing the required second instruments in each section. This results in a quartet instead of the requested octet, violating the ensemble structure.",
+            "llm_score": 4
+        },
+        {
+            "id": "84",
+            "filepath": "/gpfs/scratch/acw769/text2score/composer_x/84/xml/Bright_Currents_(final_revised).xml",
+            "prompt": "Contemporary chamber work in D major for flute, violin, and cello. Around 92 BPM in 3/4. The flute and violin play fast, flowing eighth-note counterpoints over a steady cello bass line. It should have a modern, bright feel with interesting harmonic shifts but remain tonal. Simple A-B-A form.",
+            "extracted_instruments": [
+                "Flute"
+            ],
+            "llm_reasoning": "The prompt requests a trio for flute, violin, and cello, but the generated score only includes a flute. The violin and cello are missing, which are essential to the requested ensemble structure.",
+            "llm_score": 3
+        },
+        {
+            "id": "86",
+            "filepath": "/gpfs/scratch/acw769/text2score/composer_x/86/xml/Noble_E_Major_Adagio_(Symphonic_Excerpt,_Rev._3).xml",
+            "prompt": "A large-scale romantic symphony excerpt in E major. Slow and spacious 4/4 at 52 BPM. For full orchestra: woodwinds, brass, and a large string section. The horns lead with a noble, sustained theme. The strings provide a rich, tremolo background. It should build to a lush, emotional climax with the full ensemble.",
+            "extracted_instruments": [
+                "Flute",
+                "Violins I"
+            ],
+            "llm_reasoning": "The prompt requested a full orchestra with woodwinds, brass, and a large string section. The generated instruments only include Flute (woodwind) and Violins I, missing all brass instruments and the full string ensemble (Violas, Cellos, Basses). This is a significant omission of core orchestral sections.",
+            "llm_score": 2
+        },
+        {
+            "id": "87",
+            "filepath": "/gpfs/scratch/acw769/text2score/composer_x/87/xml/Rustic_A\u2011Major_Jig_for_Solo_Mandolin.xml",
+            "prompt": "Bright solo mandolin piece in A major. A quick 6/8 jig at 128 BPM. It should be a constant stream of flowing eighth notes. The structure is simple: Intro-Theme-Variation-Theme. It needs to sound rustic and energetic.",
+            "extracted_instruments": [
+                "Mandolin Melody"
+            ],
+            "llm_reasoning": "The generated instrument 'Mandolin Melody' perfectly matches the 'solo mandolin' requirement in the prompt. No additional instruments were included, adhering strictly to the solo constraint.",
+            "llm_score": 10
+        },
+        {
+            "id": "88",
+            "filepath": "/gpfs/scratch/acw769/text2score/composer_x/88/xml/Laid-Back_Eb_Trio_\u2013_Final.xml",
+            "prompt": "A jazz-lite trio in Eb major for a medium-length scene. Around 80 BPM in 4/4. Instrumentation: Clarinet, Piano, Double Bass. The clarinet plays a smooth, breathy melody. The piano provides gentle block chords. The bass plays a walking line of steady quarters. It\u2019s meant to be very laid back and cool.",
+            "extracted_instruments": [
+                "Double Bass",
+                "Piano",
+                "Clarinet"
+            ],
+            "llm_reasoning": "The generated instruments (Double Bass, Piano, Clarinet) perfectly match the requested trio instrumentation. All three required instruments are present with no additions or omissions.",
+            "llm_score": 10
+        },
+        {
+            "id": "89",
+            "filepath": "/gpfs/scratch/acw769/text2score/composer_x/89/xml/Graduation_March.xml",
+            "prompt": "Large wind ensemble march for a graduation. 116 BPM in 4/4 in C major. Flutes, oboes, clarinets, saxophones (jazz-lite), horns, trumpets, trombones, tuba. A bold, homophonic opening followed by a lyrical trio section in F major. It should be professional and easy for a large group to stay in time.",
+            "extracted_instruments": [
+                "dummy"
+            ],
+            "llm_reasoning": "The generated instruments list contains only 'dummy', which does not match any of the requested wind ensemble instruments (flutes, oboes, clarinets, saxophones, horns, trumpets, trombones, tuba). There is a complete absence of the specified wind instruments, resulting in a total mismatch.",
+            "llm_score": 1
+        },
+        {
+            "id": "91",
+            "filepath": "/gpfs/scratch/acw769/text2score/composer_x/91/xml/Tense_Chamber_Waltz.xml",
+            "prompt": "Film student here! I need a tense chamber piece in G minor. A fast 3/4 waltz at 140 BPM. Violin, viola, cello. The violin plays a repetitive, high-pitched motif. The cello plays dark, low staccato notes. It should build in volume and complexity, then suddenly stop.",
+            "extracted_instruments": [
+                "Violin"
+            ],
+            "llm_reasoning": "The prompt requested a chamber piece with Violin, Viola, and Cello, but only the Violin was generated. The Viola and Cello are missing, which are essential to the requested ensemble.",
+            "llm_score": 3
+        },
+        {
+            "id": "92",
+            "filepath": "/gpfs/scratch/acw769/text2score/composer_x/92/xml/Spring_Light_(Revised_&_Harmonized,_Instrumented).xml",
+            "prompt": "A wordless SSA choir piece for a spring concert. A bright G-major world at 92 BPM in 3/4. The voices should weave together in flowing eighth-note patterns. It needs to be very light and airy, with no heavy bass voices. The mood is joyful and blossoming.",
+            "extracted_instruments": [
+                "Soprano 1 (Choir Aahs)"
+            ],
+            "llm_reasoning": "The prompt requested an SSA choir (Soprano, Soprano, Alto), but the generated score only includes one soprano part labeled 'Soprano 1 (Choir Aahs)' and omits the second soprano and alto entirely. This is a major omission of two required vocal parts.",
+            "llm_score": 4
+        },
+        {
+            "id": "98",
+            "filepath": "/gpfs/scratch/acw769/text2score/composer_x/98/xml/Soft_Nocturne_in_A_Minor.xml",
+            "prompt": "Jazz-lite solo acoustic guitar in A minor. A relaxed 84 BPM in 4/4. Use standard-like chord progressions with the thumb playing a steady bass. The fingers pluck a melody with occasional gentle arpeggios. (Something like a soft nocturne).",
+            "extracted_instruments": [
+                "Guitar Bass",
+                "Guitar Upper"
+            ],
+            "llm_reasoning": "The prompt requested a 'solo acoustic guitar,' but the generated score includes two distinct guitar instruments (Bass and Upper). This violates the 'Solo' constraint, as the ensemble now contains two parts instead of a single instrument. The split into 'Guitar Bass' and 'Guitar Upper' may represent a notational separation of roles but still counts as multiple instruments, which is a major violation.",
+            "llm_score": 3
+        },
+        {
+            "id": "101",
+            "filepath": "/gpfs/scratch/acw769/text2score/composer_x/101/xml/Gentle_C_Major_Piano_Prelude.xml",
+            "prompt": "Write a gentle piano prelude around 72 BPM in 4/4, clearly centered in C major. Keep the left hand as broken-chord support while the right hand sings a simple two-phrase melody. Form: intro + theme + short reprise.",
+            "extracted_instruments": [
+                "Right Hand",
+                "Left Hand"
+            ],
+            "llm_reasoning": "The prompt requested a solo piano prelude, but the generated instruments are named 'Right Hand' and 'Left Hand', which are not valid instruments. This is a complete mismatch as the system failed to recognize that piano is a single instrument and incorrectly split it into two non-standard parts.",
+            "llm_score": 1
+        },
+        {
+            "id": "102",
+            "filepath": "/gpfs/scratch/acw769/text2score/composer_x/102/xml/Muted_Echoes_(rev._\u2013_orchestrated).xml",
+            "prompt": "I need a small film-score cue at around 96 BPM in 6/8, living in D minor. Start with muted strings in soft rolling figures, then let an oboe carry a plaintive theme with a quiet horn countermelody. Add harp to outline harmony and double bass to anchor the downbeats. Structure: A\u2013B\u2013A, with B opening up briefly before returning to restraint.",
+            "extracted_instruments": [
+                "Double Bass",
+                "Muted Strings (Upper)",
+                "Oboe",
+                "Harp",
+                "Muted Strings (Lower)",
+                "Horn in F"
+            ],
+            "llm_reasoning": "The generated instruments perfectly match the requested ensemble: muted strings (split into upper and lower parts), oboe, horn, harp, and double bass are all present with no extraneous additions. The division of strings into upper and lower parts is semantically appropriate for a small film score ensemble.",
+            "llm_score": 10
+        },
+        {
+            "id": "104",
+            "filepath": "/gpfs/scratch/acw769/text2score/composer_x/104/xml/Classroom_String_Trio_Etude_in_G.xml",
+            "prompt": "Compose a classroom-friendly string trio etude at around 104 BPM in 2/4, firmly in G major. Keep the violin on a clear melody with short slurred pairs, viola providing inner motion, and cello outlining a steady bass. Use a straightforward A\u2013B\u2013A so students can track the form.",
+            "extracted_instruments": [
+                "Viola",
+                "Cello",
+                "Violin"
+            ],
+            "llm_reasoning": "The generated instruments (Violin, Viola, Cello) perfectly match the requested 'string trio' ensemble structure with no omissions or additions. Each instrument aligns with the specified roles (melody, inner motion, bass) and there are no extraneous instruments.",
+            "llm_score": 10
+        },
+        {
+            "id": "106",
+            "filepath": "/gpfs/scratch/acw769/text2score/composer_x/106/xml/Spring_Step.xml",
+            "prompt": "Please write a light folk-style dance tune around 112 BPM in 6/8, rooted in D major. Let the mandolin carry the melody, acoustic guitar provide steady strums, and fiddle add a simple echo line in the second half. Structure: AABB with a short two-bar pickup.",
+            "extracted_instruments": [
+                "Guitar",
+                "Mandolin",
+                "Fiddle"
+            ],
+            "llm_reasoning": "The generated instruments (Guitar, Mandolin, Fiddle) perfectly match the requested trio setup for a folk-style tune with specified roles for mandolin (melody), acoustic guitar (strums), and fiddle (echo line). No hallucinated instruments are present, and all required instruments are included.",
+            "llm_score": 10
+        },
+        {
+            "id": "108",
+            "filepath": "/gpfs/scratch/acw769/text2score/composer_x/108/xml/Brass_and_Woodwind_Chorale_in_Bb.xml",
+            "prompt": "Write a compact brass-and-woodwind chorale at around 66 BPM in 4/4, in Bb major. Keep the melody mostly in the first trumpet and first horn, with clarinets filling inner voices and tuba holding long bass notes. Form: four phrases that build to a strong final cadence.",
+            "extracted_instruments": [
+                "Clarinet 1 in Bb",
+                "Trumpet 1",
+                "Tuba"
+            ],
+            "llm_reasoning": "The generated instruments include Clarinet 1 (woodwind), Trumpet 1 (brass), and Tuba (brass), aligning with the brass-and-woodwind chorale request. However, the prompt explicitly mentions 'first horn' in the melody, which is missing. The absence of the horn is a notable omission, though no extra instruments are present.",
+            "llm_score": 7
+        },
+        {
+            "id": "109",
+            "filepath": "/gpfs/scratch/acw769/text2score/composer_x/109/xml/Nocturne_in_E_minor.xml",
+            "prompt": "Compose a romantic-style nocturne around 54 BPM in 4/4, clearly in E minor. The piano should feature a cantabile right-hand line over soft left-hand arpeggios, with one brief climactic swell then a quiet release. Form: A\u2013B\u2013A with a short coda.",
+            "extracted_instruments": [
+                "Piano Right Hand"
+            ],
+            "llm_reasoning": "The prompt requested a solo piano piece with both right and left hand parts. The generated list only includes 'Piano Right Hand', omitting the left-hand arpeggios which are explicitly mentioned in the prompt. This is a significant omission for a solo piano piece.",
+            "llm_score": 5
+        },
+        {
+            "id": "110",
+            "filepath": "/gpfs/scratch/acw769/text2score/composer_x/110/xml/Loopable_Town_Theme_(Revised,_Instrumented).xml",
+            "prompt": "Need a loopable game town theme around 100 BPM in 4/4, in C major. Use flute for the main melody, clarinet for a gentle counterline, and pizzicato strings for light pulse; add harp to sparkle at phrase ends. Keep the harmony simple and repeat-friendly: 8-bar A, 8-bar B, then back to A with a small tag for looping.",
+            "extracted_instruments": [
+                "Flute"
+            ],
+            "llm_reasoning": "The generated score includes only the Flute, but the prompt explicitly requested a counterline (Clarinet), pizzicato strings, and harp. All three additional instruments are missing, violating the ensemble structure and harmonic requirements.",
+            "llm_score": 2
+        },
+        {
+            "id": "113",
+            "filepath": "/gpfs/scratch/acw769/text2score/composer_x/113/xml/Divertimento_in_D_major.xml",
+            "prompt": "Compose a clear classical-era divertimento movement around 120 BPM in 2/4, in D major. Use a small wind ensemble with paired flutes, oboes, and clarinets, plus bassoons and horns, and a double bass for grounding. Keep the texture transparent: melody in flutes/oboes, clarinets as inner support, bassoons and bass outlining cadences. Form: sonatina-like A\u2013B\u2013A with a short development hint in the middle.",
+            "extracted_instruments": [
+                "Clarinet 1",
+                "Bassoon 1",
+                "Oboe 1",
+                "Flute 1",
+                "Horns in D"
+            ],
+            "llm_reasoning": "The generated instruments include all the specified wind instruments (flute, oboe, clarinet, bassoon, horns) but are missing the double bass explicitly requested for grounding. Additionally, the prompt asked for 'paired' flutes, oboes, and clarinets, but only single instances of each are present in the output.",
+            "llm_score": 6
+        },
+        {
+            "id": "114",
+            "filepath": "/gpfs/scratch/acw769/text2score/composer_x/114/xml/Pastoral_Siciliana_in_G.xml",
+            "prompt": "Please write a pastoral baroque-style siciliana around 72 BPM in 12/8, in G major. Let the recorder-like flute line be graceful and ornament-ready, supported by a harpsichord continuo and a cello bass. Use a simple two-theme layout: Theme 1, Theme 2, then Theme 1 returns with small variations.",
+            "extracted_instruments": [
+                "Harpsichord",
+                "Flute"
+            ],
+            "llm_reasoning": "The generated instruments include Flute and Harpsichord, but the requested Cello bass is missing, which is a key component of the baroque continuo. The absence of the cello results in a partial match with a significant omission.",
+            "llm_score": 6
+        },
+        {
+            "id": "119",
+            "filepath": "/gpfs/scratch/acw769/text2score/composer_x/119/xml/Tender_Return.xml",
+            "prompt": "Write a tender new-age piano-and-strings piece around 78 BPM in 6/8, in A major. Let the piano outline gentle arpeggios, with violins carrying a simple stepwise melody and violas/cellos sustaining a warm pad. Form: A\u2013B\u2013A with B lifting into a slightly higher register before returning home.",
+            "extracted_instruments": [
+                "Violin",
+                "Piano LH"
+            ],
+            "llm_reasoning": "The generated instruments include Violin and Piano LH. The prompt requested piano and strings (specifically violins, violas, and cellos). The Piano LH is a partial match for the piano, but the ensemble is missing the requested violas and cellos, which are essential for the 'warm pad' in the strings. The violin is present but incomplete as a solo string instrument.",
+            "llm_score": 6
+        },
+        {
+            "id": "120",
+            "filepath": "/gpfs/scratch/acw769/text2score/composer_x/120/xml/Organ_Trio_in_C_Minor.xml",
+            "prompt": "Please create an organ trio piece around 90 BPM in 4/4, in C minor. The organ right hand should present the main theme, the left hand keeps inner chords, and a separate cello line acts as a singing bass rather than just roots. Form: A (theme) \u2192 B (more chromatic color) \u2192 A (return with thicker voicing).",
+            "extracted_instruments": [
+                "Org RH",
+                "Org LH",
+                "Cello"
+            ],
+            "llm_reasoning": "The generated instruments 'Org RH', 'Org LH', and 'Cello' accurately reflect the requested 'organ trio' with distinct right and left hand organ parts and a cello line, as specified in the prompt. No additional or missing instruments are present.",
+            "llm_score": 10
+        },
+        {
+            "id": "126",
+            "filepath": "/gpfs/scratch/acw769/text2score/composer_x/126/xml/Warm_Clarinet_Choir_(Rev.2_\u2013_Final).xml",
+            "prompt": "Create a warm clarinet choir piece around 74 BPM in 3/4, in Eb major. Use Eb clarinet sparingly for sparkle, with multiple Bb clarinets in close voicing, bass clarinet for depth, and a contrabass clarinet-like role replaced by contrabassoon if needed; keep everything pitched and blend-focused. Form: A\u2013B\u2013A with a gentle swell in B.",
+            "extracted_instruments": [
+                "Bb Cl 3",
+                "Bb Cl 2",
+                "Contrabassoon",
+                "Eb Clarinet",
+                "Bb Cl 1",
+                "Bass Clarinet"
+            ],
+            "llm_reasoning": "The generated instruments include all specified clarinet types (Eb, Bb x3, Bass), and the contrabassoon correctly replaces the contrabass clarinet as allowed. No extraneous instruments are present, and the ensemble structure adheres precisely to the prompt's voicing requirements.",
+            "llm_score": 10
+        },
+        {
+            "id": "127",
+            "filepath": "/gpfs/scratch/acw769/text2score/composer_x/127/xml/Still_Turning_Light_(Final_Harmonized_Ensemble,_Instrumented).xml",
+            "prompt": "Write a reflective new age ensemble piece around 66 BPM in 6/8, in E major. The harp should provide steady rolling arpeggios, piano adds simple chord tones in the middle register, and two flutes trade a calm melody and countermelody. Add a soft string pad beneath that moves only on phrase changes. Form: A (8 bars) \u2192 B (8 bars, slightly higher) \u2192 A (8 bars) with a clear loop point.",
+            "extracted_instruments": [
+                "Strings",
+                "Harp",
+                "Flute 1"
+            ],
+            "llm_reasoning": "The generated instruments include Harp, Strings, and Flute 1, but are missing the requested Piano and a second Flute. The Strings cover the soft pad requirement, but the absence of the piano (critical for chord tones) and one flute (needed for trading melodies) constitutes significant omissions.",
+            "llm_score": 5
+        },
+        {
+            "id": "128",
+            "filepath": "/gpfs/scratch/acw769/text2score/composer_x/128/xml/Chamber_March_in_G.xml",
+            "prompt": "Compose a chamber march around 116 BPM in 4/4, in G major. Use brass trio with horn, trumpet, and trombone, plus piano for harmonic support and double bass for grounding. Keep the melody crisp and singable, with a contrasting trio section that softens before the return. Structure: A\u2013A\u2013B(trio)\u2013A.",
+            "extracted_instruments": [
+                "Trumpet in Bb",
+                "Piano RH",
+                "Piano LH"
+            ],
+            "llm_reasoning": "The generated instruments include only the Trumpet (from the brass trio) and split Piano parts, but are missing the Horn, Trombone, and Double Bass as explicitly requested in the prompt. The absence of the full brass trio and bass creates a major structural deficiency.",
+            "llm_score": 5
+        },
+        {
+            "id": "129",
+            "filepath": "/gpfs/scratch/acw769/text2score/composer_x/129/xml/Cozy_Winter_Lullaby_(Revised,_Harmonized,_Instrumented).xml",
+            "prompt": "Please make a cozy winter film cue around 92 BPM in 12/8, in D major. Let celesta and harp outline the harmony with gentle broken patterns, while clarinet carries a simple lullaby-like theme. Add muted strings for sustained warmth and a solo horn that answers at the end of each phrase. Form: intro, A (theme), B (slightly brighter), then A returns with a soft coda.",
+            "extracted_instruments": [
+                "Clarinet in Bb"
+            ],
+            "llm_reasoning": "The generated instrument list includes only a Clarinet in Bb, missing all other requested instruments (celesta, harp, muted strings, and solo horn). The prompt explicitly requires a multi-instrument ensemble with specific roles, but only one instrument was generated, violating the ensemble structure and omitting critical elements.",
+            "llm_score": 2
+        },
+        {
+            "id": "131",
+            "filepath": "/gpfs/scratch/acw769/text2score/composer_x/131/xml/Lush_Romantic_String_Adagio_in_Ab_(final_rev._with_instrumentation).xml",
+            "prompt": "Compose a lush romantic string orchestra adagio around 56 BPM in 4/4, in Ab major. First violins sing the main theme, second violins and violas weave inner suspensions, cellos provide a broad counter-melody in the middle section, and basses sustain the harmonic pillars. Add harp for occasional rolled chords at transitions, and keep the dynamics shaped in long arcs. Structure: A (theme) \u2192 B (expanded harmony) \u2192 climax \u2192 A (return, softer) \u2192 coda.",
+            "extracted_instruments": [
+                "Harp",
+                "Contrabass",
+                "Cello",
+                "Violin II",
+                "Viola",
+                "Violin I"
+            ],
+            "llm_reasoning": "The generated instruments include all required components of a string orchestra (Violin I, Violin II, Viola, Cello, Contrabass) plus the specified Harp. No extraneous instruments are present, and each section is properly separated as requested.",
+            "llm_score": 10
+        },
+        {
+            "id": "132",
+            "filepath": "/gpfs/scratch/acw769/text2score/composer_x/132/xml/Energetic_D_Minor_Jig_(Final,_Instrumented,_Clean).xml",
+            "prompt": "Write an energetic jig-like tune around 132 BPM in 6/8, in D minor. Use violin as the main melody, with flute doubling at the octave in places, and classical guitar providing steady harmonic support. Add cello to reinforce the bass line, mostly in long notes. Structure: AABB with a short ending tag.",
+            "extracted_instruments": [
+                "Guitar",
+                "Violin"
+            ],
+            "llm_reasoning": "The generated instruments include the required violin and classical guitar, but the flute and cello mentioned in the prompt are missing. These omissions significantly affect the ensemble structure as described in the text.",
+            "llm_score": 5
+        },
+        {
+            "id": "133",
+            "filepath": "/gpfs/scratch/acw769/text2score/composer_x/133/xml/Bright_New-Age_Chamber_Piece_(Final,_Instrumented,_Clean).xml",
+            "prompt": "Could you craft a bright new-age chamber piece around 80 BPM in 4/4, in A major? Just a little optimistic\u2014nothing flashy. Piano should play flowing eighth-note arpeggios while two violins trade a simple melody and echo line; viola and cello hold slow pads underneath. Form: A\u2013B\u2013A with the B section widening the register and then easing back.",
+            "extracted_instruments": [
+                "Piano LH",
+                "Violin I"
+            ],
+            "llm_reasoning": "The prompt requested a chamber ensemble with Piano, two Violins, Viola, and Cello. The generated instruments only include 'Piano LH' and 'Violin I', missing the second violin, viola, and cello entirely. The left-hand piano split is a minor variation, but the absence of three core instruments is a major violation.",
+            "llm_score": 4
+        },
+        {
+            "id": "134",
+            "filepath": "/gpfs/scratch/acw769/text2score/composer_x/134/xml/Eb_Orchestral_Excerpt_\u2013_Final_(Instrumented,_Clean).xml",
+            "prompt": "Write a clear, librarian-friendly orchestral excerpt around 110 BPM in 2/4, in Eb major, with careful balance and readable voicing. Keep woodwinds in paired lines (flutes, oboes, clarinets) with bassoons supporting the lower midrange, horns providing harmonic glue, and strings supplying the main motor with repeated figures. Avoid extreme ranges; let the melody pass from oboe to first violins, then to clarinet. Structure: 8-bar intro, 16-bar main theme, 8-bar contrasting idea, then a clean cadence back in Eb.",
+            "extracted_instruments": [
+                "Horn in F 1",
+                "Bassoon 1",
+                "Violin I",
+                "Oboe 1",
+                "Flute 1",
+                "Clarinet in Bb 1"
+            ],
+            "llm_reasoning": "The generated instruments include one each of flute, oboe, clarinet, and bassoon, but the prompt requested paired woodwinds (e.g., two flutes, two oboes, etc.). Additionally, the string section is incomplete\u2014only Violin I is present, while a full string section (e.g., Violin I, II, Viola, Cello, Bass) is implied by the orchestral excerpt request. The horn is correctly included but insufficiently paired.",
+            "llm_score": 5
+        },
+        {
+            "id": "137",
+            "filepath": "/gpfs/scratch/acw769/text2score/composer_x/137/xml/Cinematic_Action-Orchestral_Passage_(Revision_\u2013_Instrumented,_Clean_ABC).xml",
+            "prompt": "Create a cinematic action-adjacent orchestral passage around 138 BPM in 4/4, in E minor, but keep everything fully acoustic and pitched. Strings should drive with fast repeated figures, low brass (trombones and tuba) reinforce harmonic punches, and woodwinds add quick runs that answer the strings. Use horns for broad heroic lines in the B section, and let trumpets emphasize cadences without overpowering. Structure: A (drive) \u2192 B (heroic lift) \u2192 A (return, tighter) ending with a decisive cadence.",
+            "extracted_instruments": [
+                "Tpt",
+                "Hn",
+                "Ww (Flute)",
+                "Vla",
+                "Vlc",
+                "Cb",
+                "Vln I",
+                "LowBr",
+                "Vln II"
+            ],
+            "llm_reasoning": "The generated instruments include strings (Vln I, Vln II, Vla, Vlc, Cb), low brass (LowBr), horns (Hn), trumpets (Tpt), and woodwinds (Flute). The prompt requested specific low brass (trombones and tuba) but only 'LowBr' is present, which is a minor semantic mismatch. Woodwinds are represented by flute alone, which aligns with the prompt's focus on quick runs. All core sections (strings, low brass, horns, trumpets) are present, though LowBr lacks specificity.",
+            "llm_score": 8
+        },
+        {
+            "id": "138",
+            "filepath": "/gpfs/scratch/acw769/text2score/composer_x/138/xml/Beginner_Waltz_in_D.xml",
+            "prompt": "Please write a simple beginner-friendly piano waltz around 96 BPM in 3/4, in D major. Keep the left hand as an easy oom-pah pattern and the right hand as a singable melody that stays mostly in one position. Form: A\u2013B\u2013A with a short ending.",
+            "extracted_instruments": [
+                "Right Hand",
+                "Left Hand"
+            ],
+            "llm_reasoning": "The generated instruments 'Right Hand' and 'Left Hand' correctly represent the solo piano as a single instrument split into two parts, which is acceptable for a piano piece. However, the split into separate parts deviates slightly from the standard representation of a piano as a single instrument in ensemble contexts, but no additional or missing instruments are present.",
+            "llm_score": 9
+        },
+        {
+            "id": "142",
+            "filepath": "/gpfs/scratch/acw769/text2score/composer_x/142/xml/Still_Air_Over_Water_(Revised,_Harmonized,_Instrumented).xml",
+            "prompt": "I want a slow, spacious new-age piece around 58 BPM in 4/4, in E major. Let the piano play open-voiced chords with plenty of resonance, while the harp traces gentle arpeggios that never get too busy. A solo oboe can carry a simple melody with long notes, answered quietly by a solo cello. Form: A\u2013B\u2013A, where B rises slightly in register and then settles back.",
+            "extracted_instruments": [
+                "dummy"
+            ],
+            "llm_reasoning": "The generated instruments list is empty ('dummy'), which means none of the requested instruments (piano, harp, oboe, cello) are present. This is a complete mismatch with the prompt's requirements.",
+            "llm_score": 1
+        },
+        {
+            "id": "143",
+            "filepath": "/gpfs/scratch/acw769/text2score/composer_x/143/xml/Bright_Chamber_Fanfare_in_D.xml",
+            "prompt": "Write a bright chamber fanfare around 124 BPM in 4/4, in D major. Use two trumpets and two horns for the main chords, with a bassoon and cello reinforcing the bass. Keep the lines clear and avoid dense divisi; aim for a neat, ceremonial opening and a clean final cadence. Structure: short intro, main idea, then a brief closing repeat.",
+            "extracted_instruments": [
+                "Trumpet 1",
+                "Bassoon",
+                "Horn 1 in F (concert)"
+            ],
+            "llm_reasoning": "The prompt requested two trumpets, two horns, a bassoon, and a cello. The generated instruments include only one trumpet, one horn, and a bassoon, omitting the cello entirely. The missing cello and one each of trumpet/horn are major omissions.",
+            "llm_score": 6
+        },
+        {
+            "id": "144",
+            "filepath": "/gpfs/scratch/acw769/text2score/composer_x/144/xml/Warm_Orchestral_Adagio_in_F.xml",
+            "prompt": "Could you write a warm, flowing orchestral adagio around 60 BPM in 3/4, in F major? Let the strings carry the main melody in long arcs, while woodwinds add soft countermelodies that appear between phrases. Use horns sparingly to widen the harmony, and add harp for gentle rolled chords at transitions. Form: A\u2013B\u2013A with B building to a single, heartfelt peak before easing back. Keep everything playable and not overly dense on the page.",
+            "extracted_instruments": [
+                "Winds+Harp",
+                "Cello",
+                "Violin II",
+                "Viola",
+                "Violin I"
+            ],
+            "llm_reasoning": "The generated instruments include the standard string section (Violin I, Violin II, Viola, Cello) as requested, but are missing the specified woodwinds and horns. The 'Winds+Harp' grouping combines harp with winds, which violates the prompt's explicit request for a separate harp part for transitions and does not clarify which specific woodwinds are present. The absence of horns is also a significant omission.",
+            "llm_score": 7
+        },
+        {
+            "id": "145",
+            "filepath": "/gpfs/scratch/acw769/text2score/composer_x/145/xml/Choral_Benediction_in_Ab.xml",
+            "prompt": "Please create a simple choral benediction around 72 BPM in 4/4, in Ab major. SATB choir should be mostly block chords with a clear soprano line; add organ to sustain and support intonation. Form: two short phrases repeated, then a final extended cadence.",
+            "extracted_instruments": [
+                "Soprano",
+                "Organ LH",
+                "Organ RH",
+                "Alto",
+                "Bass",
+                "Tenor",
+                "Pedal"
+            ],
+            "llm_reasoning": "The SATB choir (Soprano, Alto, Tenor, Bass) is correctly included. However, the organ is split into three parts (Organ LH, Organ RH, Pedal), which is unnecessary and not explicitly requested in the prompt. The core ensemble is present, but the organ's division into separate parts introduces minor hallucination.",
+            "llm_score": 9
+        },
+        {
+            "id": "146",
+            "filepath": "/gpfs/scratch/acw769/text2score/composer_x/146/xml/Lyrical_Chamber_Piece_in_A_minor.xml",
+            "prompt": "Compose a lyrical chamber piece around 98 BPM in 6/8, in A minor. Let the oboe present the main theme, with the clarinet weaving a gentle countermelody, and a string trio underneath providing sustained harmony plus occasional moving inner notes. Add a harp for soft arpeggios that outline cadences. Form: A (theme) \u2192 B (more expansive) \u2192 A (return) with a brief closing tag.",
+            "extracted_instruments": [
+                "Violin",
+                "Oboe"
+            ],
+            "llm_reasoning": "The generated instruments are missing the clarinet, string trio (expected 3 instruments), and harp as requested in the prompt. Only the oboe and a single violin (instead of a full string trio) are present, which is a major violation of the specified ensemble structure.",
+            "llm_score": 2
+        },
+        {
+            "id": "147",
+            "filepath": "/gpfs/scratch/acw769/text2score/composer_x/147/xml/Weightless_Orbit_(Final).xml",
+            "prompt": "I\u2019m looking for a calm, loopable \u201cfloating in space\u201d cue around 64 BPM in 12/8, in C major\u2014can it feel weightless? A soft string ensemble should hold long chords while harp and celesta do slow, repeating arpeggios. Add bass clarinet for a low, warm line that moves only occasionally, and a flute that enters late with a simple two-note motif. Note-like: keep the harmony stable and the texture breathable. Form: intro, A (8 bars), B (8 bars, slightly brighter), return to A and end where it can loop.",
+            "extracted_instruments": [
+                "Strings"
+            ],
+            "llm_reasoning": "The generated instrument list includes only 'Strings', missing the explicitly requested harp, celesta, bass clarinet, and flute. These omissions prevent the realization of the specified harmonic texture (arpeggios), low warm line, and melodic motifs described in the prompt.",
+            "llm_score": 3
+        },
+        {
+            "id": "149",
+            "filepath": "/gpfs/scratch/acw769/text2score/composer_x/149/xml/Transparent_Canopy_(final,_instrumented,_cleaned).xml",
+            "prompt": "Compose a transparent woodwind octet piece around 108 BPM in 2/4, in G major. Use pairs of flutes, oboes, clarinets, and bassoons, with careful voice-leading so inner parts remain singable. The main melody should rotate between flute and clarinet; bassoons articulate the harmonic rhythm without sounding heavy. Form: A\u2013B\u2013A, ending with a crisp cadence.",
+            "extracted_instruments": [
+                "Bassoon 2",
+                "Bassoon 1",
+                "Clarinet 1 (concert)",
+                "Clarinet 2 (concert)",
+                "Flute 2",
+                "Oboe 2",
+                "Oboe 1",
+                "Flute 1"
+            ],
+            "llm_reasoning": "The generated instruments include two each of flutes, oboes, clarinets, and bassoons, forming a complete woodwind octet as requested. All instruments are semantically correct and no additional or missing instruments are present.",
+            "llm_score": 10
+        },
+        {
+            "id": "150",
+            "filepath": "/gpfs/scratch/acw769/text2score/composer_x/150/xml/Soft_Romantic_Aria_in_D_minor_(Unified,_Refined,_Instrumented).xml",
+            "prompt": "Write a soft romantic aria without words around 66 BPM in 4/4, in D minor. Solo cello should sing the melody, supported by piano chords that are mostly sustained with occasional gentle arpeggios. Add a violin countermelody only in the B section. Structure: A (cellos sings), B (a little brighter), A (return, simpler) with a final long D-minor cadence.",
+            "extracted_instruments": [
+                "Piano RH",
+                "Cello",
+                "Violin"
+            ],
+            "llm_reasoning": "The generated instruments include Cello, Piano (labeled as 'Piano RH'), and Violin. The cello and violin align with the prompt's request for a solo cello and a violin countermelody in the B section. The piano is present, though labeled as 'RH' (right hand), which may imply a split part but semantically matches the requested piano chords. No hallucinated instruments are present, and all required instruments are included.",
+            "llm_score": 10
+        },
+        {
+            "id": "151",
+            "filepath": "/gpfs/scratch/acw769/text2score/composer_x/151/xml/Tender_Glow.xml",
+            "prompt": "Could you make a tender choral-and-strings piece around 70 BPM in 3/4, in A major? Just a gentle glow\u2026 The SATB choir should be wordless and mostly homophonic, while strings sustain a warm cushion and harp adds soft rolls at cadences. Let the melody sit in the sopranos, doubled lightly by first violins, and keep the bass line slow and stepwise. Form: A\u2013B\u2013A with the return thinner and quieter than before.",
+            "extracted_instruments": [
+                "Soprano",
+                "Harp",
+                "Violin I"
+            ],
+            "llm_reasoning": "The generated instruments include only Soprano, Harp, and Violin I. The prompt explicitly requested a SATB choir (missing Alto, Tenor, Bass) and a full string section (missing Viola, Cello, Bass). The absence of the full choral and string ensemble constitutes significant omissions.",
+            "llm_score": 4
+        },
+        {
+            "id": "154",
+            "filepath": "/gpfs/scratch/acw769/text2score/composer_x/154/xml/Soft_Jazz-Lite_Piano_Trio_Ballad_(Rev_\u2013_Harmonized,_Instrumented).xml",
+            "prompt": "Compose a soft jazz-lite piano trio ballad around 72 BPM in 4/4, in F major. Piano should voice close, warm chords; the double bass plays simple supportive lines, and a clarinet takes the melody like a gentle standard. Structure: A\u2013A\u2013B\u2013A with the B section slightly more open in register.",
+            "extracted_instruments": [
+                "Clarinet"
+            ],
+            "llm_reasoning": "The prompt requested a piano trio (piano, double bass, and drums), but only the clarinet was generated. The piano and double bass, which are essential to the trio, are missing.",
+            "llm_score": 4
+        },
+        {
+            "id": "156",
+            "filepath": "/gpfs/scratch/acw769/text2score/composer_x/156/xml/Intermediate_Piano_Etude_in_E_minor.xml",
+            "prompt": "I need an intermediate piano etude around 120 BPM in 2/4, in E minor. Focus on even, flowing eighth notes in the right hand while the left hand outlines a clear bass line with occasional inner voice notes. Form: A\u2013B\u2013A, with B moving to a higher register and returning cleanly to E minor at the end.",
+            "extracted_instruments": [
+                "dummy"
+            ],
+            "llm_reasoning": "The text prompt explicitly requests a solo piano etude, but the generated instrument list contains an invalid/non-instrument term 'dummy'. There is a complete absence of the requested piano instrument, and the generated output fails to adhere to the solo constraint.",
+            "llm_score": 1
+        },
+        {
+            "id": "158",
+            "filepath": "/gpfs/scratch/acw769/text2score/composer_x/158/xml/Quiet_Lake_at_Dusk_(final).xml",
+            "prompt": "Could you write a serene, meditative piece around 62 BPM in 4/4, in C major, for a small mixed ensemble? The piano should hold open chords and occasional gentle arpeggios; harp provides soft color at cadence points. Two flutes can trade a simple melody and echo line, while viola and cello sustain slow inner harmonies beneath. Form: A (8 bars), B (8 bars with a slightly brighter lift), then A returns and ends on a long, quiet C-major chord.",
+            "extracted_instruments": [
+                "Piano",
+                "Flute 1"
+            ],
+            "llm_reasoning": "The generated instruments include only Piano and Flute 1, but the prompt explicitly requested a mixed ensemble with Piano, Harp, Two Flutes, Viola, and Cello. Key instruments like Harp, Viola, Cello, and the second Flute are entirely missing, violating the ensemble structure.",
+            "llm_score": 2
+        },
+        {
+            "id": "159",
+            "filepath": "/gpfs/scratch/acw769/text2score/composer_x/159/xml/Warm_Orchestral-Choral_Finale.xml",
+            "prompt": "Write a warm orchestral-choral finale around 76 BPM in 4/4, in D major. SATB choir is wordless and should enter after an orchestral introduction: first strings and woodwinds establish the theme, then choir supports with broad chordal writing. Keep brass supportive\u2014horns and trombones in long tones\u2014and let trumpets appear only at the biggest cadences. Add harp for clarity and gentle articulation at transitions. Form: intro, A (theme), B (expansion and build), then A returns with full forces and a long final cadence.",
+            "extracted_instruments": [
+                "Flute"
+            ],
+            "llm_reasoning": "The generated instrument list includes only 'Flute', while the prompt explicitly requires a SATB choir, strings, woodwinds (including flute), brass (horns/trombones/trumpets), and harp. The absence of all core requested instruments (choir, strings, brass, harp) and the inclusion of only a single woodwind instrument constitutes a complete mismatch.",
+            "llm_score": 1
+        },
+        {
+            "id": "160",
+            "filepath": "/gpfs/scratch/acw769/text2score/composer_x/160/xml/Gentle_Harp_Lullaby.xml",
+            "prompt": "Write a gentle lullaby around 72 BPM in 6/8, in G major, for solo harp. Keep the arpeggios consistent and let the melody appear in the upper strings in two simple phrases. Form: A\u2013A\u2013B\u2013A with a quiet ending.",
+            "extracted_instruments": [
+                "Harp Upper Voice"
+            ],
+            "llm_reasoning": "The generated instrument 'Harp Upper Voice' semantically aligns with the requested 'solo harp' constraint. No additional or missing instruments are present, and the solo requirement is strictly adhered to.",
+            "llm_score": 10
+        },
+        {
+            "id": "161",
+            "filepath": "/gpfs/scratch/acw769/text2score/composer_x/161/xml/Reflective_Film_Cue_in_E_Minor_(Final).xml",
+            "prompt": "Compose a reflective film-score cue around 80 BPM in 3/4, in E minor. Use solo piano for the harmonic bed, with a solo violin carrying the melody and an English horn answering in the middle register. Add soft strings sustaining long chords and a harp that lightly emphasizes cadence points. Structure: A (intimate), B (slightly wider and more hopeful), then A returns and fades to a quiet E-minor resolution.",
+            "extracted_instruments": [
+                "Piano"
+            ],
+            "llm_reasoning": "The generated score includes only a piano, but the prompt explicitly requested a solo violin, English horn, soft strings, and harp. All these instruments are missing, resulting in a complete mismatch with the user's detailed instrumentation requirements.",
+            "llm_score": 1
+        },
+        {
+            "id": "162",
+            "filepath": "/gpfs/scratch/acw769/text2score/composer_x/162/xml/Bright_Ceremonial_in_F.xml",
+            "prompt": "Make a bright, ceremonial chamber piece around 108 BPM in 2/4, in F major, for brass quintet plus organ. Trumpet 1 carries the main melody, horn and trombone provide inner support, trumpet 2 reinforces cadences, and tuba anchors long bass tones; organ sustains harmonic pads behind the brass. Structure: A (statement) \u2192 B (softer trio-like contrast) \u2192 A (return with stronger ending).",
+            "extracted_instruments": [
+                "Organ",
+                "Tuba",
+                "Horn in F",
+                "Trumpet 1",
+                "Trombone",
+                "Trumpet 2"
+            ],
+            "llm_reasoning": "The generated instruments include all required elements for a brass quintet (two trumpets, horn, trombone, tuba) plus the specified organ. No extra or missing instruments are present.",
+            "llm_score": 10
+        },
+        {
+            "id": "164",
+            "filepath": "/gpfs/scratch/acw769/text2score/composer_x/164/xml/Playful_Woodwind_Feature_(revised,_fully_harmonized,_instrumented).xml",
+            "prompt": "Compose a fast, playful woodwind feature around 132 BPM in 4/4, in C major. Use piccolo and flute for sparkling upper lines, clarinets for agile inner motion, and bassoon for a buoyant bass that stays light. Add horn for brief harmonic warmth at phrase ends. Form: A\u2013B\u2013A with a short coda.",
+            "extracted_instruments": [
+                "Horn in F",
+                "Clarinet in Bb",
+                "Bassoon",
+                "Flute",
+                "Piccolo"
+            ],
+            "llm_reasoning": "The generated instruments perfectly match the requested woodwind ensemble, including all specified instruments (Piccolo, Flute, Clarinet, Bassoon, Horn) without any extraneous additions or omissions.",
+            "llm_score": 10
+        },
+        {
+            "id": "165",
+            "filepath": "/gpfs/scratch/acw769/text2score/composer_x/165/xml/Orchestral_Elegy_in_G_Minor_(Final_Revision_\u2013_Full_Score).xml",
+            "prompt": "Write a large orchestral elegy around 52 BPM in 4/4, in G minor, with a slow build and a clear emotional arc. Start with low strings and bass clarinet holding long tones, then introduce a solo oboe melody that feels fragile. Gradually add violins in sustained harmonies, then horns in warm, quiet support; keep trumpets out until a single climactic cadence near the end. Harp should appear sparingly with rolled chords to mark transitions. Structure: intro (dark), A (theme), B (expansion and rise), climax, then a return of A in thinner scoring and a long final resolution in G minor.",
+            "extracted_instruments": [
+                "dummy"
+            ],
+            "llm_reasoning": "The generated instruments list is 'dummy', which does not correspond to any valid instruments from the prompt. All requested instruments (low strings, bass clarinet, oboe, violins, horns, trumpets, harp) are entirely missing.",
+            "llm_score": 1
+        },
+        {
+            "id": "169",
+            "filepath": "/gpfs/scratch/acw769/text2score/composer_x/169/xml/Wide_Horizon_Reveal_(Final_Cue).xml",
+            "prompt": "I\u2019m making a short cutscene cue\u2014around 90 BPM in 12/8, in Bb major\u2014and it needs to feel like the camera pulls back to reveal a big landscape. Gentle arpeggios in harp and piano, long chords in strings, and a simple horn melody that grows in confidence. Could the woodwinds (flute and oboe) add a soft countermelody in the second half? Keep the harmony stable and readable, with a clear return to Bb at the end. Form: intro, A (theme), B (wider), then A returns and lands on a long final chord\u2026",
+            "extracted_instruments": [
+                "Strings",
+                "Horn in F",
+                "Harp"
+            ],
+            "llm_reasoning": "The generated instruments include Strings, Horn in F, and Harp. The prompt explicitly requested harp, piano, strings, horns, and woodwinds (flute/oboe for countermelody). The piano and woodwinds (flute/oboe) are missing, which are critical to fulfilling the requested ensemble structure and melodic elements.",
+            "llm_score": 6
+        },
+        {
+            "id": "170",
+            "filepath": "/gpfs/scratch/acw769/text2score/composer_x/170/xml/Quiet_Morning_(Final_Version).xml",
+            "prompt": "Please write a small, calm piano piece around 72 BPM in 4/4, clearly in C major. Keep the melody simple and singable, with gentle arpeggios underneath. Form: intro + theme + short reprise.",
+            "extracted_instruments": [
+                "Piano RH"
+            ],
+            "llm_reasoning": "The prompt requested a solo piano piece, and the generated instrument is 'Piano RH' (Right Hand). While this technically adheres to the solo piano constraint, splitting the piano into RH/LH parts is a minor violation of standard instrument grouping (a solo piano is typically one instrument). There are no additional or missing instruments, but the split implies a partial structure not requested.",
+            "llm_score": 9
+        },
+        {
+            "id": "171",
+            "filepath": "/gpfs/scratch/acw769/text2score/composer_x/171/xml/Quiet_Night_Scene_(2nd_Revision_\u2013_Refined,_Instrumented).xml",
+            "prompt": "I\u2019m scoring a quiet nighttime scene: around 96 BPM in 6/8, centered in D minor. Start with strings in soft rolling figures, then let an oboe sing the main theme while horns hold warm sustained support. Add harp arpeggios to outline the harmony and double bass to anchor the pulse. Structure: A\u2013B\u2013A, with B opening into a slightly brighter color before returning to D minor.",
+            "extracted_instruments": [
+                "Violas",
+                "Violins I",
+                "Oboe",
+                "Horns in F",
+                "Harp",
+                "Double Bass",
+                "Cellos"
+            ],
+            "llm_reasoning": "The generated instruments perfectly align with the requested ensemble. Strings (Violas, Violins I, Cellos), oboe, horns, harp, and double bass are all explicitly mentioned in the prompt and are present without any hallucinated additions.",
+            "llm_score": 10
+        },
+        {
+            "id": "173",
+            "filepath": "/gpfs/scratch/acw769/text2score/composer_x/173/xml/G_Major_Trio_Etude.xml",
+            "prompt": "Write a student-friendly string trio etude around 104 BPM in 2/4, firmly in G major. The violin should carry a clear melody, the viola keeps an active inner line, and the cello outlines the bass without huge leaps. Form: A\u2013B\u2013A with a neat cadence at the end.",
+            "extracted_instruments": [
+                "Violin",
+                "Viola",
+                "Cello"
+            ],
+            "llm_reasoning": "The generated instruments (Violin, Viola, Cello) perfectly match the requested 'string trio' ensemble as specified in the prompt. All required instruments are present with no additions or omissions.",
+            "llm_score": 10
+        },
+        {
+            "id": "175",
+            "filepath": "/gpfs/scratch/acw769/text2score/composer_x/175/xml/Lively_D_Major_Folk_Dance.xml",
+            "prompt": "Please write a lively folk dance around 112 BPM in 6/8, rooted in D major. Mandolin carries the tune, acoustic guitar provides steady strums, and a fiddle adds a simple echo line in the second half. Structure: AABB with a short ending tag.",
+            "extracted_instruments": [
+                "Fiddle",
+                "Mandolin"
+            ],
+            "llm_reasoning": "The prompt requested a mandolin, acoustic guitar, and fiddle. The generated instruments include fiddle and mandolin but omit the acoustic guitar, which is a critical missing element for the requested ensemble structure.",
+            "llm_score": 5
+        },
+        {
+            "id": "176",
+            "filepath": "/gpfs/scratch/acw769/text2score/composer_x/176/xml/Slow_Waltz_in_A_Minor_(Revised,_Instrumented,_Clean).xml",
+            "prompt": "I\u2019m hoping for a slow-turning waltz around 88 BPM in 3/4, in A minor. Clarinet should sing the main line, piano supports with gentle broken chords, and cello answers with a warm counterline. Important: keep the middle section tender, then return to the opening with a slightly fuller ending.",
+            "extracted_instruments": [
+                "Clarinet",
+                "Piano RH",
+                "Cello"
+            ],
+            "llm_reasoning": "The generated instruments (Clarinet, Piano RH, Cello) perfectly match the requested trio ensemble (clarinet, piano, cello) as specified in the prompt. All required instruments are present with no hallucinations or omissions.",
+            "llm_score": 10
+        },
+        {
+            "id": "181",
+            "filepath": "/gpfs/scratch/acw769/text2score/composer_x/181/xml/In_Quiet_Memory.xml",
+            "prompt": "A memorial gift piece around 64 BPM in 4/4, grounded in G minor. Solo violin sings a restrained melody over piano chords that breathe, and cello enters later to deepen the middle register. Form: intro, theme, brief rise, then a gentle close in G minor.",
+            "extracted_instruments": [
+                "Violin",
+                "Cello",
+                "Piano RH",
+                "Piano LH"
+            ],
+            "llm_reasoning": "The generated instruments include Violin, Cello, and split Piano into RH and LH. While the core ensemble (Violin, Piano, Cello) is present, splitting the Piano into two parts is an unnecessary addition not requested in the prompt, violating standard instrument grouping.",
+            "llm_score": 8
+        },
+        {
+            "id": "182",
+            "filepath": "/gpfs/scratch/acw769/text2score/composer_x/182/xml/Divertimento_in_D_major_-_I._Allegretto.xml",
+            "prompt": "Compose a classical divertimento movement around 120 BPM in 2/4, in D major, for a bright wind ensemble with bass support. Use paired flutes, oboes, and clarinets, plus two bassoons and two horns, with double bass reinforcing cadences. Keep texture transparent: melody in flutes/oboes, clarinets as inner support, bassoons and bass outlining harmonic rhythm. Form: A\u2013B\u2013A, with B briefly exploring and then returning decisively to D major.",
+            "extracted_instruments": [
+                "dummy"
+            ],
+            "llm_reasoning": "The generated instrument list contains only 'dummy', which does not correspond to any valid musical instruments. The prompt explicitly requested a specific wind ensemble configuration (paired flutes, oboes, clarinets, 2 bassoons, 2 horns, double bass) which is completely absent in the output.",
+            "llm_score": 1
+        },
+        {
+            "id": "183",
+            "filepath": "/gpfs/scratch/acw769/text2score/composer_x/183/xml/Pastoral_Siciliana_in_G.xml",
+            "prompt": "Please write a pastoral siciliana around 72 BPM in 12/8, in G major. Let the flute carry a graceful line that could take small ornaments, supported by harpsichord continuo and cello bass. Structure: Theme 1, Theme 2, then Theme 1 returns with small variations and a clean cadence in G.",
+            "extracted_instruments": [
+                "Harpsichord",
+                "Flute",
+                "Cello"
+            ],
+            "llm_reasoning": "The generated instruments (Flute, Harpsichord, Cello) perfectly match the requested ensemble in the prompt: flute for the melody, harpsichord for continuo, and cello for the bass. No missing or hallucinated instruments.",
+            "llm_score": 10
+        },
+        {
+            "id": "184",
+            "filepath": "/gpfs/scratch/acw769/text2score/composer_x/184/xml/Autumn_Lights_(Revised).xml",
+            "prompt": "Write a jazz-lite ballad around 68 BPM in 4/4, in Ab major. Piano should voice warm chords while tenor sax carries the melody, double bass moves in long supportive notes, and acoustic guitar adds soft comping. Structure: A\u2013A\u2013B\u2013A, returning clearly to Ab major at the end.",
+            "extracted_instruments": [
+                "Tenor Sax",
+                "Piano RH",
+                "Piano LH",
+                "Acoustic Guitar",
+                "Double Bass"
+            ],
+            "llm_reasoning": "The generated instruments include Tenor Sax, Piano (split into RH and LH), Acoustic Guitar, and Double Bass, which align with the requested ensemble. However, splitting the piano into two parts (RH and LH) introduces a minor addition not explicitly requested, though semantically they map to a single piano. The core instruments (Tenor Sax, Piano, Double Bass, Acoustic Guitar) are all present as specified.",
+            "llm_score": 9
+        },
+        {
+            "id": "187",
+            "filepath": "/gpfs/scratch/acw769/text2score/composer_x/187/xml/Grand_Overture_in_Bb_Major.xml",
+            "prompt": "Compose a grand overture-style opening around 126 BPM in 4/4, in Bb major, for full orchestra without any percussion. Use brass for fanfare lines, woodwinds for running passages, strings for broad supporting figures, and harp for clarity at transitions. Theme 1 should be bold and diatonic; Theme 2 more lyrical in strings with clarinet doubling. Structure: intro fanfare, Theme 1, Theme 2, then a short recap ending decisively in Bb.",
+            "extracted_instruments": [
+                "Flute 2",
+                "Clarinet 1",
+                "Violin I",
+                "Horn 2",
+                "Trumpet 1",
+                "Clarinet 2",
+                "Viola",
+                "Violin II",
+                "Harp",
+                "Flute 1",
+                "Cello/Bass",
+                "Horn 1",
+                "Trumpet 2"
+            ],
+            "llm_reasoning": "The generated instruments include all required sections (brass, woodwinds, strings, harp) as requested, but the 'Cello/Bass' grouping combines two distinct instruments into a single part, which partially violates the ensemble structure. No percussion is present, adhering to the prompt. Minor omission of typical full orchestra elements like oboes or bassoons is acceptable given the prompt's flexibility.",
+            "llm_score": 9
+        },
+        {
+            "id": "188",
+            "filepath": "/gpfs/scratch/acw769/text2score/composer_x/188/xml/New_Age_Light_(Final,_Instrumented,_Clean).xml",
+            "prompt": "Write a new-age piano-and-strings piece around 78 BPM in 6/8, in A major. Piano outlines gentle arpeggios, violins carry a simple stepwise melody, and viola/cello sustain a warm pad. Form: A\u2013B\u2013A with B lifting briefly before returning to A major.",
+            "extracted_instruments": [
+                "Piano RH",
+                "Violins"
+            ],
+            "llm_reasoning": "The generated instruments include Piano RH and Violins but omit the requested viola and cello, which were essential for sustaining the warm pad in the piece. The absence of these two instruments constitutes a significant omission.",
+            "llm_score": 5
+        },
+        {
+            "id": "189",
+            "filepath": "/gpfs/scratch/acw769/text2score/composer_x/189/xml/Adagio_in_C_minor.xml",
+            "prompt": "Please write an organ-centered slow movement around 90 BPM in 4/4, in C minor. The organ right hand presents the theme, the left hand supports with inner chords, and a cello line acts as a singing bass rather than just roots. Form: A \u2192 B (slightly more searching) \u2192 A, resolving back into C minor.",
+            "extracted_instruments": [
+                "Organ LH",
+                "Organ RH",
+                "Cello"
+            ],
+            "llm_reasoning": "The generated instruments 'Organ LH', 'Organ RH', and 'Cello' perfectly align with the prompt's request for an organ-centered piece with a cello bass line. The organ is split into left and right hands as specified, and the cello is present as required without any extraneous instruments.",
+            "llm_score": 10
+        },
+        {
+            "id": "190",
+            "filepath": "/gpfs/scratch/acw769/text2score/composer_x/190/xml/Wedding_Processional_in_F.xml",
+            "prompt": "Compose a gentle wedding processional around 72 BPM in 4/4, in F major, for string quartet and harp. First violin carries the melody, the inner strings fill warmth, cello grounds the harmony, and harp adds soft arpeggios at cadences. Structure: 8-bar intro, 16-bar theme, then a reprise that ends with a longer final chord in F.",
+            "extracted_instruments": [
+                "Violin I"
+            ],
+            "llm_reasoning": "The prompt requested a string quartet (2 Violins, Viola, Cello) plus Harp, but the generated instruments only include Violin I. The required Viola, Cello, Harp, and second Violin are missing, violating the ensemble structure.",
+            "llm_score": 2
+        },
+        {
+            "id": "191",
+            "filepath": "/gpfs/scratch/acw769/text2score/composer_x/191/xml/Wistful_Waltz_in_G_Minor.xml",
+            "prompt": "Could you write a wistful cue around 84 BPM in 3/4, centered in G minor? English horn carries the melody, clarinets support with soft held tones, and strings provide a slow waltz-like undercurrent. Add harp for occasional rolled chords and keep brass restrained, mostly horns in long notes. Structure: A (lonely) \u2192 B (slightly brighter) \u2192 A (return, quieter) with a short coda in G minor.",
+            "extracted_instruments": [
+                "Celli/Basses",
+                "Violins I",
+                "Harp & Horns",
+                "English Horn",
+                "Clarinets",
+                "Violas/Violins II"
+            ],
+            "llm_reasoning": "The generated instruments include all requested elements: English Horn (melody), Clarinets (support), Strings (Violins I, Violas/Violins II, Celli/Basses), Harp, and Horns (brass). No extra or missing instruments; groupings like 'Violas/Violins II' and 'Celli/Basses' are standard for string sections.",
+            "llm_score": 10
+        },
+        {
+            "id": "192",
+            "filepath": "/gpfs/scratch/acw769/text2score/composer_x/192/xml/Invention_Study_in_C.xml",
+            "prompt": "Write a two-part invention-like study around 108 BPM in 2/4, in C major. Flute takes the upper voice and bassoon the lower voice, with clear imitative entries and balanced phrasing. Structure: exposition, short middle sequence, then a firm cadence back in C major.",
+            "extracted_instruments": [
+                "Bassoon",
+                "Flute"
+            ],
+            "llm_reasoning": "The generated instruments (Bassoon, Flute) perfectly match the requested two-part structure with flute as the upper voice and bassoon as the lower voice. No additional or missing instruments are present.",
+            "llm_score": 10
+        },
+        {
+            "id": "193",
+            "filepath": "/gpfs/scratch/acw769/text2score/composer_x/193/xml/Luminous_Choral_Prelude_(A-major,_Instrumented_\u2013_Corrected).xml",
+            "prompt": "Compose a luminous choral prelude around 62 BPM in 4/4, in A major. The SATB choir is wordless, with sopranos floating a simple melody and altos/tenors holding warm inner harmony, while basses move slowly and stepwise. Add strings and organ for sustained support, and let a solo violin briefly ornament the melody before the final cadence. Form: A\u2013B\u2013A, returning transparently to A major.",
+            "extracted_instruments": [
+                "Violin Solo",
+                "Soprano"
+            ],
+            "llm_reasoning": "The prompt requested a SATB choir, strings, organ, and a solo violin. The generated instruments only include 'Violin Solo' and 'Soprano', missing all other choir parts (Alto, Tenor, Bass), strings, and organ. The violin solo is present, but the core ensemble elements are omitted, violating the ensemble structure and support requirements.",
+            "llm_score": 3
+        },
+        {
+            "id": "195",
+            "filepath": "/gpfs/scratch/acw769/text2score/composer_x/195/xml/Warm_Clarinet_Ensemble_in_Eb.xml",
+            "prompt": "Create a warm clarinet-ensemble piece around 74 BPM in 3/4, in Eb major. Keep multiple Bb clarinets in close voicing with bass clarinet for depth, and add bassoon and contrabassoon for a stable low foundation. The melody should move smoothly between the upper clarinets while inner parts stay playable and blended. Form: A\u2013B\u2013A, easing back into Eb major at the end.",
+            "extracted_instruments": [
+                "Clarinet 3 in Bb",
+                "Clarinet 1 in Bb",
+                "Bassoon",
+                "Bass Clarinet in Bb",
+                "Clarinet 2 in Bb",
+                "Contrabassoon"
+            ],
+            "llm_reasoning": "The generated instruments perfectly match the requested ensemble: three Bb clarinets, a bass clarinet, bassoon, and contrabassoon. All specified instruments are present with correct semantic mapping, and no extraneous instruments are included.",
+            "llm_score": 10
+        },
+        {
+            "id": "196",
+            "filepath": "/gpfs/scratch/acw769/text2score/composer_x/196/xml/Still_Water_Paths.xml",
+            "prompt": "Write a reflective new-age ensemble piece around 66 BPM in 6/8, in E major. Harp provides steady rolling arpeggios, piano adds simple chord tones, and two flutes trade a calm melody and countermelody. A soft string pad should shift only on phrase changes. Form: A (8 bars) \u2192 B (8 bars, slightly higher) \u2192 A (8 bars), finishing with a clear return to E major.",
+            "extracted_instruments": [
+                "dummy"
+            ],
+            "llm_reasoning": "The generated instrument list contains only 'dummy', which does not correspond to any of the requested instruments (harp, piano, two flutes, string pad). This is a complete mismatch with the text prompt.",
+            "llm_score": 1
+        },
+        {
+            "id": "197",
+            "filepath": "/gpfs/scratch/acw769/text2score/composer_x/197/xml/Chamber_March_in_G.xml",
+            "prompt": "Compose a chamber march around 116 BPM in 4/4, in G major. Use horn, trumpet, trombone, plus piano for harmonic support and double bass for grounding; keep the melody crisp and singable. Include a contrasting trio section that softens before the return. Structure: A\u2013A\u2013B (trio)\u2013A, ending in G.",
+            "extracted_instruments": [
+                "Piano RH",
+                "Piano LH",
+                "Horn",
+                "Trombone",
+                "Double Bass",
+                "Trumpet"
+            ],
+            "llm_reasoning": "All requested instruments (horn, trumpet, trombone, piano, double bass) are present. The piano is split into RH and LH parts, which is a standard technical representation and does not violate the prompt's requirements. No additional instruments are included.",
+            "llm_score": 10
+        },
+        {
+            "id": "198",
+            "filepath": "/gpfs/scratch/acw769/text2score/composer_x/198/xml/Gentle_Cinematic_Lullaby.xml",
+            "prompt": "Please write a gentle cinematic lullaby around 92 BPM in 12/8, in D major. Celesta and harp outline the harmony with slow broken patterns, clarinet carries a simple melody, and muted strings sustain warm chords. A solo horn can answer at the end of each phrase, staying soft and lyrical. Form: intro, A, B (slightly brighter), then A returns and settles into D major.",
+            "extracted_instruments": [
+                "Strings",
+                "Clarinet",
+                "Celesta"
+            ],
+            "llm_reasoning": "The generated instruments include Celesta, Clarinet, and Strings, but the prompt explicitly requested Harp and a solo Horn (e.g., French Horn) to answer the clarinet phrases. The absence of the Harp and Horn is a significant omission, while the Strings likely represent the 'muted strings' mentioned. No extraneous instruments are present.",
+            "llm_score": 6
+        },
+        {
+            "id": "199",
+            "filepath": "/gpfs/scratch/acw769/text2score/composer_x/199/xml/Meditation_in_A_Minor.xml",
+            "prompt": "Write a meditative solo classical guitar piece around 70 BPM in 3/4, in A minor. Keep the bass notes steady and let the upper voices form gentle arpeggios. Form: A\u2013A'\u2013B\u2013A, ending on a quiet, resolved A-minor chord.",
+            "extracted_instruments": [
+                "dummy"
+            ],
+            "llm_reasoning": "The prompt explicitly requested a solo classical guitar piece, but the generated instruments only contain a placeholder 'dummy' instrument. There is no actual guitar or valid instrument present to fulfill the 'solo' requirement.",
+            "llm_score": 1
+        },
+        {
+            "id": "200",
+            "filepath": "/gpfs/scratch/acw769/text2score/composer_x/200/xml/Lush_Romantic_Adagio_in_Ab_(melodically_&_texturally_refined).xml",
+            "prompt": "Compose a lush romantic string orchestra adagio around 56 BPM in 4/4, in Ab major. First violins sing the main theme, inner strings weave gentle suspensions, cellos take a broad counter-melody in the middle section, and basses sustain the harmonic pillars. Add harp to mark transitions with rolled chords, and shape dynamics in long arcs. Structure: A \u2192 B \u2192 climax \u2192 A (return, softer) \u2192 coda, ending clearly in Ab major.",
+            "extracted_instruments": [
+                "Violin I"
+            ],
+            "llm_reasoning": "The prompt requested a string orchestra with specific sections (Violin I, inner strings, cellos, basses) and a harp. Only 'Violin I' is present in the generated list, missing all other required instruments. This is a major violation of the ensemble structure.",
+            "llm_score": 3
+        },
+        {
+            "id": "203",
+            "filepath": "/gpfs/scratch/acw769/text2score/composer_x/203/xml/Orchestral_Excerpt_in_Eb_\u2013_Instrumented.xml",
+            "prompt": "Write a clear orchestral excerpt around 110 BPM in 2/4, in Eb major, prioritizing balance and readability. Strings provide steady repeated figures, paired woodwinds carry melodic lines and replies, bassoons support the lower midrange, and horns supply harmonic glue; avoid extreme ranges. Let the melody pass from oboe to first violins, then to clarinet, while double bass reinforces cadences. Structure: 8-bar intro, 16-bar theme, 8-bar contrasting idea, then a clean cadence back to Eb major.",
+            "extracted_instruments": [
+                "dummy"
+            ],
+            "llm_reasoning": "The generated instruments list contains only 'dummy', which does not correspond to any of the requested orchestral sections (strings, woodwinds, bassoons, horns, double bass). The prompt explicitly required multiple specific instrument groups to execute the described orchestral structure, but none were realized.",
+            "llm_score": 1
+        },
+        {
+            "id": "205",
+            "filepath": "/gpfs/scratch/acw769/text2score/composer_x/205/xml/Wordless_Choral_Benediction.xml",
+            "prompt": "Write a wordless choral benediction around 74 BPM in 3/4, in F major. SATB choir should move gently in close harmony, harp outlines rolled chords, a solo flute mirrors the soprano line at moments, and cello holds slow bass tones. Form: A\u2013B\u2013A, ending with a long, calm cadence in F major.",
+            "extracted_instruments": [
+                "Soprano",
+                "Cello",
+                "Flute"
+            ],
+            "llm_reasoning": "The prompt requested a SATB choir, harp, solo flute, and cello. The generated instruments include Soprano, Cello, and Flute, but are missing Alto, Tenor, Bass (from the SATB choir) and the harp. The flute and cello are present as requested, but the incomplete SATB and missing harp are significant omissions.",
+            "llm_score": 5
+        },
+        {
+            "id": "210",
+            "filepath": "/gpfs/scratch/acw769/text2score/composer_x/210/xml/Wordless_Hymn_in_Bb_(Revised).xml",
+            "prompt": "Write a large hymn-like statement around 68 BPM in 4/4, in Bb major, with wordless SATB choir and full orchestra colors but no percussion. Choir should be mostly homophonic with a few gentle suspensions, while strings sustain the harmony and woodwinds color the top line. Horns and low brass support in long tones, harp clarifies transitions, and soprano melody can be lightly doubled by clarinet. Structure: A (quiet) \u2192 B (full) \u2192 A (return, softer), ending on a broad cadence in Bb major.",
+            "extracted_instruments": [
+                "Violin I",
+                "Soprano",
+                "Clarinet"
+            ],
+            "llm_reasoning": "The generated instruments are Violin I, Soprano, and Clarinet. The prompt requested a SATB choir (missing Alto, Tenor, Bass) and full orchestra (missing strings, woodwinds, brass, harp). The generated list contains only one vocal part and minimal instruments, failing to represent the required ensemble structure.",
+            "llm_score": 2
+        },
+        {
+            "id": "211",
+            "filepath": "/gpfs/scratch/acw769/text2score/composer_x/211/xml/Spacious_Light_(revised,_instrumented).xml",
+            "prompt": "I want a slow, spacious new-age piece around 58 BPM in 4/4, in E major. Piano plays open-voiced chords with lots of resonance, harp traces gentle arpeggios, and a solo oboe carries a simple melody answered quietly by solo cello. Form: A\u2013B\u2013A, where B rises slightly and then settles back into E major.",
+            "extracted_instruments": [
+                "Cello",
+                "Piano LH",
+                "Harp",
+                "Oboe"
+            ],
+            "llm_reasoning": "The generated instruments include Cello, Oboe, Harp, and Piano LH. The prompt requested a piano with open-voiced chords, which typically require both hands, but only the left hand is present. The right hand is missing, and the split into LH/RH is a partial violation. All other requested instruments (Cello, Oboe, Harp) are present.",
+            "llm_score": 6
+        },
+        {
+            "id": "212",
+            "filepath": "/gpfs/scratch/acw769/text2score/composer_x/212/xml/Bright_Chamber_Fanfare_in_D.xml",
+            "prompt": "Write a bright chamber fanfare around 124 BPM in 4/4, in D major. Two trumpets and two horns state the main chords, with bassoon and cello reinforcing the bass and inner motion. Structure: short intro, main idea, then a brief closing repeat that cadences firmly in D.",
+            "extracted_instruments": [
+                "Trumpet 1",
+                "Bassoon",
+                "Horn 2 in F",
+                "Horn 1 in F",
+                "Cello",
+                "Trumpet 2"
+            ],
+            "llm_reasoning": "The generated instruments perfectly match the requested ensemble: two trumpets (Trumpet 1 and 2), two horns (Horn 1 and 2 in F), bassoon, and cello. No missing or hallucinated instruments.",
+            "llm_score": 10
+        },
+        {
+            "id": "213",
+            "filepath": "/gpfs/scratch/acw769/text2score/composer_x/213/xml/Orchestral_Adagio_in_F_(Final_Revision,_Instrumented_&_Cleaned).xml",
+            "prompt": "Could you write a flowing orchestral adagio around 60 BPM in 3/4, in F major? Strings carry the main melody in long arcs, woodwinds add soft countermelodies between phrases, and horns widen the harmony without dominating. Harp marks transitions with gentle rolled chords. Form: A\u2013B\u2013A, with B building to a single peak, then easing back to a quiet cadence in F major.",
+            "extracted_instruments": [
+                "Violin I",
+                "Oboe",
+                "Horns in F",
+                "Viola",
+                "Violin II",
+                "Harp",
+                "Flute",
+                "Cello"
+            ],
+            "llm_reasoning": "The generated instruments include all required sections (strings, woodwinds, horns, harp) as specified in the prompt. Violin I/II, Viola, and Cello cover the string section; Flute and Oboe represent woodwinds; Horns in F fulfill the brass requirement; and Harp is present. A minor omission is the absence of a double bass in the string section, but this is a minor variation for an orchestral adagio.",
+            "llm_score": 9
+        },
+        {
+            "id": "214",
+            "filepath": "/gpfs/scratch/acw769/text2score/composer_x/214/xml/Choral_Benediction_in_Ab.xml",
+            "prompt": "Please create a simple choral benediction around 72 BPM in 4/4, in Ab major. SATB choir stays mostly in block chords with a clear soprano line, and organ sustains underneath for support. Form: two short phrases repeated, then a final extended cadence in Ab.",
+            "extracted_instruments": [
+                "Organ",
+                "Soprano"
+            ],
+            "llm_reasoning": "The prompt requested an SATB choir (Soprano, Alto, Tenor, Bass) with organ accompaniment. The generated instruments only include Soprano and Organ, missing the Alto, Tenor, and Bass parts. The organ is correctly included, but the choir is incomplete, violating the ensemble structure.",
+            "llm_score": 3
+        },
+        {
+            "id": "215",
+            "filepath": "/gpfs/scratch/acw769/text2score/composer_x/215/xml/Lyrical_Chamber_Piece_in_A_minor_(Final_Version).xml",
+            "prompt": "Compose a lyrical chamber piece around 98 BPM in 6/8, in A minor. Oboe presents the theme, clarinet weaves a gentle countermelody, and a string trio sustains harmony with occasional moving inner notes. Harp can outline cadences with soft arpeggios. Form: A \u2192 B (more expansive) \u2192 A, closing clearly in A minor.",
+            "extracted_instruments": [
+                "Oboe",
+                "Clarinet",
+                "Viola",
+                "Harp",
+                "Cello",
+                "Violin"
+            ],
+            "llm_reasoning": "The generated instruments (Oboe, Clarinet, Viola, Harp, Cello, Violin) perfectly match the requested ensemble: oboe and clarinet for the melodic roles, a string trio (Violin, Viola, Cello), and Harp. No extra or missing instruments.",
+            "llm_score": 10
+        },
+        {
+            "id": "216",
+            "filepath": "/gpfs/scratch/acw769/text2score/composer_x/216/xml/Weightless_Floating_Cue.xml",
+            "prompt": "I\u2019m looking for a weightless \u201cfloating\u201d cue around 64 BPM in 12/8, in C major\u2014can it feel almost still? Strings hold long chords while harp and celesta repeat slow arpeggios, and bass clarinet offers a low warm line that moves only occasionally. A flute enters late with a simple two-note motif. Note: keep the harmony stable and the texture breathable. Form: intro, A (8 bars), B (8 bars), return to A, ending where it can loop in C major.",
+            "extracted_instruments": [
+                "Strings",
+                "Bass Clarinet",
+                "Celesta",
+                "Harp",
+                "Flute"
+            ],
+            "llm_reasoning": "All requested instruments (Strings, Harp, Celesta, Bass Clarinet, Flute) are present and no additional instruments are included. The ensemble matches the 'floating' texture and harmonic stability described, with each instrument fulfilling the specified role in the composition.",
+            "llm_score": 10
+        },
+        {
+            "id": "217",
+            "filepath": "/gpfs/scratch/acw769/text2score/composer_x/217/xml/Evening_Barcarolle.xml",
+            "prompt": "Write a gentle barcarolle around 84 BPM in 6/8, in Eb major. Piano rocks softly, and a solo cello answers the melody in the middle section. Form: A\u2013B\u2013A with a quiet cadence in Eb.",
+            "extracted_instruments": [
+                "Cello",
+                "Piano LH",
+                "Piano RH"
+            ],
+            "llm_reasoning": "The generated instruments include a cello and a piano (split into left and right hands), which align with the user's request for a piano and a solo cello. No additional or missing instruments are present.",
+            "llm_score": 10
+        },
+        {
+            "id": "218",
+            "filepath": "/gpfs/scratch/acw769/text2score/composer_x/218/xml/Transparent_Currents_(Final).xml",
+            "prompt": "Compose a transparent woodwind octet piece around 108 BPM in 2/4, in G major. Use pairs of flutes, oboes, clarinets, and bassoons with smooth voice-leading so inner parts are singable. The melody rotates between flute and clarinet, and bassoons articulate the harmonic rhythm without heaviness. Form: A\u2013B\u2013A, ending crisply in G major.",
+            "extracted_instruments": [
+                "Clarinet 1",
+                "Flute 1",
+                "Oboe 1",
+                "Bassoon 1"
+            ],
+            "llm_reasoning": "The prompt requested a woodwind octet with pairs of flutes, oboes, clarinets, and bassoons (totaling eight parts). The generated instruments only include one of each instrument, missing the required pairs. This results in four instruments instead of eight, violating the ensemble structure.",
+            "llm_score": 4
+        },
+        {
+            "id": "219",
+            "filepath": "/gpfs/scratch/acw769/text2score/composer_x/219/xml/Romantic_Aria_Without_Words_(Final).xml",
+            "prompt": "Write a wordless romantic aria around 66 BPM in 4/4, in D minor. Solo cello sings the melody, piano supports with mostly sustained chords and occasional gentle arpeggios, and a violin countermelody appears only in the B section. Structure: A, B, A, finishing with a long cadence in D minor.",
+            "extracted_instruments": [
+                "Piano Left",
+                "Piano Right",
+                "Cello",
+                "Violin"
+            ],
+            "llm_reasoning": "The generated instruments include Cello, Violin, and split Piano parts (Left/Right). The cello and violin align with the request, but the split piano parts are a minor addition not explicitly mentioned in the prompt. The structure adheres to the solo cello and supporting instruments, with no major violations.",
+            "llm_score": 9
+        },
+        {
+            "id": "220",
+            "filepath": "/gpfs/scratch/acw769/text2score/composer_x/220/xml/Tender_Glow.xml",
+            "prompt": "Could you make a tender choir-and-strings piece around 70 BPM in 3/4, in A major? Just a gentle glow\u2026 SATB choir is wordless and mostly homophonic, strings sustain a warm cushion, and harp adds soft rolls at cadences. Melody sits in the sopranos, lightly doubled by first violins, while the bass line stays slow and stepwise. Form: A\u2013B\u2013A, returning thinner and quieter, ending in A major.",
+            "extracted_instruments": [
+                "Soprano",
+                "Violin I"
+            ],
+            "llm_reasoning": "The generated instruments only include 'Soprano' and 'Violin I', missing the full SATB choir (Alto, Tenor, Bass), other string sections (Viola, Cello, Bass), and the specified harp. These omissions violate the ensemble structure and key elements requested in the prompt.",
+            "llm_score": 3
+        },
+        {
+            "id": "221",
+            "filepath": "/gpfs/scratch/acw769/text2score/composer_x/221/xml/Chamber_Miniature_in_C_minor.xml",
+            "prompt": "Compose a contemporary chamber miniature around 96 BPM in 4/4, in C minor. Piano provides repeated chordal pulses, strings sustain shifting harmonies, and flute/clarinet trade short melodic cells that stay in a comfortable range. Form: A (steady) \u2192 B (more spacious) \u2192 A (return with added counterline), ending with a clear cadence in C minor.",
+            "extracted_instruments": [
+                "Flute",
+                "Strings",
+                "Clarinet",
+                "Piano RH"
+            ],
+            "llm_reasoning": "The generated instruments include Flute, Strings, Clarinet, and Piano RH. The prompt requested a piano providing chordal pulses, but the split into 'Piano RH' may not fully capture the intended role. The left hand is missing, which is necessary for chordal pulses. However, no extraneous instruments are present.",
+            "llm_score": 7
+        },
+        {
+            "id": "222",
+            "filepath": "/gpfs/scratch/acw769/text2score/composer_x/222/xml/Orchestral_Scherzo_in_D.xml",
+            "prompt": "Write an orchestral scherzo around 144 BPM in 3/4, in D major, with no percussion. Strings carry quick figures, woodwinds answer with light running lines, horns give brief harmonic lifts, and trumpet appears only at cadences. Form: A (scherzo) \u2192 B (trio, more lyrical) \u2192 A (short return), ending decisively in D major.",
+            "extracted_instruments": [
+                "Hn",
+                "Fl",
+                "Vl I"
+            ],
+            "llm_reasoning": "The generated instruments (Hn, Fl, Vl I) partially address the orchestral scherzo prompt but are severely incomplete. The trumpet (explicitly mentioned for cadences) is entirely missing, the string section is reduced to only first violin (no viola, cello, or bass), and woodwinds are limited to just flute. The omission of key sections (strings, woodwinds) and the trumpet constitutes a major violation.",
+            "llm_score": 2
+        },
+        {
+            "id": "224",
+            "filepath": "/gpfs/scratch/acw769/text2score/composer_x/224/xml/Ocean_at_Dawn.xml",
+            "prompt": "Write a large \u201cocean at dawn\u201d orchestral scene around 60 BPM in 12/8, in Ab major, with no percussion at all. Begin with strings sustaining soft chords, harp outlining slow arpeggios, and celesta adding occasional high sparkles. Woodwinds enter one by one with a simple rising motif, horns provide a warm halo, and low brass appears only near the climax to broaden the harmony. Keep the meter feeling like a slow rolling tide through notation alone. Structure: intro, A (theme emerges), B (bigger, brighter), then A returns and dissolves into a long final chord in Ab major.",
+            "extracted_instruments": [
+                "Violin I",
+                "Cello",
+                "Flute",
+                "Horn I",
+                "Harp"
+            ],
+            "llm_reasoning": "The generated instruments include some required elements (Violin I, Cello, Flute, Horn I, Harp) but are missing key components explicitly requested in the prompt: celesta, low brass (e.g., tuba or French horn), and additional woodwinds/brass for a full orchestral texture. The absence of the celesta, a critical 'sparkle' instrument, and low brass for the climax represents significant omissions.",
+            "llm_score": 5
+        },
+        {
+            "id": "225",
+            "filepath": "/gpfs/scratch/acw769/text2score/composer_x/225/xml/Intermediate_Etude_in_E_minor.xml",
+            "prompt": "I need an intermediate piano etude around 120 BPM in 2/4, in E minor. Focus on even flowing eighth notes in the right hand while the left hand outlines a clear bass line with occasional inner voice notes. Form: A\u2013B\u2013A, returning cleanly to E minor at the end.",
+            "extracted_instruments": [
+                "dummy"
+            ],
+            "llm_reasoning": "The prompt explicitly requests a solo piano etude, but the generated instrument list contains 'dummy', which is not a valid or semantically matching instrument. There is a complete absence of the requested solo piano instrument.",
+            "llm_score": 1
+        },
+        {
+            "id": "227",
+            "filepath": "/gpfs/scratch/acw769/text2score/composer_x/227/xml/Serene_Ensemble_in_C.xml",
+            "prompt": "Please write a serene ensemble piece around 62 BPM in 4/4, in C major. Piano holds open chords and occasional gentle arpeggios while harp adds soft color at cadence points. Two flutes trade a simple melody and echo line, and viola/cello sustain slow inner harmonies beneath. Structure: A (8 bars), B (8 bars, slightly brighter), then A returns and ends on a long C-major chord.",
+            "extracted_instruments": [
+                "Piano"
+            ],
+            "llm_reasoning": "The generated score includes only a piano, but the prompt explicitly requested a serene ensemble with piano, harp, two flutes, viola, and cello. All other instruments are missing, violating the ensemble structure. This is a major violation due to omissions of critical components.",
+            "llm_score": 2
+        },
+        {
+            "id": "228",
+            "filepath": "/gpfs/scratch/acw769/text2score/composer_x/228/xml/Wordless_Choral-Orchestral_Finale_in_D_(Final).xml",
+            "prompt": "Write a choral-orchestral finale around 76 BPM in 4/4, in D major, with SATB choir singing wordlessly. Begin with an orchestral introduction where strings and woodwinds establish the theme, then bring in the choir for broad chordal writing. Keep brass supportive: horns and trombone in long tones, and trumpet only at the biggest cadences; harp can clarify transitions. Form: intro, A (theme), B (expansion and build), then A returns with fuller forces and a long final cadence in D major.",
+            "extracted_instruments": [
+                "Violin I",
+                "Soprano",
+                "Flute",
+                "Horns",
+                "Harp"
+            ],
+            "llm_reasoning": "The generated instruments include Soprano (part of the SATB choir) but are missing Alto, Tenor, and Bass. Strings are only partially represented (Violin I), and brass (Trombone, Trumpet) are missing. Woodwinds (Oboe, Clarinet, Bassoon) and full string ensemble (Viola, Cello, Bass) are also absent. The Harp is present as requested.",
+            "llm_score": 5
+        },
+        {
+            "id": "230",
+            "filepath": "/gpfs/scratch/acw769/text2score/composer_x/230/xml/Quiet_Resolve_(rev,_orchestrated,_formatted).xml",
+            "prompt": "Compose a reflective film cue around 80 BPM in 3/4, in E minor. Solo piano provides the harmonic bed, solo violin carries the melody, and English horn answers in the middle register. Add soft strings sustaining long chords and harp lightly emphasizing cadence points. Structure: A (intimate), B (slightly wider and more hopeful), then A returns and fades to a quiet resolution in E minor.",
+            "extracted_instruments": [
+                "Strings II",
+                "Violin",
+                "Strings I",
+                "Harp",
+                "Piano",
+                "English Horn"
+            ],
+            "llm_reasoning": "The generated instruments include all requested elements: solo piano (Piano), solo violin (Violin), English Horn, and harp (Harp). The 'soft strings' are represented by Strings I and Strings II, which align with the harmonic bed and sustained chords. No hallucinated instruments are present, and all solo instruments are correctly isolated.",
+            "llm_score": 10
+        },
+        {
+            "id": "231",
+            "filepath": "/gpfs/scratch/acw769/text2score/composer_x/231/xml/Ceremonial_Procession_in_F_(Rhythmic_&_Counterpoint_Rev._\u2013_Harmonized).xml",
+            "prompt": "Make a ceremonial piece around 108 BPM in 2/4, in F major, for brass quintet plus organ. Trumpet 1 carries the melody, horn and trombone support inner lines, trumpet 2 reinforces cadences, and tuba anchors long bass tones while organ sustains harmonic pads. Structure: A (statement) \u2192 B (softer contrast) \u2192 A (return), finishing with a clear cadence in F major.",
+            "extracted_instruments": [
+                "Trombone",
+                "Trumpet 1 in C"
+            ],
+            "llm_reasoning": "The generated instruments only include 'Trombone' and 'Trumpet 1 in C', missing the second trumpet, horn, tuba, and organ explicitly requested in the prompt. These omissions are critical as the brass quintet requires five instruments plus the organ, and the structure outlined in the prompt cannot be fulfilled without them.",
+            "llm_score": 2
+        },
+        {
+            "id": "232",
+            "filepath": "/gpfs/scratch/acw769/text2score/composer_x/232/xml/Moonlit_Drift.xml",
+            "prompt": "I\u2019d like a calm \u201csleep\u201d piece around 56 BPM in 12/8, in A major. Gentle arpeggios, long lines\u2014no big surprises. Harp and piano alternate the rolling patterns while a solo flute plays a repeating theme, and strings hold a quiet pad that shifts every few bars. Form: intro, A (8 bars), A' (8 bars), then a short coda that lands softly back in A major.",
+            "extracted_instruments": [
+                "Harp LH",
+                "Strings",
+                "Piano LH",
+                "Flute",
+                "Harp RH",
+                "Piano RH"
+            ],
+            "llm_reasoning": "The generated instruments include Harp LH/RH and Piano LH/RH, which semantically map to the requested Harp and Piano but are split into left/right hands. The Flute and Strings are correctly included. While the core instruments (Harp, Piano, Flute, Strings) are present, splitting into LH/RH is an unnecessary addition not specified in the prompt, violating the 'no big surprises' constraint.",
+            "llm_score": 7
+        },
+        {
+            "id": "233",
+            "filepath": "/gpfs/scratch/acw769/text2score/composer_x/233/xml/Woodland_Whim_(Final).xml",
+            "prompt": "Compose a fast playful woodwind feature around 132 BPM in 4/4, in C major. Piccolo and flute handle sparkling upper lines, two clarinets provide agile inner motion, bassoon gives a buoyant bass, and horn adds brief warmth at phrase ends. Form: A\u2013B\u2013A with a short coda, ending firmly in C major.",
+            "extracted_instruments": [
+                "Piccolo"
+            ],
+            "llm_reasoning": "The generated instruments list includes only a Piccolo, but the prompt explicitly requested a full woodwind ensemble with Flute, two Clarinets, Bassoon, and Horn. All other required instruments are missing, and no additional instruments were included.",
+            "llm_score": 1
+        },
+        {
+            "id": "234",
+            "filepath": "/gpfs/scratch/acw769/text2score/composer_x/234/xml/Orchestral_Elegy_in_G_Minor_(Final_Revision,_Harmonically_Refined).xml",
+            "prompt": "Write a large orchestral elegy around 52 BPM in 4/4, in G minor, with a slow build and a clear arc. Start with low strings and bass clarinet holding long tones, then introduce a fragile solo oboe melody. Gradually add violins in sustained harmony, then horns for warmth; keep trumpet absent until a single climactic cadence near the end. Harp should appear sparingly with rolled chords to mark transitions, and low brass can broaden the harmony briefly at the peak. Structure: intro (dark), A (theme), B (expansion), climax, then A returns thinner, resolving into a long final cadence in G minor.",
+            "extracted_instruments": [
+                "dummy"
+            ],
+            "llm_reasoning": "The generated instruments list is marked as 'dummy', indicating no actual instrument data was provided for evaluation. Since the prompt explicitly requested specific orchestral elements (e.g., low strings, oboe, horns, harp, etc.), the absence of any verifiable instruments constitutes a complete mismatch.",
+            "llm_score": 1
+        },
+        {
+            "id": "236",
+            "filepath": "/gpfs/scratch/acw769/text2score/composer_x/236/xml/Dream_Eb_Dreamscape_(Revised).xml",
+            "prompt": "Can you make a dreamy choir-and-orchestra texture around 60 BPM in 6/8, in Eb major? The SATB choir is wordless and sustained, entering as soft blocks that bloom and recede. Strings hold long harmonies, harp and celesta provide gentle arpeggios, and flute/clarinet add small melodic fragments that drift in and out; horns stay in long tones for warmth. Structure: A (floating), B (slightly brighter), then A returns and dissolves into a long Eb-major chord.",
+            "extracted_instruments": [
+                "Flute",
+                "Harp",
+                "Soprano",
+                "Violin I"
+            ],
+            "llm_reasoning": "The prompt requested a SATB choir (Soprano, Alto, Tenor, Bass), strings, harp, celesta, flute, clarinet, and horns. The generated instruments only include Flute, Harp, Soprano, and Violin I. The full SATB choir is missing (only Soprano present), celesta/clarinet/horns are absent, and the string section is incomplete (no Viola/Cello/Bass). These are major omissions for a composition explicitly requiring these elements.",
+            "llm_score": 4
+        },
+        {
+            "id": "237",
+            "filepath": "/gpfs/scratch/acw769/text2score/composer_x/237/xml/Contemporary_Classical_Miniature_(final).xml",
+            "prompt": "Write a contemporary classical miniature around 104 BPM in 2/4, in A minor. Piano is the backbone with repeated chords, violin and clarinet trade a narrow-range motif, and cello sustains a slow-moving bass line. Form: A\u2013B\u2013A, ending cleanly in A minor.",
+            "extracted_instruments": [
+                "dummy"
+            ],
+            "llm_reasoning": "The generated instrument list is labeled as 'dummy', indicating no valid instruments were extracted or generated. The prompt specifically requested Piano, Violin, Clarinet, and Cello, none of which are present. This is a complete mismatch.",
+            "llm_score": 1
+        },
+        {
+            "id": "238",
+            "filepath": "/gpfs/scratch/acw769/text2score/composer_x/238/xml/Wide_Horizons_(Final).xml",
+            "prompt": "I\u2019m making a cutscene cue around 90 BPM in 12/8, in Bb major, and it should feel like the camera pulls back to reveal a big landscape. Harp and piano lay down gentle arpeggios, strings hold long chords, and horn plays a simple melody that grows in confidence. Flute and oboe can add a soft countermelody in the second half, staying lyrical and readable. Form: intro, A (theme), B (wider), then A returns and lands on a long final chord in Bb major.",
+            "extracted_instruments": [
+                "Harp",
+                "Horn in F (concert)",
+                "Violins I"
+            ],
+            "llm_reasoning": "The generated instruments include Harp and Horn in F (as requested), but the prompt explicitly called for piano, strings (which should include Violins I, Viola, Cello), and later mentions flute/oboe. The absence of piano and the incomplete string section (only Violins I present) are major omissions. The horn is correctly included but the ensemble lacks the full texture described.",
+            "llm_score": 6
+        }
+    ]
+}

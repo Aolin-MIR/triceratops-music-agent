@@ -1,0 +1,5 @@
+#!/usr/bin/env bash
+exec /home/liaolin/.local/opt/native-gcc/usr/bin/g++-11 \
+  -B/home/liaolin/.local/opt/native-gcc/usr/lib/gcc/x86_64-linux-gnu/11 \
+  -B/usr/lib/gcc/x86_64-linux-gnu/11 \
+  "$@"

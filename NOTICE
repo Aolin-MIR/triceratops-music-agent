@@ -1,0 +1,7 @@
+This repository builds on Text2Score by Keshav Bhandari.
+
+Upstream repository: https://github.com/keshavbhandari/text2score
+
+The Triceratops agent, VST3 integration, REAPER bridge, local-model support,
+tests, and project documentation are maintained in this repository. Review the
+upstream repository's terms before redistributing upstream-derived material.
