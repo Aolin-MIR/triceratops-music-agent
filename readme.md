@@ -8,6 +8,8 @@ Triceratops 是 REAPER 中的音乐 Agent VST3。用自然语言描述想法，�
 
 **v0.9 仅支持 REAPER。Windows 使用原生 Python 后端，不需要 WSL。** 聊天及意图改写通过你配置的 Qwen / OpenAI 兼容 API 完成；MIDI 生成、续写、分轨和转写在本机运行。
 
+[![Triceratops 0.9 功能一览](docs/images/triceratops-0.9-overview.webp)](https://github.com/Aolin-MIR/triceratops-music-agent/releases/download/v0.9.0/Triceratops-0.9.0-Feature-Overview.png)
+
 ## 下载与安装
 
 - [Windows x64 安装程序（EXE）](https://github.com/Aolin-MIR/triceratops-music-agent/releases/download/v0.9.0/Triceratops-0.9.0-Windows-x64-Setup.exe)
