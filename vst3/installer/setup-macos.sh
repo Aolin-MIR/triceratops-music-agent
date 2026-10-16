@@ -1,9 +1,14 @@
 #!/bin/bash
 # Experimental macOS native setup. Run from the extracted release directory.
 set -euo pipefail
+if [[ "$(uname -m)" != "arm64" ]]; then
+  echo "Triceratops 0.9 model runtime requires Apple Silicon. Intel Mac is not supported by the pinned Torch wheel." >&2
+  exit 1
+fi
+
 root="$(cd -- "$(dirname -- "$0")" && pwd)"
 python="${TRICERATOPS_PYTHON:-python3.11}"
-"$python" -c 'import sys; assert (3,10) <= sys.version_info < (3,12), "Use Python 3.10 or 3.11"'
+"$python" -c 'import sys,platform; assert (3,10) <= sys.version_info < (3,12), "Use Python 3.10 or 3.11"; assert tuple(map(int,platform.mac_ver()[0].split(".")[:2])) >= (14,0), "The pinned Torch runtime requires macOS 14 or newer"'
 data="$HOME/Library/Application Support/Triceratops"
 mkdir -p "$data" "$HOME/Library/Audio/Plug-Ins/VST3"
 cp -R "$root/Triceratops.vst3" "$HOME/Library/Audio/Plug-Ins/VST3/"

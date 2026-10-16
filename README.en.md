@@ -12,7 +12,7 @@ Triceratops is a music Agent VST3 for REAPER. Describe an idea naturally or use 
 
 - [Windows x64 EXE installer](https://github.com/Aolin-MIR/triceratops-music-agent/releases/download/v0.9.0/Triceratops-0.9.0-Windows-x64-Setup.exe)
 - [Release notes, checksums and available assets](https://github.com/Aolin-MIR/triceratops-music-agent/releases/tag/v0.9.0)
-- macOS: native build and setup scripts are provided as **experimental support**. Download a Mac package only if it appears in the release assets. REAPER on actual Mac hardware has not been verified.
+- [macOS Apple Silicon experimental package](https://github.com/Aolin-MIR/triceratops-music-agent/releases/download/v0.9.0/Triceratops-0.9.0-macOS-AppleSilicon-experimental.zip): the model runtime requires **Apple Silicon, macOS 14+, and Python 3.10 / 3.11**. Extract and keep the directory, then run `bash setup-macos.sh` in Terminal. The universal VST3 build passed; actual Mac REAPER functionality has not been verified. Intel Mac model execution is not supported.
 
 1. Save your project and close REAPER. Run the EXE. The single VST3 installation is `C:\Program Files\Common Files\VST3\Triceratops.vst3`.
 2. Open **Configure runtime and download models** at the end of installation or from the Start menu. Select REAPER, a model directory and compute device; enter your own API key. A dedicated native Python seed is included, without modifying system Python.
