@@ -4,13 +4,12 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "text2music"
-version = "0.1.0"
-description = "Text to music score generation"
+version = "0.9.0"
+description = "Triceratops Music Agent for REAPER"
 authors = [
     {name = "Keshav Bhandari", email = "keshavbhandari@gmail.com"}
 ]
-readme = "README.md"
-license = {file = "LICENSE"}
+readme = "readme.md"
 
 # Dependencies
 dependencies = [
@@ -34,6 +33,16 @@ dependencies = [
 [tool.setuptools.packages.find]
 where = ["."]
 include = ["text2music", "text2music.*"]
+
+[project.optional-dependencies]
+audio = [
+    "numpy>=1.26,<2",
+    "librosa==0.11.0",
+    "soundfile>=0.13",
+    "demucs==4.1.0",
+    "basic-pitch[onnx]==0.4.0",
+    "onnxruntime==1.23.2"
+]
 
 [tool.setuptools.exclude-package-data]
 "text2music" = ["artifacts/*"]

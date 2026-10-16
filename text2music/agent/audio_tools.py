@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import importlib.util
 import json
+import os
 import re
 import subprocess
 import sys
@@ -19,6 +20,8 @@ AUDIO_EXTENSIONS = {".wav", ".flac", ".mp3", ".ogg", ".m4a", ".aiff", ".aif"}
 
 
 def windows_to_wsl(path: str) -> Path:
+    if os.name == "nt":
+        return Path(path)
     match = re.match(r"^([A-Za-z]):[\\/](.*)$", path)
     if match:
         return Path("/mnt") / match.group(1).lower() / match.group(2).replace("\\", "/")
@@ -74,7 +77,9 @@ def separate_stems(path: Path, output_dir: Path) -> list[Path]:
     if importlib.util.find_spec("demucs") is None:
         raise RuntimeError("Demucs is not installed")
     output_dir.mkdir(parents=True, exist_ok=True)
-    subprocess.run([sys.executable, "-m", "demucs.separate", "-o", str(output_dir), str(path)], check=True)
+    subprocess.run([sys.executable, "-X", "utf8", "-m", "text2music.agent.demucs_runner", "-n", "hf://htdemucs",
+                    "-d", os.environ.get("TRICERATOPS_DEVICE", "cpu"),
+                    "-o", str(output_dir), str(path)], check=True)
     files = sorted((output_dir / "htdemucs" / path.stem).glob("*.wav"))
     if not files:
         raise RuntimeError("Stem separation returned no audio files")
@@ -85,8 +90,14 @@ def audio_to_midi(path: Path, output_dir: Path) -> list[Path]:
     if importlib.util.find_spec("basic_pitch") is None:
         raise RuntimeError("Basic Pitch is not installed")
     output_dir.mkdir(parents=True, exist_ok=True)
+    if importlib.util.find_spec("onnxruntime") is None:
+        raise RuntimeError("Basic Pitch requires onnxruntime; install the audio dependencies")
+    from basic_pitch import FilenameSuffix, build_icassp_2022_model_path
     from basic_pitch.inference import predict
-    _, midi, _ = predict(str(path))
+    model_path = build_icassp_2022_model_path(FilenameSuffix.onnx)
+    if not model_path.is_file():
+        raise FileNotFoundError(f"Basic Pitch ONNX weights are missing: {model_path}")
+    _, midi, _ = predict(str(path), model_or_model_path=model_path)
     destination = output_dir / f"{path.stem}_basic_pitch.mid"
     midi.write(str(destination))
     return [destination]

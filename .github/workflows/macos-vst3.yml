@@ -1,0 +1,32 @@
+name: macOS experimental VST3
+on:
+  workflow_dispatch:
+  push:
+    tags: ['v0.9.*']
+permissions:
+  contents: write
+jobs:
+  build:
+    runs-on: macos-14
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+      - name: Build universal REAPER VST3
+        run: |
+          cmake -S vst3 -B vst3/build-macos -DCMAKE_BUILD_TYPE=Release -DCMAKE_OSX_ARCHITECTURES="arm64;x86_64" -DCMAKE_OSX_DEPLOYMENT_TARGET=13.0
+          cmake --build vst3/build-macos --target Triceratops_VST3 --parallel 3
+      - name: Package experimental native setup
+        run: |
+          python3 vst3/installer/package_release.py --platform macos --plugin vst3/build-macos/Triceratops_artefacts/Release/VST3/Triceratops.vst3 --output vst3/package/macos
+          cd vst3/package/macos
+          ditto -c -k --sequesterRsrc --keepParent . ../Triceratops-0.9.0-macOS-universal-experimental.zip
+      - uses: actions/upload-artifact@v4
+        with:
+          name: Triceratops-0.9.0-macOS-universal-experimental
+          path: vst3/package/Triceratops-0.9.0-macOS-universal-experimental.zip
+      - name: Attach to tagged release
+        if: startsWith(github.ref, 'refs/tags/')
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh release upload "$GITHUB_REF_NAME" vst3/package/Triceratops-0.9.0-macOS-universal-experimental.zip --clobber

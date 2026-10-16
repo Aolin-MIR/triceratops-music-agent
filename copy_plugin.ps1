@@ -1,6 +1,6 @@
 # Single Canonical VST3 Installation Script for Triceratops
 $ErrorActionPreference = "Stop"
-$Source = "E:\text2score\vst3\build-windows-msvcrt\Triceratops_artefacts\Release\VST3\Triceratops.vst3"
+$Source = Join-Path $PSScriptRoot "vst3\build-msvc\Triceratops_artefacts\Release\VST3\Triceratops.vst3"
 $CanonicalDest = "C:\Program Files\Common Files\VST3"
 $UserLocalDest = "$env:LOCALAPPDATA\Programs\Common\VST3\Triceratops.vst3"
 $BinaryRelative = "Contents\x86_64-win\Triceratops.vst3"

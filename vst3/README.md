@@ -1,71 +1,29 @@
-# Triceratops VST3
+# Triceratops 0.9 · REAPER VST3
 
-Triceratops is the DAW-neutral front end for the existing local music Agent.
-It reuses the Qwen tool loop, persistent Text2Score GPU worker, validation,
-self-correction, MIDI/audio analysis, preference memory, and version history.
+User documentation: [中文](../readme.md) / [English](../README.en.md).
 
-## Use
+Only REAPER 6.80+ is supported. The Windows release is a native x64 VST3 with a dedicated native Python runtime; it does not require WSL. macOS build/setup is experimental until verified on actual Mac hardware.
 
-1. Rescan VST3 plug-ins in the DAW and insert **Triceratops** on a stereo track.
-2. Wait for the status to change from model loading to ready.
-3. Type a request in the large message box and press **Send**.
-4. Use **Drag MIDI** to drop the result onto any DAW MIDI/instrument track, or
-   **Play MIDI** to send it from the plug-in at the next bar.
+## Build
 
-MIDI and audio can be loaded by button or file drag. **Capture MIDI** records
-incoming plug-in MIDI. **Capture audio** records the plug-in input for analysis,
-stem separation, or audio-to-MIDI.
+```powershell
+cmake -S vst3 -B vst3/build-msvc -G "Visual Studio 17 2022" -A x64
+cmake --build vst3/build-msvc --config Release --target Triceratops_VST3
+```
 
-Requests such as “make the loaded MIDI more rock, keep the melody”, “extend the
-chorus”, “split this audio into stems”, “reject this version”, and “restore the
-previous version” are routed by the Agent to the appropriate tool.
+JUCE is a pinned Git submodule; clone with `--recurse-submodules`.
+The single Windows plug-in destination is `C:\Program Files\Common Files\VST3\Triceratops.vst3`. Save and close REAPER before updating it. Developer deployment uses `copy_plugin.ps1`; public distribution uses the EXE described in [installer/README.txt](installer/README.txt).
 
-## Host boundary
+## Native backend configuration
 
-VST3 exposes transport, tempo, time signature, PPQ position, audio input, MIDI
-input, and MIDI output. It does not expose a portable API for arbitrary DAW
-track creation or direct replacement of another track's clip. Triceratops uses
-MIDI output and external drag-and-drop in every host. In REAPER, the optional
-`Triceratops - Import from Agent.lua` bridge also creates a new track and imports
-the current MIDI or generated stems when **Import to REAPER** or auto-import is
-enabled. The bridge must be registered once in REAPER's Action List and its
-numeric action ID reported with the supplied setup action.
+`%APPDATA%\Triceratops\backend.json` contains `python`, `entry` and `config` absolute paths. The plug-in starts those arguments without invoking a shell. The user-owned runtime configuration supplies paths, selected compute device, API settings and model directory. No developer drive or WSL path is compiled into the VST3.
 
-## Agent foundation
+The macOS equivalent is `~/Library/Application Support/Triceratops/backend.json`. It launches native Python, not WSL.
 
-The chat controller uses native model tool calls. It can answer without taking
-an action, inspect host/MIDI/audio state, execute several tools in one turn, and
-feed every real result or failure back to the model before it replies. There is
-no keyword fallback that silently starts generation after an API failure.
+Local HTTP: `127.0.0.1:49327`. The backend writes the one-shot REAPER importer into the configured runs directory, with that directory injected as a Lua string. Import uses REAPER's `-nonewinst` script support and adds actual MIDI/audio sources on new tracks. Automatic import and explicit import share the same bridge.
 
-Project memory stores explicit constraints, decisions and preferences separately
-for each available project identity. Accept and Reject update learned musical
-preferences; generating a candidate alone does not count as approval. Long
-conversations retain recent turns plus a compact project summary.
+## Verification
 
-The local RAG index covers this manual, the repository README, example plans,
-files placed in `knowledge/`, and project notes placed under
-`text2music/artifacts/agent_runs/project_notes/`. Retrieval results include their
-source path so the agent can cite the basis of an answer. The index is rebuilt
-with `KnowledgeBase.rebuild()` after adding or changing documents.
+`python -m pytest -q` runs Agent, MIDI, service and release-path regression tests. `python -m text2music.agent.doctor --config <runtime.json>` checks dependencies, selected device, model checksums and Basic Pitch ONNX initialization.
 
-## Local symbolic models
-
-The agent exposes two local symbolic-music backends alongside the original
-Text2Score generator. MIDI-LLM generates multi-instrument MIDI from a natural
-language request. `generate_draft.backend` accepts `auto`, `midi_llm`, or
-`text2score`; `auto` prefers MIDI-LLM only after every local model file is
-present. MIDI-GPT fills selected zero-based bar and track ids through the
-`infill_midi` tool, while tracks outside the request are explicitly preserved.
-
-Run `bash text2music/agent/install_symbolic_models.sh` inside WSL to install the
-pinned checkpoints. The installer uses the Tsinghua/Aliyun Python mirrors and
-`beta.hf-mirror.com` first. Chat requests never download a model and a missing
-model is never silently replaced with another backend.
-
-## Local debug build
-
-The current Windows build starts the existing WSL backend at
-`/mnt/e/text2score/text2music/agent/launch_vst_service.sh`. The model is loaded
-once for all active Triceratops instances. It is released when the last editor
-closes; a heartbeat watchdog also releases it after an abnormal DAW exit.
+Audio verification helpers in `tools/` were used against actual audio, MIDI and REAPER projects. Historical Steinberg validator results do not certify the v0.9 build. Public release notes record the checks that were actually rerun.

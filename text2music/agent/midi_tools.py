@@ -5,6 +5,7 @@ import json
 import re
 from collections import Counter
 from pathlib import Path
+from statistics import median
 from typing import Any
 
 from mido import MetaMessage, MidiFile, MidiTrack
@@ -32,15 +33,15 @@ def analyze_selection(path: Path) -> dict[str, Any]:
                     if pending:
                         pending.pop(0)["end_ppq"] = tick
         data = {"notes": notes, "tracks": [track.name or str(i) for i, track in enumerate(midi.tracks)],
-                "start_time": 0, "end_time": midi.length}
+                "start_time": 0, "end_time": midi.length, "ticks_per_quarter": midi.ticks_per_beat}
     else:
         data = json.loads(path.read_text(encoding="utf-8"))
     notes = [note for note in data.get("notes", []) if isinstance(note, dict)]
     pitches = [int(note["pitch"]) for note in notes]
     starts = sorted(float(note["start_ppq"]) for note in notes)
     intervals = [round(starts[index + 1] - starts[index], 3) for index in range(len(starts) - 1)]
-    pitch_classes = Counter(pitch % 12 for pitch in pitches)
-    likely_root = pitch_classes.most_common(1)[0][0] if pitch_classes else 0
+    pitch_classes = Counter(int(note["pitch"]) % 12 for note in notes if int(note.get("channel", 0)) != 9)
+    common_pitch_class = pitch_classes.most_common(1)[0][0] if pitch_classes else None
     channels = Counter(int(note.get("channel", 0)) for note in notes)
     by_take: dict[str, list[dict[str, Any]]] = {}
     for note in notes:
@@ -66,9 +67,15 @@ def analyze_selection(path: Path) -> dict[str, Any]:
         "notes": len(notes),
         "pitch_min": min(pitches, default=0),
         "pitch_max": max(pitches, default=0),
-        "likely_root": PITCH_CLASSES[likely_root],
+        "pitch_min_name": f"{PITCH_CLASSES[min(pitches) % 12]}{min(pitches) // 12 - 1}" if pitches else None,
+        "pitch_max_name": f"{PITCH_CLASSES[max(pitches) % 12]}{max(pitches) // 12 - 1}" if pitches else None,
+        "pitch_naming_convention": "Scientific pitch notation: MIDI 60 = C4",
+        "most_common_pitch_class": PITCH_CLASSES[common_pitch_class] if common_pitch_class is not None else None,
+        "key_estimate": None,
+        "key_note": "Pitch frequency alone does not establish the key or mode.",
         "dominant_channel": channels.most_common(1)[0][0] if channels else 0,
-        "median_onset_gap_ppq": sorted(intervals)[len(intervals) // 2] if intervals else 0,
+        "median_onset_gap_ppq": median(intervals) if intervals else 0,
+        "ticks_per_quarter": data.get("ticks_per_quarter", data.get("ppq", 960)),
         "start_time": data.get("start_time", 0),
         "end_time": data.get("end_time", 0),
         "tracks": data.get("tracks", []),
@@ -191,6 +198,9 @@ def transform_midi_file(source: Path, request: str, destination: Path, *, operat
     melody_track = max(range(len(pitch_averages)), key=pitch_averages.__getitem__) if pitch_averages else -1
 
     output = MidiFile(type=midi.type, ticks_per_beat=midi.ticks_per_beat)
+    # All synchronous tracks must repeat at the same song boundary, including
+    # trailing silence stored in end_of_track, rather than their last note.
+    repeat_span = max((sum(event.time for event in track) for track in midi.tracks), default=0)
     original_notes = 0
     output_notes = 0
     for track_index, track in enumerate(midi.tracks):
@@ -228,7 +238,7 @@ def transform_midi_file(source: Path, request: str, destination: Path, *, operat
                 if message.type in {"note_on", "note_off"}:
                     note_events.append((event_time, order * 2, item.copy()))
         if extend and note_events:
-            span = max(time_value for time_value, _, _ in events)
+            span = max(1, repeat_span)
             for event_time, order, message in note_events:
                 events.append((event_time + span, order, message.copy()))
                 if message.type == "note_on" and message.velocity > 0:

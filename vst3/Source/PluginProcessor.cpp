@@ -153,6 +153,14 @@ void TriceratopsAudioProcessor::armGeneratedClip()
     clipArmed.store(true);
 }
 
+void TriceratopsAudioProcessor::clearMidiClip()
+{
+    const juce::ScopedLock lock(clipLock);
+    clipArmed.store(false);
+    generatedClip.clear();
+    loadedMidiPath.clear();
+}
+
 void TriceratopsAudioProcessor::setCaptureMidi(bool shouldCapture)
 {
     const juce::ScopedLock lock(clipLock);

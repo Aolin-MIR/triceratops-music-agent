@@ -148,10 +148,12 @@ void AnimatedButton::mouseUp(const juce::MouseEvent& event)   { target = isMouse
 
 void AnimatedButton::timerCallback()
 {
+    const auto previous = amount;
     amount += (target - amount) * 0.22f;
     if (isSpinning)
         spinnerAngle += 0.18f;
-    repaint();
+    if (isSpinning || std::abs(amount - previous) > 0.0001f)
+        repaint();
 }
 
 void AnimatedButton::paintButton(juce::Graphics& g, bool, bool)
@@ -243,7 +245,7 @@ TriceratopsAudioProcessorEditor::TriceratopsAudioProcessorEditor(TriceratopsAudi
         label->setFont(juce::FontOptions(13.0f, juce::Font::bold));
         addAndMakeVisible(label);
     }
-    statusLabel.setText("WARMING UP MODEL", juce::dontSendNotification);
+    statusLabel.setText("CONNECTING TO AGENT", juce::dontSendNotification);
     statusLabel.setColour(juce::Label::textColourId, accentBlue);
     progressLabel.setText("Local GPU Model Service", juce::dontSendNotification);
 
@@ -282,15 +284,16 @@ TriceratopsAudioProcessorEditor::TriceratopsAudioProcessorEditor(TriceratopsAudi
 
     newMusic.onClick      = [this] { setStarter("Create music: "); };
     editMidi.onClick      = [this] { setStarter("Change this MIDI: "); };
-    analyze.onClick       = [this] { runQuickAction("Analyze what I loaded and explain the most useful musical details."); };
-    continueFour.onClick  = [this] { runQuickAction("Continue the loaded MIDI for four bars, keeping its musical identity."); };
-    moreEnergy.onClick    = [this] { runQuickAction("Make the loaded MIDI more energetic while keeping the main melody."); };
-    tightenTiming.onClick = [this] { runQuickAction("Tighten the timing of the loaded MIDI without changing its notes."); };
-    undoBtn.onClick       = [this] { runQuickAction("Undo the last MIDI change."); };
-    keepBtn.onClick       = [this] { runQuickAction("Keep this version. I like it."); };
-    rejectBtn.onClick     = [this] { runQuickAction("Reject this version and remember that I do not like it."); };
-    stems.onClick         = [this] { runQuickAction("Split the loaded audio into stems."); };
-    audioMidi.onClick     = [this] { runQuickAction("Convert the loaded audio to MIDI."); };
+    analyze.onClick       = [this] { runQuickAction("Analyze what I loaded and explain the most useful musical details.",
+        midiPath.isNotEmpty() ? "analyze_selected_midi" : (audioPath.isNotEmpty() ? "analyze_audio" : "inspect_project")); };
+    continueFour.onClick  = [this] { runQuickAction("Continue the loaded MIDI for four bars, keeping its musical identity.", "continue_midi"); };
+    moreEnergy.onClick    = [this] { runQuickAction("Make the loaded MIDI more energetic while keeping the main melody.", "transform_midi"); };
+    tightenTiming.onClick = [this] { runQuickAction("Tighten the timing of the loaded MIDI without changing its notes.", "transform_midi"); };
+    undoBtn.onClick       = [this] { runQuickAction("Undo the last MIDI change.", "undo"); };
+    keepBtn.onClick       = [this] { runQuickAction("Keep this version. I like it.", "accept"); };
+    rejectBtn.onClick     = [this] { runQuickAction("Reject this version and remember that I do not like it.", "reject"); };
+    stems.onClick         = [this] { runQuickAction("Split the loaded audio into stems.", "separate_stems"); };
+    audioMidi.onClick     = [this] { runQuickAction("Convert the loaded audio to MIDI.", "audio_to_midi"); };
 
     continueFour.setTooltip("Generate a four-bar continuation from the loaded MIDI");
     moreEnergy.setTooltip("Increase musical energy while preserving the melody");
@@ -312,13 +315,21 @@ TriceratopsAudioProcessorEditor::TriceratopsAudioProcessorEditor(TriceratopsAudi
     send.setEnabled(false);
     prompt.setEnabled(false);
 
+    const auto savedMidi = juce::File(ownerProcessor.getLoadedMidiPath());
+    if (savedMidi.existsAsFile())
+    {
+        midiPath = savedMidi.getFullPathName();
+        midiLabel.setText("MIDI: " + savedMidi.getFileName(), juce::dontSendNotification);
+        midiLabel.setColour(juce::Label::textColourId, accentBlue);
+        scoreStave.loadMidiFile(savedMidi);
+    }
+
     // Initial welcoming chat message
     warmupStartMs = juce::Time::currentTimeMillis();
     chatTurns.push_back({
         "assistant",
         "Welcome to Triceratops Music Agent!\n"
-        "Opening plugin session... Continuing saved conversation.\n"
-        "Model worker is warming up GPU cache. Please wait...",
+        "Opening plugin session. Models load when their tools are requested.",
         juce::Time::getCurrentTime().formatted("%H:%M:%S"),
         "",
         {}
@@ -326,8 +337,6 @@ TriceratopsAudioProcessorEditor::TriceratopsAudioProcessorEditor(TriceratopsAudi
     updateChatDisplay();
 
     startTimer(100);
-    pending = std::async(std::launch::async, [this] { return ownerProcessor.backend().openSession(); });
-    requestKind = RequestKind::open;
 }
 
 TriceratopsAudioProcessorEditor::~TriceratopsAudioProcessorEditor()
@@ -335,7 +344,8 @@ TriceratopsAudioProcessorEditor::~TriceratopsAudioProcessorEditor()
     stopTimer();
     if (pending.valid())
         pending.wait();
-    ownerProcessor.backend().closeSession();
+    if (sessionStartupRequested)
+        ownerProcessor.backend().closeSession();
 }
 
 void TriceratopsAudioProcessorEditor::paint(juce::Graphics& g)
@@ -473,18 +483,59 @@ void TriceratopsAudioProcessorEditor::timerCallback()
 {
     repaint();
 
+    // Hosts may construct an editor during plug-in scanning merely to query
+    // its size. Starting WSL, HTTP, or GPU work at that point can stall the
+    // scanner. Only open the backend after the editor has actually remained
+    // visible to the user for a short interval.
+    if (!sessionStartupRequested)
+    {
+        if (!isShowing())
+        {
+            visibleSinceMs = 0;
+            return;
+        }
+
+        const auto now = juce::Time::currentTimeMillis();
+        if (visibleSinceMs == 0)
+        {
+            visibleSinceMs = now;
+            return;
+        }
+
+        if (now - visibleSinceMs < 300)
+            return;
+
+        sessionStartupRequested = true;
+        pending = std::async(std::launch::async, [this] { return ownerProcessor.backend().openSession(); });
+        requestKind = RequestKind::open;
+    }
+
     if (requestKind != RequestKind::none && pending.valid()
         && pending.wait_for(std::chrono::seconds(0)) == std::future_status::ready)
     {
         handleStatus(pending.get());
+        if (requestKind == RequestKind::open)
+            sessionOpened = true;
         requestKind = RequestKind::none;
     }
 
-    if (requestKind == RequestKind::none && queuedMessage.isNotEmpty())
+    if (requestKind == RequestKind::none && deferredCancel)
+    {
+        deferredCancel = false;
+        cancelCurrentTask();
+    }
+    else if (requestKind == RequestKind::none && deferredClearChat)
+    {
+        deferredClearChat = false;
+        clearChatHistory();
+    }
+    else if (requestKind == RequestKind::none && queuedMessage.isNotEmpty())
     {
         const auto message = queuedMessage;
+        const auto action = queuedAction;
         queuedMessage.clear();
-        startChat(message);
+        queuedAction.clear();
+        startChat(message, action);
     }
     else if (requestKind == RequestKind::none && deferredAutoImport)
     {
@@ -516,6 +567,7 @@ void TriceratopsAudioProcessorEditor::sendMessage()
 
     prompt.setText("");
     queuedMessage = message;
+    queuedAction.clear();
 
     chatTurns.push_back({
         "user",
@@ -526,7 +578,6 @@ void TriceratopsAudioProcessorEditor::sendMessage()
     });
     currentThinkingSteps.clear();
     lastStateDetail.clear();
-    latestResultMidi.clear();
     addThinkingStep("Understanding request & observing DAW project context...");
 
     busyGenerating = true;
@@ -535,10 +586,13 @@ void TriceratopsAudioProcessorEditor::sendMessage()
     updateChatDisplay();
 }
 
-void TriceratopsAudioProcessorEditor::startChat(const juce::String& message)
+void TriceratopsAudioProcessorEditor::startChat(const juce::String& message, const juce::String& action)
 {
-    pending = std::async(std::launch::async, [this, message] {
-        return ownerProcessor.backend().chat(message, ownerProcessor.hostSnapshot(), midiPath, audioPath);
+    const auto host = ownerProcessor.hostSnapshot();
+    const auto selectedMidi = midiPath;
+    const auto selectedAudio = audioPath;
+    pending = std::async(std::launch::async, [this, message, action, host, selectedMidi, selectedAudio] {
+        return ownerProcessor.backend().chat(message, host, selectedMidi, selectedAudio, action);
     });
     requestKind = RequestKind::chat;
 }
@@ -578,6 +632,18 @@ void TriceratopsAudioProcessorEditor::handleStatus(const juce::var& value)
     {
         statusLabel.setText("BACKEND OFFLINE", juce::dontSendNotification);
         statusLabel.setColour(juce::Label::textColourId, accentRed);
+        if (busyGenerating)
+        {
+            busyGenerating = false;
+            queuedMessage.clear();
+            send.setSpinning(false);
+            chatTurns.push_back({ "assistant", "Backend connection failed. Check the local service and retry.",
+                juce::Time::getCurrentTime().formatted("%H:%M:%S"), "", currentThinkingSteps });
+            currentThinkingSteps.clear();
+            updateChatDisplay();
+        }
+        send.setEnabled(true);
+        prompt.setEnabled(true);
         return;
     }
 
@@ -679,6 +745,7 @@ void TriceratopsAudioProcessorEditor::handleStatus(const juce::var& value)
     }
 
     const auto response = object->getProperty("reply").toString();
+    const auto error = object->getProperty("error").toString();
 
     if (busy)
     {
@@ -712,12 +779,15 @@ void TriceratopsAudioProcessorEditor::handleStatus(const juce::var& value)
         send.setSpinning(false);
         send.setEnabled(!modelIsWarmingUp);
 
-        juce::String finalReply = response;
+        juce::String finalReply = error.isEmpty() ? response : "Operation failed:\n" + error;
+        const auto* finalResult = object->getProperty("result").getDynamicObject();
+        const auto finalMidi = finalResult != nullptr
+            ? finalResult->getProperty("midi_windows").toString() : juce::String();
         chatTurns.push_back({
             "assistant",
             finalReply,
             juce::Time::getCurrentTime().formatted("%H:%M:%S"),
-            latestResultMidi,
+            finalMidi,
             currentThinkingSteps
         });
         currentThinkingSteps.clear();
@@ -725,7 +795,6 @@ void TriceratopsAudioProcessorEditor::handleStatus(const juce::var& value)
         updateChatDisplay();
     }
 
-    const auto error = object->getProperty("error").toString();
     if (error.isNotEmpty() && busyGenerating)
     {
         busyGenerating = false;
@@ -744,14 +813,30 @@ void TriceratopsAudioProcessorEditor::handleStatus(const juce::var& value)
     }
 
     // Process Result Object & Update Score Visualizer
-    if (auto* result = object->getProperty("result").getDynamicObject())
+    if (auto* result = object->getProperty("result").getDynamicObject();
+        result != nullptr && !busy && queuedMessage.isEmpty())
     {
+        if (!busy)
+            if (auto* files = result->getProperty("files").getArray())
+            {
+                const auto stemKey = juce::JSON::toString(result->getProperty("files"), false);
+                if (!files->isEmpty() && stemKey != latestStemResult)
+                {
+                    latestStemResult = stemKey;
+                    latestStemFiles = *files;
+                    latestResultMidi.clear();
+                    if (autoImportToReaper && requestKind != RequestKind::open)
+                        deferredAutoImport = true;
+                }
+            }
         const auto midi = result->getProperty("midi_windows").toString();
         if (midi.isNotEmpty())
         {
             if (midi != latestResultMidi)
             {
                 latestResultMidi = midi;
+                latestStemResult.clear();
+                latestStemFiles.clear();
                 midiPath = midi;
                 ownerProcessor.loadMidiClip(juce::File(midi));
                 midiLabel.setText("MIDI: " + juce::File(midi).getFileName(), juce::dontSendNotification);
@@ -760,7 +845,7 @@ void TriceratopsAudioProcessorEditor::handleStatus(const juce::var& value)
                 // Load and paint score stave visualizer
                 scoreStave.loadMidiFile(juce::File(midi));
 
-                if (autoImportToReaper)
+                if (autoImportToReaper && requestKind != RequestKind::open)
                 {
                     // Defer to the timer so the REAPER import request runs on a
                     // background future instead of blocking the message thread.
@@ -770,8 +855,6 @@ void TriceratopsAudioProcessorEditor::handleStatus(const juce::var& value)
             else
             {
                 latestResultMidi = midi;
-                if (midiPath.isEmpty())
-                    midiPath = midi;
             }
 
             // Attach the result file to the most recent assistant message so
@@ -873,6 +956,13 @@ void TriceratopsAudioProcessorEditor::updateChatDisplay()
 
 void TriceratopsAudioProcessorEditor::clearChatHistory()
 {
+    if (busyGenerating)
+        return;
+    if (requestKind != RequestKind::none)
+    {
+        deferredClearChat = true;
+        return;
+    }
     chatTurns.clear();
     currentThinkingSteps.clear();
     chatTurns.push_back({
@@ -889,17 +979,22 @@ void TriceratopsAudioProcessorEditor::clearChatHistory()
 
 void TriceratopsAudioProcessorEditor::cancelCurrentTask()
 {
+    queuedMessage.clear();
+    queuedAction.clear();
+    deferredAutoImport = false;
+    if (requestKind != RequestKind::none)
+    {
+        deferredCancel = true;
+        return;
+    }
     if (busyGenerating)
     {
-        busyGenerating = false;
-        send.setSpinning(false);
-        send.setEnabled(!modelIsWarmingUp);
         pending = std::async(std::launch::async, [this] { return ownerProcessor.backend().cancelTask(); });
         requestKind = RequestKind::status;
 
         chatTurns.push_back({
             "assistant",
-            "Stop requested. Active generation task cancelled.",
+            "Stop requested. Waiting for the active tool to finish cancelling.",
             juce::Time::getCurrentTime().formatted("%H:%M:%S"),
             "",
             currentThinkingSteps
@@ -917,9 +1012,15 @@ void TriceratopsAudioProcessorEditor::cancelCurrentTask()
 
 void TriceratopsAudioProcessorEditor::importToReaper()
 {
-    juce::String fileToImport = latestResultMidi;
-    if (fileToImport.isEmpty())
-        fileToImport = midiPath;
+    const auto fileToImport = latestStemFiles.isEmpty() ? midiPath : juce::String();
+    const juce::var filesToImport(latestStemFiles);
+    if (fileToImport.isEmpty() && latestStemFiles.isEmpty())
+    {
+        chatTurns.push_back({ "assistant", "Load or generate MIDI or stems before importing.",
+            juce::Time::getCurrentTime().formatted("%H:%M:%S"), "", {} });
+        updateChatDisplay();
+        return;
+    }
 
     // Never destroy a future that is still running: if another request is in
     // flight, retry once it completes (the timer drives the deferred import).
@@ -930,14 +1031,14 @@ void TriceratopsAudioProcessorEditor::importToReaper()
         return;
     }
 
-    pending = std::async(std::launch::async, [this, fileToImport] {
-        return ownerProcessor.backend().importReaperTrack(fileToImport);
+    pending = std::async(std::launch::async, [this, fileToImport, filesToImport] {
+        return ownerProcessor.backend().importReaperTrack(fileToImport, filesToImport);
     });
     requestKind = RequestKind::import_reaper;
 
     juce::String msg = fileToImport.isNotEmpty()
         ? ("Importing " + juce::File(fileToImport).getFileName() + " into REAPER track...")
-        : "Importing latest generated MIDI clip into REAPER track...";
+        : "Importing separated audio stems into REAPER tracks...";
 
     chatTurns.push_back({
         "assistant",
@@ -952,15 +1053,19 @@ void TriceratopsAudioProcessorEditor::importToReaper()
 void TriceratopsAudioProcessorEditor::chooseMidi()
 {
     auto chooser = std::make_shared<juce::FileChooser>("Load MIDI", juce::File(), "*.mid;*.midi");
+    const juce::Component::SafePointer<TriceratopsAudioProcessorEditor> safeThis(this);
     chooser->launchAsync(juce::FileBrowserComponent::openMode | juce::FileBrowserComponent::canSelectFiles,
-                         [this, chooser](const juce::FileChooser& selected) {
+                         [safeThis, chooser](const juce::FileChooser& selected) {
+        if (safeThis == nullptr)
+            return;
         const auto file = selected.getResult();
-        if (file.existsAsFile() && ownerProcessor.loadMidiClip(file))
+        if (file.existsAsFile() && safeThis->ownerProcessor.loadMidiClip(file))
         {
-            midiPath = file.getFullPathName();
-            midiLabel.setText("MIDI: " + file.getFileName(), juce::dontSendNotification);
-            midiLabel.setColour(juce::Label::textColourId, accentBlue);
-            scoreStave.loadMidiFile(file);
+            safeThis->midiPath = file.getFullPathName();
+            safeThis->latestStemFiles.clear();
+            safeThis->midiLabel.setText("MIDI: " + file.getFileName(), juce::dontSendNotification);
+            safeThis->midiLabel.setColour(juce::Label::textColourId, accentBlue);
+            safeThis->scoreStave.loadMidiFile(file);
         }
     });
 }
@@ -968,20 +1073,24 @@ void TriceratopsAudioProcessorEditor::chooseMidi()
 void TriceratopsAudioProcessorEditor::chooseAudio()
 {
     auto chooser = std::make_shared<juce::FileChooser>("Load Audio", juce::File(), "*.wav;*.flac;*.mp3;*.ogg");
+    const juce::Component::SafePointer<TriceratopsAudioProcessorEditor> safeThis(this);
     chooser->launchAsync(juce::FileBrowserComponent::openMode | juce::FileBrowserComponent::canSelectFiles,
-                         [this, chooser](const juce::FileChooser& selected) {
+                         [safeThis, chooser](const juce::FileChooser& selected) {
+        if (safeThis == nullptr)
+            return;
         const auto file = selected.getResult();
         if (file.existsAsFile())
         {
-            audioPath = file.getFullPathName();
-            audioLabel.setText("AUDIO: " + file.getFileName(), juce::dontSendNotification);
-            audioLabel.setColour(juce::Label::textColourId, accentBlue);
+            safeThis->audioPath = file.getFullPathName();
+            safeThis->audioLabel.setText("AUDIO: " + file.getFileName(), juce::dontSendNotification);
+            safeThis->audioLabel.setColour(juce::Label::textColourId, accentBlue);
         }
     });
 }
 
 void TriceratopsAudioProcessorEditor::clearMidi()
 {
+    ownerProcessor.clearMidiClip();
     midiPath.clear();
     midiLabel.setText("MIDI: None", juce::dontSendNotification);
     midiLabel.setColour(juce::Label::textColourId, textSub);
@@ -1008,12 +1117,13 @@ void TriceratopsAudioProcessorEditor::setStarter(const juce::String& text)
     prompt.grabKeyboardFocus();
 }
 
-void TriceratopsAudioProcessorEditor::runQuickAction(const juce::String& text)
+void TriceratopsAudioProcessorEditor::runQuickAction(const juce::String& text, const juce::String& action)
 {
     if (busyGenerating)
         return;
     prompt.setText(text);
     sendMessage();
+    queuedAction = action;
 }
 
 juce::File TriceratopsAudioProcessorEditor::nextCaptureFile(const juce::String& extension) const
@@ -1039,6 +1149,8 @@ void TriceratopsAudioProcessorEditor::toggleMidiCapture()
     const auto file = nextCaptureFile(".mid");
     if (ownerProcessor.saveCapturedMidi(file))
     {
+        ownerProcessor.loadMidiClip(file);
+        latestStemFiles.clear();
         midiPath = file.getFullPathName();
         midiLabel.setText("MIDI: " + file.getFileName(), juce::dontSendNotification);
         midiLabel.setColour(juce::Label::textColourId, accentBlue);
@@ -1085,8 +1197,10 @@ void TriceratopsAudioProcessorEditor::filesDropped(const juce::StringArray& file
     const juce::File file(files[0]);
     if (file.hasFileExtension("mid;midi"))
     {
+        if (!ownerProcessor.loadMidiClip(file))
+            return;
         midiPath = file.getFullPathName();
-        ownerProcessor.loadMidiClip(file);
+        latestStemFiles.clear();
         midiLabel.setText("MIDI: " + file.getFileName(), juce::dontSendNotification);
         midiLabel.setColour(juce::Label::textColourId, accentBlue);
         scoreStave.loadMidiFile(file);

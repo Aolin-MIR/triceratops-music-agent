@@ -1,11 +1,10 @@
 -- @description Triceratops: Import generated media from agent
--- @version 1.0
+-- @version 0.9
 -- One-shot consumer for reaper-command.txt written by the Triceratops backend.
--- Registered as a REAPER action so the backend can trigger it with
--- "reaper.exe <numeric command id>" (REAPER does NOT run .lua files passed
--- on the command line; it treats them as media to open).
-local ROOT = "E:\\text2score\\text2music\\artifacts\\agent_runs"
-local cmd_path = ROOT .. "\\reaper-command.txt"
+-- Invoked through REAPER 6.80+ script command-line support (-nonewinst).
+local ROOT = nil -- injected by vst_service
+assert(ROOT, "Run this importer through Triceratops, which supplies the configured data folder")
+local cmd_path = ROOT .. "/reaper-command.txt"
 
 local function value(s, k) return (s or ""):match(k .. ": ([^\r\n]+)") or "" end
 
@@ -25,16 +24,37 @@ local files = value(payload, "FILES")
 if files == "" then return end
 
 reaper.Undo_BeginBlock()
+local imported = 0
 for file in files:gmatch("[^|]+") do
+  local source = reaper.PCM_Source_CreateFromFile(file)
+  if not source then error("Cannot load generated media: " .. file) end
   local index = reaper.CountTracks(0)
   reaper.InsertTrackAtIndex(index, true)
   local track = reaper.GetTrack(0, index)
   local name = file:match("([^/\\]+)%.%w+$") or "Triceratops Import"
   reaper.GetSetMediaTrackInfo_String(track, "P_NAME", name, true)
   reaper.SetOnlyTrackSelected(track)
-  -- 512 = 0x200: bypass MIDI import option dialogs, insert straight away.
-  reaper.InsertMedia(file, 512)
+  -- InsertMedia's 512 flag is a track-index flag, not a dialog bypass.
+  -- Attach the real source directly to avoid blocking unattended imports.
+  local item = reaper.AddMediaItemToTrack(track)
+  local take = reaper.AddTakeToMediaItem(item)
+  reaper.SetMediaItemTake_Source(take, source)
+  reaper.GetSetMediaItemTakeInfo_String(take, "P_NAME", name, true)
+  local length, isQN = reaper.GetMediaSourceLength(source)
+  local position = reaper.GetCursorPosition()
+  if isQN then
+    local startQN = reaper.TimeMap2_timeToQN(0, position)
+    length = reaper.TimeMap2_QNToTime(0, startQN + length) - position
+  end
+  reaper.SetMediaItemInfo_Value(item, "D_POSITION", position)
+  reaper.SetMediaItemInfo_Value(item, "D_LENGTH", length)
+  imported = imported + 1
 end
 reaper.TrackList_AdjustWindows(false)
 reaper.Undo_EndBlock("Triceratops import generated media", -1)
 reaper.UpdateArrange()
+local result = io.open(ROOT .. "/reaper-import-result.txt", "w")
+if result then
+  result:write("COMMAND: " .. command .. "\nIMPORTED: " .. imported .. "\nFILES: " .. files .. "\n")
+  result:close()
+end

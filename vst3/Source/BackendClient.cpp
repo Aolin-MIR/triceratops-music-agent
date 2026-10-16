@@ -2,37 +2,15 @@
 
 namespace
 {
-// Converts a Windows path (e.g. E:\text2score\...) into the WSL mount
-// equivalent (/mnt/e/text2score/...) so the backend launch script is found
-// regardless of where the repository lives.
-juce::String toWslPath(const juce::File& windowsFile)
+juce::File backendConfiguration()
 {
-    const auto full = windowsFile.getFullPathName();
-    if (full.length() >= 2 && full[1] == ':')
-    {
-        juce::String drive = full.substring(0, 1).toLowerCase();
-        juce::String rest = full.substring(2).replaceCharacter('\\', '/');
-        return "/mnt/" + drive + rest;
-    }
-    return full.replaceCharacter('\\', '/');
-}
-
-juce::String launchScriptWslPath()
-{
-    // Prefer the location of the running plug-in module / standalone exe so a
-    // relocated checkout still works; fall back to the documented default.
-    for (auto location : { juce::File::getSpecialLocation(juce::File::currentExecutableFile),
-                           juce::File::getSpecialLocation(juce::File::currentApplicationFile) })
-    {
-        auto script = location.getParentDirectory()
-                              .getChildFile("text2music/agent/launch_vst_service.sh");
-        if (!script.existsAsFile())
-            script = location.getParentDirectory()
-                             .getChildFile("../text2music/agent/launch_vst_service.sh");
-        if (script.existsAsFile())
-            return toWslPath(script);
-    }
-    return "/mnt/e/text2score/text2music/agent/launch_vst_service.sh";
+   #if JUCE_MAC
+    return juce::File::getSpecialLocation(juce::File::userHomeDirectory)
+        .getChildFile("Library/Application Support/Triceratops/backend.json");
+   #else
+    return juce::File::getSpecialLocation(juce::File::userApplicationDataDirectory)
+        .getChildFile("Triceratops/backend.json");
+   #endif
 }
 }
 
@@ -49,10 +27,20 @@ void BackendClient::ensureService()
     if (!health.isVoid())
         return;
 
+    const auto config = juce::JSON::parse(backendConfiguration());
+    auto* settings = config.getDynamicObject();
+    if (settings == nullptr)
+        return;
+    const auto launcher = settings->getProperty("entry").toString();
+    const auto runtime = settings->getProperty("config").toString();
+    const auto python = settings->getProperty("python").toString();
+    if (launcher.isEmpty() || runtime.isEmpty() || python.isEmpty())
+        return;
+    juce::StringArray command;
+    command.addArray({ python, "-X", "utf8", launcher, "--config", runtime });
     serviceProcess = std::make_unique<juce::ChildProcess>();
-    const auto command = juce::String("wsl.exe -e bash \"") + launchScriptWslPath() + "\"";
-    serviceProcess->start(command,
-                          juce::ChildProcess::wantStdOut | juce::ChildProcess::wantStdErr);
+    if (!serviceProcess->start(command, juce::ChildProcess::wantStdOut | juce::ChildProcess::wantStdErr))
+        return;
 
     for (int attempt = 0; attempt < 50; ++attempt)
     {
@@ -111,16 +99,19 @@ juce::var BackendClient::cancelTask()
     return request("/cancel", "POST", juce::var(payload));
 }
 
-juce::var BackendClient::importReaperTrack(const juce::String& filePath)
+juce::var BackendClient::importReaperTrack(const juce::String& filePath, const juce::var& files)
 {
     auto payload = new juce::DynamicObject();
     payload->setProperty("session", sessionId);
     payload->setProperty("file", filePath);
+    if (files.isArray())
+        payload->setProperty("files", files);
     return request("/import_reaper", "POST", juce::var(payload));
 }
 
 juce::var BackendClient::chat(const juce::String& message, const juce::var& host,
-                              const juce::String& midiPath, const juce::String& audioPath)
+                              const juce::String& midiPath, const juce::String& audioPath,
+                              const juce::String& action)
 {
     auto payload = new juce::DynamicObject();
     payload->setProperty("session", sessionId);
@@ -128,6 +119,7 @@ juce::var BackendClient::chat(const juce::String& message, const juce::var& host
     payload->setProperty("host", host);
     payload->setProperty("midi_path", midiPath);
     payload->setProperty("audio_path", audioPath);
+    payload->setProperty("action", action);
     return request("/chat", "POST", juce::var(payload));
 }
 

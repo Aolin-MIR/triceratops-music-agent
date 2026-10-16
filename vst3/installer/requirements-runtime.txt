@@ -1,0 +1,19 @@
+# Release runtime only; training, Gradio and legacy Text2Score are not installed.
+numpy==1.26.4
+torch==2.13.0
+transformers==5.14.1
+accelerate>=1.0,<2
+openai>=1.60,<3
+mido==1.3.3
+music21>=9,<10
+librosa==0.11.0
+soundfile==0.13.1
+demucs==4.1.0
+basic-pitch[onnx]==0.4.0
+onnxruntime==1.23.2
+midigpt[inference]==0.3.4
+pretty-midi>=0.2.10,<0.3
+rapidfuzz>=3,<4
+unidecode>=1,<2
+jellyfish>=1,<2
+pyyaml>=6,<7

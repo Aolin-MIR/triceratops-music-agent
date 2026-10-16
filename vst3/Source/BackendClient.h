@@ -17,9 +17,10 @@ public:
     juce::var history();
     juce::var clearChat();
     juce::var cancelTask();
-    juce::var importReaperTrack(const juce::String& filePath);
+    juce::var importReaperTrack(const juce::String& filePath, const juce::var& files = {});
     juce::var chat(const juce::String& message, const juce::var& host,
-                   const juce::String& midiPath, const juce::String& audioPath);
+                   const juce::String& midiPath, const juce::String& audioPath,
+                   const juce::String& action = {});
 
     const juce::String& getSessionId() const noexcept { return sessionId; }
 

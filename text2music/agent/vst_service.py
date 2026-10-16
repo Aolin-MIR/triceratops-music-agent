@@ -1,4 +1,4 @@
-"""DAW-neutral localhost service used by the Triceratops VST3 plug-in."""
+"""Localhost service used by the Triceratops REAPER VST3 plug-in."""
 from __future__ import annotations
 
 import json
@@ -15,11 +15,11 @@ from typing import Any
 from text2music.agent.knowledge import KnowledgeBase
 from text2music.agent.project_memory import ProjectMemory, project_key
 
-HOST = "0.0.0.0"
+HOST = "127.0.0.1"
 PORT = int(os.environ.get("TRICERATOPS_PORT", "49327"))
 RUNS_DIR = Path(os.environ.get(
     "TEXT2SCORE_RUNS_DIR",
-    "/mnt/e/text2score/text2music/artifacts/agent_runs",
+    str(Path(__file__).resolve().parents[1] / "artifacts" / "agent_runs"),
 ))
 STATUS = RUNS_DIR / "reaper-status.txt"
 HISTORY = RUNS_DIR / "reaper-history.jsonl"
@@ -37,6 +37,8 @@ WORKER_SCRIPT = AGENT_DIR / "launch_reaper_worker.sh"
 
 
 def _worker_alive() -> bool:
+    if os.name == "nt":
+        return False
     try:
         res = subprocess.run(["pgrep", "-f", "[w]arm_worker.py"],
                              capture_output=True, text=True, timeout=5)
@@ -46,6 +48,9 @@ def _worker_alive() -> bool:
 
 
 def _find_reaper_executable() -> str:
+    configured = os.environ.get("TRICERATOPS_REAPER", "")
+    if configured:
+        return configured if Path(configured).is_file() else ""
     candidates = [
         "/mnt/c/Program Files/REAPER (x64)/reaper.exe",
         "/mnt/c/Program Files/REAPER/reaper.exe",
@@ -62,35 +67,35 @@ def _write_reaper_command(command: str, files: str) -> None:
     """Atomically publish a command for REAPER-side consumers (the one-shot
     import action or the agent panel, whichever claims it first)."""
     cmd_file = RUNS_DIR / "reaper-command.txt"
-    try:
-        tmp = cmd_file.with_suffix(".txt.tmp")
-        tmp.write_text(f"COMMAND: {command}\nFILES: {files}\n", encoding="utf-8")
-        os.replace(tmp, cmd_file)
-    except OSError:
-        pass
+    RUNS_DIR.mkdir(parents=True, exist_ok=True)
+    tmp = cmd_file.with_suffix(".txt.tmp")
+    tmp.write_text(f"COMMAND: {command}\nFILES: {files}\n", encoding="utf-8")
+    os.replace(tmp, cmd_file)
 
 
 def _trigger_reaper_import(command: str, files: str) -> dict[str, Any]:
-    """Publish the command file and trigger the registered one-shot import
-    action in REAPER via its numeric command id."""
+    """Publish media and run the one-shot importer in the existing REAPER host."""
     _write_reaper_command(command, files)
-    action_id = ""
-    try:
-        action_id = ACTION_ID_FILE.read_text(encoding="utf-8").strip()
-    except OSError:
-        pass
     reaper_exe = _find_reaper_executable()
-    if action_id.isdigit() and reaper_exe:
+    script = RUNS_DIR / "Triceratops - Import.lua"
+    template = AGENT_DIR / "reaper" / "Triceratops - Import from Agent.lua"
+    if template.is_file():
+        root = _windows_path(RUNS_DIR)
+        # JSON strings are valid Lua strings here, including Windows backslashes.
+        script.write_text(template.read_text(encoding="utf-8").replace(
+            "local ROOT = nil -- injected by vst_service", "local ROOT = " + json.dumps(root, ensure_ascii=False)
+        ), encoding="utf-8")
+    if script.is_file() and reaper_exe:
         try:
-            subprocess.Popen([reaper_exe, action_id], start_new_session=True,
+            subprocess.Popen([reaper_exe, "-nonewinst", _windows_path(script)], start_new_session=True,
                              stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
             return {"triggered": True, "detail": ""}
         except Exception:
             return {"triggered": False,
                     "detail": "Failed to launch REAPER to run the import action"}
-    if not action_id.isdigit():
+    if not script.is_file():
         return {"triggered": False,
-                "detail": "REAPER bridge not set up: run the 'Triceratops: Report Import Action ID' action once in REAPER (register 'Triceratops - Import from Agent.lua' via Action List > Add > Load script first)"}
+                "detail": "REAPER import script is missing"}
     return {"triggered": False, "detail": "REAPER executable not found"}
 
 
@@ -109,6 +114,8 @@ def _archive_and_clear_conversation() -> None:
 
 
 def _windows_to_wsl(path: str) -> Path:
+    if os.name == "nt":
+        return Path(path)
     match = re.match(r"^([A-Za-z]):[\\/](.*)$", path)
     if match:
         return Path("/mnt") / match.group(1).lower() / match.group(2).replace("\\", "/")
@@ -289,8 +296,6 @@ class TriceratopsState:
                 self.sessions[session] = time.monotonic()
                 self.last_activity = time.monotonic()
             self.ever_opened = True
-        # Always trigger worker check/start when a plugin instance opens
-        self.start_worker()
         return self.snapshot()
 
     def stop_when_unused(self) -> None:
@@ -340,7 +345,15 @@ class TriceratopsState:
         audio_raw = str(payload.get("audio_path", "")).strip()
         midi = _windows_to_wsl(midi_raw) if midi_raw else None
         audio = _windows_to_wsl(audio_raw) if audio_raw else None
-        context = _host_context(host)
+        try:
+            context = _host_context(host)
+        except (ValueError, TypeError) as exc:
+            with self.lock:
+                self.last_error = f"Invalid host context: {exc}"
+                self.last_reply = self.last_error
+                self.busy = False
+            _write_status("failed", "100", self.last_error)
+            return
         if audio and audio.exists():
             context += f"\nAudio: {audio}"
         with self.lock:
@@ -369,17 +382,15 @@ class TriceratopsState:
 
         # Heavy music/ML modules are imported only for requests that need them,
         # after the HTTP server is already listening.
-        # Make sure the GPU worker survived since the session opened; if it
-        # crashed or was stopped, restart it before the request queues work.
+        # Each generation adapter starts only the model needed for that request.
         try:
             from text2music.agent.audio_tools import audio_to_midi, separate_stems
             from text2music.agent.capabilities import record_feedback, load_memory, memory_context
             from text2music.agent.midi_tools import transform_midi_file
             from text2music.agent.symbolic_models import (
-                generate_midi_llm, infill_midi_gpt, model_status, release_text2score_worker,
+                generate_midi_llm, infill_midi_gpt, continue_midi_gpt, model_status, release_text2score_worker,
             )
             from text2music.agent.tool_loop import run_tool_loop
-            from text2music.agent.workflow import run_agent
 
             project_memory = ProjectMemory(RUNS_DIR, project_key(host))
             knowledge = KnowledgeBase(
@@ -429,6 +440,14 @@ class TriceratopsState:
                     result["midi"] = str(output)
                     result["midi_windows"] = _windows_path(output)
                     reply = "The revised MIDI clip is ready."
+                elif tool == "continue_midi":
+                    if not midi or not midi.is_file():
+                        raise ValueError("Load or capture MIDI before asking for a continuation")
+                    release_text2score_worker(RUNS_DIR)
+                    output = RUNS_DIR / "vst_midi" / f"continuation-{uuid.uuid4().hex}.mid"
+                    result.update(continue_midi_gpt(midi, output, bar_count=arguments.get("bar_count", 4)))
+                    result["midi_windows"] = _windows_path(output)
+                    reply = f"MIDI-GPT generated {result['added_bars']} new bars after the original clip."
                 elif tool == "infill_midi":
                     if not midi or not midi.exists():
                         raise ValueError("Drop or capture a MIDI clip before asking for generative infill")
@@ -460,8 +479,7 @@ class TriceratopsState:
                 elif tool == "generate_draft":
                     requested_backend = str(arguments.get("backend", "auto"))
                     installed = model_status()
-                    backend = ("midi_llm" if installed["midi_llm"]["ready"] else "text2score") \
-                        if requested_backend == "auto" else requested_backend
+                    backend = "midi_llm" if requested_backend == "auto" else requested_backend
                     request = request_text + "\n\nVST3 host context:\n" + context
                     if backend == "midi_llm":
                         release_text2score_worker(RUNS_DIR)
@@ -474,6 +492,9 @@ class TriceratopsState:
                         with HISTORY.open("a", encoding="utf-8") as handle:
                             handle.write(json.dumps(history_entry, ensure_ascii=False) + "\n")
                     elif backend == "text2score":
+                        if os.environ.get("TRICERATOPS_ENABLE_LEGACY") != "1":
+                            raise ValueError("Text2Score is a developer-only backend; v0.9 uses MIDI-LLM")
+                        from text2music.agent.workflow import run_agent
                         self.start_worker()
                         entry = run_agent(request)
                     else:
@@ -505,11 +526,10 @@ class TriceratopsState:
                     raise ValueError(f"Unsupported action: {tool}")
                 if result.get("midi"):
                     midi = Path(result["midi"])
-                    if tool in {"transform_midi", "infill_midi", "audio_to_midi"}:
+                    if tool in {"transform_midi", "infill_midi", "continue_midi", "audio_to_midi"}:
                         entry = {**result, "request": request_text, "time": time.strftime("%Y-%m-%d %H:%M:%S")}
                         with HISTORY.open("a", encoding="utf-8") as handle:
                             handle.write(json.dumps(entry, ensure_ascii=False) + "\n")
-                self._queue_reaper_import(result)
                 return {**result, "reply": reply}
 
             def on_event(event):
@@ -520,13 +540,19 @@ class TriceratopsState:
             decision = run_tool_loop(message, context=context,
                                      selection=midi if midi and midi.exists() else None,
                                      conversation=conversation, execute=execute, on_event=on_event,
+                                     forced_tool=str(payload.get("action", "")),
                                      cancelled=self.cancel_event.is_set)
             result["trace"] = decision.trace
             reply = decision.reply
+            report_error = ""
+            if payload.get("action"):
+                from text2music.agent.operation_report import operation_report
+                reply, report_error = operation_report(str(payload["action"]), decision.trace)
             with self.lock:
                 self.last_result = result
                 self.last_reply = reply
-            _write_status("completed", "100",
+                self.last_error = report_error
+            _write_status("failed" if report_error else "completed", "100",
                           result.get("comparison", {}).get("summary", reply)
                           if isinstance(result.get("comparison"), dict) else reply)
             self.append_turn("assistant", reply, decision.tool)
@@ -547,28 +573,11 @@ class TriceratopsState:
             with self.lock:
                 self.busy = False
 
-    def _queue_reaper_import(self, result: dict[str, Any]) -> None:
-        # Write-only on purpose: the explicit /import_reaper endpoint (used by
-        # the plug-in) triggers REAPER; triggering here too would double-import
-        # when the plug-in auto-import is enabled.
-        try:
-            if result.get("files"):
-                _write_reaper_command("import_audio_stems",
-                                      "|".join(str(f) for f in result["files"]))
-            elif result.get("midi_windows"):
-                _write_reaper_command("import_midi_file", str(result["midi_windows"]))
-            elif result.get("midi"):
-                _write_reaper_command("import_midi_file",
-                                      _windows_path(Path(result["midi"])))
-        except OSError:
-            pass
-
-
 APP = TriceratopsState()
 
 
 class Handler(BaseHTTPRequestHandler):
-    server_version = "Triceratops/1.0"
+    server_version = "Triceratops/0.9.0"
 
     def log_message(self, format: str, *args: Any) -> None:
         return
@@ -584,10 +593,14 @@ class Handler(BaseHTTPRequestHandler):
 
     def _payload(self) -> dict[str, Any]:
         length = int(self.headers.get("Content-Length", "0"))
+        if length < 0 or length > 1024 * 1024:
+            raise ValueError("Request body must not exceed 1 MiB")
         if length <= 0:
             return {}
         value = json.loads(self.rfile.read(length).decode("utf-8"))
-        return value if isinstance(value, dict) else {}
+        if not isinstance(value, dict):
+            raise ValueError("Request body must be a JSON object")
+        return value
 
     def do_GET(self) -> None:
         if self.path in {"/health", "/status"}:
@@ -599,19 +612,19 @@ class Handler(BaseHTTPRequestHandler):
 
     def do_POST(self) -> None:
         try:
-            payload = self._payload()
+            try:
+                payload = self._payload()
+            except (ValueError, UnicodeError) as exc:
+                self._json(400, {"error": f"Invalid request: {exc}"})
+                return
             if self.path == "/session/open":
                 session = str(payload.get("session") or uuid.uuid4())
                 with APP.lock:
                     APP.sessions[session] = time.monotonic()
                     APP.ever_opened = True
-                    APP.last_reply = "Ready."
-                    APP.last_error = ""
-                    APP.last_result = {}
-                # Clear any stale status file from a previous session so the
-                # plug-in does not inherit a phantom "planning" state.
-                _write_status("ready", "0", "Service ready")
-                APP.start_worker()
+                    APP.last_activity = time.monotonic()
+                # A second editor must observe the existing task and result.
+                # Only service startup resets stale status from a prior run.
                 self._json(200, {"session": session, **APP.snapshot()})
             elif self.path == "/session/ping":
                 session = str(payload.get("session", ""))
@@ -629,7 +642,14 @@ class Handler(BaseHTTPRequestHandler):
                     threading.Thread(target=APP.stop_when_unused, daemon=True).start()
                 self._json(200, APP.snapshot())
             elif self.path == "/chat/clear":
-                _archive_and_clear_conversation()
+                with APP.lock:
+                    if APP.busy:
+                        self._json(409, {**APP.snapshot(), "error": "Stop the active task before clearing chat"})
+                        return
+                    _archive_and_clear_conversation()
+                    APP.last_reply = "Ready."
+                    APP.last_error = ""
+                    APP.last_result = {}
                 self._json(200, {"cleared": True, **APP.snapshot()})
             elif self.path == "/cancel":
                 with APP.lock:
@@ -646,27 +666,42 @@ class Handler(BaseHTTPRequestHandler):
                         pass
                     APP.cancel_event.set()
                     APP.last_reply = "Cancellation requested; waiting for the active tool to stop."
-                _write_status("ready", "0", "Generation cancelled by user")
+                _write_status("cancelling" if APP.busy else "ready", "0", APP.last_reply)
                 self._json(200, {"cancelled": True, **APP.snapshot()})
             elif self.path == "/import_reaper":
                 file_path = str(payload.get("file", "")).strip()
-                if not file_path:
+                stem_files = payload.get("files", [])
+                if not isinstance(stem_files, list) or any(not isinstance(path, str) or not path.strip() for path in stem_files):
+                    self._json(400, {"error": "files must be an array of non-empty media paths"})
+                    return
+                if not file_path and not stem_files:
                     with APP.lock:
                         file_path = str(APP.last_result.get("midi_windows", "")).strip()
-                if file_path:
-                    win_path = _windows_path(Path(file_path))
-                    trigger = _trigger_reaper_import("import_midi_file", win_path)
-                    with APP.lock:
-                        if trigger["triggered"]:
-                            APP.last_error = ""
-                            APP.last_reply = f"Importing {Path(win_path).name} into a new REAPER track..."
-                        else:
-                            APP.last_error = trigger["detail"]
-                    self._json(200, {"ok": trigger["triggered"], "file": win_path,
-                                      "bridge": trigger, **APP.snapshot()})
+                        stem_files = APP.last_result.get("files") or []
+                if file_path or stem_files:
+                    win_path = _windows_path(Path(file_path)) if file_path else "|".join(stem_files)
+                    trigger = _trigger_reaper_import("import_midi_file" if file_path else "import_audio_stems", win_path)
+                    response = {**APP.snapshot(), "ok": trigger["triggered"], "file": win_path,
+                                "bridge": trigger}
+                    if not trigger["triggered"]:
+                        response["error"] = trigger["detail"]
+                    self._json(200 if trigger["triggered"] else 503, response)
                 else:
-                    self._json(400, {"error": "No MIDI file path available to import", **APP.snapshot()})
+                    self._json(400, {**APP.snapshot(), "error": "No MIDI file path available to import"})
             elif self.path == "/chat":
+                from text2music.agent.tool_loop import DESCRIPTIONS
+                action = payload.get("action", "")
+                if not isinstance(action, str) or (action and action not in DESCRIPTIONS):
+                    self._json(400, {"error": "action must identify a supported tool"})
+                    return
+                if not isinstance(payload.get("message"), str) or not payload["message"].strip():
+                    self._json(400, {"error": "message must be a non-empty string"})
+                    return
+                try:
+                    _host_context(payload.get("host") if isinstance(payload.get("host"), dict) else {})
+                except (ValueError, TypeError) as exc:
+                    self._json(400, {"error": f"Invalid host context: {exc}"})
+                    return
                 with APP.lock:
                     if APP.busy:
                         rejected = True
@@ -677,7 +712,7 @@ class Handler(BaseHTTPRequestHandler):
                         APP.last_reply = "Understanding your request..."
                         rejected = False
                 if rejected:
-                    self._json(409, {"error": "agent is busy", **APP.snapshot()})
+                    self._json(409, {**APP.snapshot(), "error": "agent is busy"})
                     return
                 threading.Thread(target=APP.run_chat, args=(payload,), daemon=True).start()
                 self._json(202, {"accepted": True, **APP.snapshot()})
@@ -695,9 +730,6 @@ def main() -> None:
     threading.Thread(target=APP.session_watchdog, daemon=True).start()
     STATE.write_text(json.dumps({"pid": os.getpid(), "host": HOST, "port": PORT}), encoding="utf-8")
     
-    # Automatically boot GPU worker and load PyTorch model into VRAM immediately on startup
-    APP.start_worker()
-
     try:
         server.serve_forever(poll_interval=0.2)
     finally:

@@ -6,6 +6,9 @@ silently fall back to a different generator when a requested model is missing.
 from __future__ import annotations
 
 import os
+import sys
+import copy
+import tempfile
 import subprocess
 import time
 from pathlib import Path
@@ -18,7 +21,7 @@ MIDI_LLM_MODEL = Path(os.environ.get("MIDI_LLM_MODEL", PROJECT_ROOT / "models" /
 MIDI_GPT_MODEL = Path(os.environ.get(
     "MIDI_GPT_MODEL", PROJECT_ROOT / "models" / "midi-gpt" / "yellow_medium-final.safetensors"
 ))
-PYTHON = Path(os.environ.get("TEXT2SCORE_PYTHON", PROJECT_ROOT / ".venv" / "bin" / "python"))
+PYTHON = Path(os.environ.get("TEXT2SCORE_PYTHON", sys.executable))
 MIDI_LLM_BYTES = 3_447_788_104
 MIDI_GPT_BYTES = 350_508_072
 
@@ -53,6 +56,8 @@ def _require_model(name: str) -> None:
 
 def release_text2score_worker(runs_dir: Path, timeout: float = 30.0) -> None:
     """Release the warm Text2Score worker before another CUDA model is loaded."""
+    if sys.platform == "win32":
+        return  # Legacy Linux worker is not part of the native Windows release.
     shutdown = runs_dir / "worker_queue" / "shutdown"
     shutdown.parent.mkdir(parents=True, exist_ok=True)
     shutdown.write_text("switching symbolic model\n", encoding="utf-8")
@@ -77,7 +82,7 @@ def generate_midi_llm(prompt: str, output_dir: Path, *, max_tokens: int = 768,
     output_dir.mkdir(parents=True, exist_ok=True)
     before = set(output_dir.rglob("*.mid"))
     command = [
-        str(PYTHON), str(MIDI_LLM_ROOT / "generate_transformers.py"),
+        str(PYTHON), "-X", "utf8", "-m", "text2music.agent.midi_llm_runner",
         "--model", str(MIDI_LLM_MODEL), "--prompt", prompt,
         "--output_root", str(output_dir), "--n_outputs", "1", "--no-synthesize",
         "--max_tokens", str(max(96, min(2046, int(max_tokens)))),
@@ -85,7 +90,8 @@ def generate_midi_llm(prompt: str, output_dir: Path, *, max_tokens: int = 768,
     ]
     started = time.monotonic()
     completed = subprocess.run(
-        command, cwd=MIDI_LLM_ROOT, capture_output=True, text=True,
+        command, cwd=MIDI_LLM_ROOT, capture_output=True, text=True, encoding="utf-8",
+        env={**os.environ, "PYTHONUTF8": "1"},
         timeout=int(os.environ.get("MIDI_LLM_TIMEOUT_SECONDS", "900")),
     )
     if completed.returncode != 0:
@@ -126,7 +132,7 @@ def infill_midi_gpt(source: Path, destination: Path, *, track_ids: list[int],
     config = InferenceConfig(seed=int(seed), temperature=float(temperature),
                              model_dim=4, mask_mode="attention")
     started = time.monotonic()
-    engine = InferenceEngine.from_checkpoint(str(MIDI_GPT_MODEL), device="cuda")
+    engine = InferenceEngine.from_checkpoint(str(MIDI_GPT_MODEL), device=os.environ.get("TRICERATOPS_DEVICE", "cuda"))
     generated = engine.session(score, GenerationRequest(tracks=prompts, config=config)).run()
     destination.parent.mkdir(parents=True, exist_ok=True)
     generated.to_midi(str(destination))
@@ -135,3 +141,73 @@ def infill_midi_gpt(source: Path, destination: Path, *, track_ids: list[int],
     return {"backend": "midi_gpt", "midi": str(destination),
             "tracks": selected_tracks, "bars": selected_bars,
             "elapsed_seconds": round(time.monotonic() - started, 2)}
+
+
+def continue_midi_gpt(source: Path, destination: Path, *, bar_count: int = 4,
+                      seed: int = -1, temperature: float = 1.0) -> dict[str, Any]:
+    """Generate new trailing bars with MIDI-GPT, retaining the original bars."""
+    if type(bar_count) is not int or not 1 <= bar_count <= 32:
+        raise ValueError("Continuation length must be between 1 and 32 bars")
+    _require_model("midi_gpt")
+    from midigpt import Bar, Score
+    from midigpt.inference import InferenceConfig, InferenceEngine, GenerationRequest, TrackPrompt
+
+    original = Score.from_midi(str(source))
+    first_bar = max((len(track.bars) for track in original.tracks), default=0)
+    if first_bar == 0 or not any(bar.notes for track in original.tracks for bar in track.bars):
+        raise ValueError("Continuation requires a MIDI clip with notes")
+    score = copy.deepcopy(original)
+    for track in score.tracks:
+        reference = track.bars[-1] if track.bars else original.tracks[0].bars[-1]
+        while len(track.bars) < first_bar + bar_count:
+            track.bars.append(Bar(ts_numerator=reference.ts_numerator,
+                                  ts_denominator=reference.ts_denominator,
+                                  beat_length=reference.beat_length))
+    target_bars = list(range(first_bar, first_bar + bar_count))
+    request = GenerationRequest(
+        tracks=[TrackPrompt(id=index, bars=target_bars, autoregressive=True)
+                for index in range(len(score.tracks))],
+        config=InferenceConfig(seed=seed, temperature=temperature, model_dim=4, mask_mode="attention"),
+    )
+    started = time.monotonic()
+    engine = InferenceEngine.from_checkpoint(str(MIDI_GPT_MODEL), device=os.environ.get("TRICERATOPS_DEVICE", "cuda"))
+    generated = engine.session(score, request).run().resample(original.resolution)
+    if len(generated.tracks) != len(original.tracks):
+        raise RuntimeError("Continuation changed the number of source tracks")
+    if not any(bar.notes for track in generated.tracks for bar in track.bars[first_bar:]):
+        raise RuntimeError("MIDI-GPT returned no notes in the continuation")
+    # Keep the original MIDI event streams, including pitch bends, CCs and
+    # tempo changes. The model's MIDI writer only exports notes/programs.
+    from mido import MidiFile, MidiTrack
+    source_midi = MidiFile(source)
+    if source_midi.type == 2:
+        raise ValueError("Continuation requires synchronous MIDI tracks (type 0 or 1)")
+    reference_track = max(original.tracks, key=lambda track: len(track.bars))
+    boundary_beats = sum(bar.beat_length for bar in reference_track.bars)
+    boundary_tick = round(boundary_beats * source_midi.ticks_per_beat)
+    for track in generated.tracks:
+        if len(track.bars) < first_bar + bar_count:
+            raise RuntimeError("MIDI-GPT returned fewer bars than requested")
+        track.bars = track.bars[first_bar:first_bar + bar_count]
+    destination.parent.mkdir(parents=True, exist_ok=True)
+    with tempfile.TemporaryDirectory(dir=destination.parent) as temporary:
+        tail_path = Path(temporary) / "tail.mid"
+        generated.to_midi(str(tail_path))
+        tail = MidiFile(tail_path)
+    combined = MidiFile(type=1, ticks_per_beat=source_midi.ticks_per_beat)
+    combined.tracks.extend(MidiTrack(event.copy() for event in track) for track in source_midi.tracks)
+    for track in tail.tracks:
+        result_track = MidiTrack()
+        absolute, previous = 0, 0
+        for event in track:
+            absolute += event.time
+            if event.type == "set_tempo":
+                continue
+            tick = boundary_tick + round(absolute * combined.ticks_per_beat / tail.ticks_per_beat)
+            result_track.append(event.copy(time=tick-previous))
+            previous = tick
+        combined.tracks.append(result_track)
+    combined.save(destination)
+    return {"backend": "midi_gpt", "midi": str(destination), "source": str(source),
+            "original_bars": first_bar, "added_bars": bar_count, "bars": target_bars,
+            "elapsed_seconds": round(time.monotonic()-started, 2)}

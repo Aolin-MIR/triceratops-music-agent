@@ -28,6 +28,21 @@ def test_chat_does_not_execute_music_tools():
     assert result.tool == "chat"
     assert result.reply.startswith("你好")
 
+def test_button_operation_must_execute_before_reporting():
+    client = Client([Answer(tool="audio_to_midi"), Answer("已转写。")])
+    calls = []
+    result = run_tool_loop("Convert the loaded audio to MIDI.", forced_tool="audio_to_midi",
+                           client=client, execute=lambda name, args: calls.append(name) or {"midi": "/tmp/out.mid"})
+    assert calls == ["audio_to_midi"]
+    assert result.trace[0]["state"] == "completed"
+    assert client.requests[0]["tool_choice"]["function"]["name"] == "audio_to_midi"
+    assert len(client.requests) == 1
+
+def test_button_does_not_accept_a_promise_without_execution():
+    with pytest.raises(RuntimeError, match="did not execute"):
+        run_tool_loop("Convert audio", forced_tool="audio_to_midi",
+                      client=Client([Answer("Converting now.")]))
+
 def test_observe_execute_and_report_actual_results():
     client = Client([Answer(tool="inspect_project"),
                      Answer(tool="transform_midi", arguments={"request": "transpose up 2 semitones"}),
@@ -72,6 +87,11 @@ def test_real_midi_analysis_and_structured_edit(tmp_path):
     track.append(Message("note_off", note=60, time=480))
     midi.save(source)
     assert analyze_selection(source)["notes"] == 1
+    analysis = analyze_selection(source)
+    assert analysis["pitch_min_name"] == "C4"
+    assert analysis["pitch_max_name"] == "C4"
+    assert analysis["ticks_per_quarter"] == 480
+    assert analysis["key_estimate"] is None
     result = transform_midi_file(source, "降低力度", output, operations={"velocity_delta": -20})
     assert [m.velocity for t in MidiFile(output).tracks for m in t if m.type == "note_on"] == [60]
     with pytest.raises(ValueError, match="No supported"):
@@ -81,6 +101,31 @@ def test_real_midi_analysis_and_structured_edit(tmp_path):
 def test_cancel_prevents_next_model_or_tool_call():
     result = run_tool_loop("edit", client=Client([]), cancelled=lambda: True)
     assert "取消" in result.reply
+
+
+def test_repeat_preserves_multi_track_alignment_and_trailing_rest(tmp_path):
+    from mido import MidiFile, MidiTrack, Message, MetaMessage
+    from text2music.agent.midi_tools import transform_midi_file
+    source = tmp_path / "duet.mid"
+    output = tmp_path / "repeat.mid"
+    midi = MidiFile(ticks_per_beat=480)
+    for duration in (240, 480):
+        track = MidiTrack([
+            Message("note_on", note=60, velocity=80),
+            Message("note_off", note=60, time=duration),
+            MetaMessage("end_of_track", time=960-duration),
+        ])
+        midi.tracks.append(track)
+    midi.save(source)
+    transform_midi_file(source, "repeat", output)
+    for track in MidiFile(output).tracks:
+        tick = 0
+        onsets = []
+        for event in track:
+            tick += event.time
+            if event.type == "note_on" and event.velocity:
+                onsets.append(tick)
+        assert onsets == [0, 960]
 
 
 def test_broad_prompt_is_rewritten_into_actionable_generation_request():

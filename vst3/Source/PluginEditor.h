@@ -74,8 +74,8 @@ private:
     void updateChatDisplay();
     void addThinkingStep(const juce::String& step);
     void setStarter(const juce::String&);
-    void runQuickAction(const juce::String&);
-    void startChat(const juce::String& message);
+    void runQuickAction(const juce::String&, const juce::String& action = {});
+    void startChat(const juce::String& message, const juce::String& action);
     void toggleMidiCapture();
     void toggleAudioCapture();
     juce::File nextCaptureFile(const juce::String& extension) const;
@@ -107,18 +107,25 @@ private:
                    playMidi { "Play VST" }, dragMidi { "Drag MIDI" },
                    capture { "Rec MIDI" }, captureAudio { "Rec audio" };
 
-    juce::String midiPath, audioPath, latestResultMidi;
+    juce::String midiPath, audioPath, latestResultMidi, latestStemResult;
+    juce::Array<juce::var> latestStemFiles;
     juce::String queuedMessage;
+    juce::String queuedAction;
     std::future<juce::var> pending;
     RequestKind requestKind = RequestKind::none;
     juce::int64 lastStatusPollMs = 0;
     juce::int64 warmupStartMs = 0;
+    juce::int64 visibleSinceMs = 0;
 
     bool modelIsWarmingUp = true;
+    bool sessionStartupRequested = false;
+    bool sessionOpened = false;
     bool autoImportToReaper = true;
     bool showSidebar = true;
     bool busyGenerating = false;
     bool deferredAutoImport = false;
+    bool deferredCancel = false;
+    bool deferredClearChat = false;
     std::vector<ChatTurn> chatTurns;
     std::vector<juce::String> currentThinkingSteps;
     juce::String lastStateDetail;

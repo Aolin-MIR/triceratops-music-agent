@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.22)
-project(Triceratops VERSION 1.0.0 LANGUAGES C CXX)
+project(Triceratops VERSION 0.9.0 LANGUAGES C CXX)
 
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
@@ -17,9 +17,9 @@ juce_add_plugin(Triceratops
     BUNDLE_ID "audio.triceratops.agent"
     PLUGIN_MANUFACTURER_CODE Tric
     PLUGIN_CODE Tria
-    FORMATS VST3 Standalone
+    FORMATS VST3
     PRODUCT_NAME "Triceratops"
-    DESCRIPTION "DAW-neutral local music agent"
+    DESCRIPTION "Music agent for REAPER"
     IS_SYNTH FALSE
     NEEDS_MIDI_INPUT TRUE
     NEEDS_MIDI_OUTPUT TRUE
@@ -44,6 +44,7 @@ target_compile_definitions(Triceratops PUBLIC
     JUCE_WEB_BROWSER=0
     JUCE_USE_CURL=0
     JUCE_VST3_CAN_REPLACE_VST2=0
+    JUCE_VST3_EMULATE_MIDI_CC_WITH_PARAMETERS=0
 )
 
 if (MINGW)
