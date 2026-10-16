@@ -60,24 +60,6 @@ The downloader checks SHA-256 for MIDI-LLM and MIDI-GPT. Exact repositories, rev
 
 Windows settings: `%APPDATA%\Triceratops\runtime.json`; dedicated Python and weights: `%LOCALAPPDATA%\Triceratops\`; generated work and memory: `%APPDATA%\Triceratops\runs\`. Keys stay in the user-owned configuration and are excluded from packages and repository commits. Chat API calls send conversation and necessary project/analysis context to your chosen provider, which may charge for usage. The backend listens only on `127.0.0.1:49327`.
 
-## Development and verification
-
-```bash
-git clone --recurse-submodules https://github.com/Aolin-MIR/triceratops-music-agent.git
-cd triceratops-music-agent
-```
-
-Windows VST3 builds require Visual Studio 2022 and CMake 3.22+. In Developer PowerShell:
-
-```powershell
-cmake -S vst3 -B vst3/build-msvc -G "Visual Studio 17 2022" -A x64
-cmake --build vst3/build-msvc --config Release --target Triceratops_VST3
-```
-
-Backend dependencies: [`requirements-runtime.txt`](vst3/installer/requirements-runtime.txt). Run tests with `python -m pytest -q`. See the [installer build instructions](vst3/installer/README.txt). Upstream training directories are retained for research and are excluded from the desktop distribution.
-
-Real REAPER verification covers audio analysis, four stems, Basic Pitch, track import, MIDI/audio capture, timing edits, MIDI-GPT continuation and project reopening. Release notes distinguish native Windows validation from earlier WSL validation; historical validator results are not presented as certification of this release.
-
 ## Testing feedback
 
 Open an [issue](https://github.com/Aolin-MIR/triceratops-music-agent/issues) with OS, REAPER version, CPU/GPU, reproduction steps, expected behavior and actual behavior. Exclude API keys and private recordings. A short shareable MIDI/audio fixture is helpful.

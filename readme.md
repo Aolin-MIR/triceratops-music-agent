@@ -60,24 +60,6 @@ MIDI 是演奏数据，需要在 REAPER 的后续轨道/插件中加载音源才
 
 Windows 配置：`%APPDATA%\Triceratops\runtime.json`；模型与专用 Python：`%LOCALAPPDATA%\Triceratops\`；结果和记忆：`%APPDATA%\Triceratops\runs\`。密钥只保存在本机用户配置中，不随插件、发布包或生成结果上传。调用聊天 API 时会发送对话和必要的工程/分析上下文，API 提供方可能按用量收费。服务只监听 `127.0.0.1:49327`。
 
-## 开发与验证
-
-```bash
-git clone --recurse-submodules https://github.com/Aolin-MIR/triceratops-music-agent.git
-cd triceratops-music-agent
-```
-
-Windows 原生 VST3：Visual Studio 2022、CMake 3.22+。在 Developer PowerShell 中：
-
-```powershell
-cmake -S vst3 -B vst3/build-msvc -G "Visual Studio 17 2022" -A x64
-cmake --build vst3/build-msvc --config Release --target Triceratops_VST3
-```
-
-后端依赖为 [`requirements-runtime.txt`](vst3/installer/requirements-runtime.txt)，运行测试使用 `python -m pytest -q`。安装包构建见 [安装器文档](vst3/installer/README.txt)。训练目录保留上游研究代码，不属于桌面发行包。
-
-已完成真实 REAPER 验证：音频分析、四分轨、Basic Pitch 转写、轨道导入、MIDI/音频录制、节奏修改、MIDI-GPT 续写与项目重开。v0.9 发布记录会区分 Windows 原生后端验收和此前 WSL 后端验收，不将历史 validator 结果当作本次认证。
-
 ## 试用反馈
 
 请到 [Issues](https://github.com/Aolin-MIR/triceratops-music-agent/issues) 提交系统版本、REAPER 版本、CPU/GPU、操作步骤、预期与实际结果。不要上传 API key 或含私密素材的完整配置。欢迎分享一小段可复现 MIDI 或音频。
