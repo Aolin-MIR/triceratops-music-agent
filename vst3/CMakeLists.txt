@@ -31,6 +31,7 @@ juce_add_plugin(Triceratops
 )
 
 target_sources(Triceratops PRIVATE
+    Source/UiStrings.h
     Source/BackendClient.cpp
     Source/BackendClient.h
     Source/PluginEditor.cpp
@@ -38,6 +39,10 @@ target_sources(Triceratops PRIVATE
     Source/PluginProcessor.cpp
     Source/PluginProcessor.h
 )
+
+if (MSVC)
+    target_compile_options(Triceratops PRIVATE /utf-8)
+endif()
 
 target_compile_definitions(Triceratops PUBLIC
     JUCE_USE_WINDOWS_MEDIA_FORMAT=0

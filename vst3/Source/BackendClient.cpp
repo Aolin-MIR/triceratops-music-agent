@@ -111,7 +111,7 @@ juce::var BackendClient::importReaperTrack(const juce::String& filePath, const j
 
 juce::var BackendClient::chat(const juce::String& message, const juce::var& host,
                               const juce::String& midiPath, const juce::String& audioPath,
-                              const juce::String& action)
+                              const juce::String& action, const juce::String& language)
 {
     auto payload = new juce::DynamicObject();
     payload->setProperty("session", sessionId);
@@ -120,6 +120,7 @@ juce::var BackendClient::chat(const juce::String& message, const juce::var& host
     payload->setProperty("midi_path", midiPath);
     payload->setProperty("audio_path", audioPath);
     payload->setProperty("action", action);
+    payload->setProperty("language", language);
     return request("/chat", "POST", juce::var(payload));
 }
 

@@ -21,3 +21,16 @@ def test_failed_button_operation_cannot_report_success():
                                                    "result": {"error": "No audio attached"}}])
     assert error == "No audio attached" and reply.startswith("操作未完成")
     assert operation_report("audio_to_midi", [])[1]
+
+
+def test_english_continuation_report_keeps_verified_counts():
+    reply,error=operation_report("continue_midi",[{"tool":"continue_midi","state":"completed",
+        "result":{"original_bars":3,"added_bars":4,"midi_windows":"C:/out.mid"}}],language="en")
+    assert "total: 7 bars" in reply and "C:/out.mid" in reply and not error
+    assert "原" not in reply
+
+
+def test_english_failure_never_claims_success():
+    reply,error=operation_report("audio_to_midi",[{"tool":"audio_to_midi","state":"failed",
+        "result":{"error":"No audio attached"}}],language="en")
+    assert reply.startswith("Operation did not complete") and error=="No audio attached"

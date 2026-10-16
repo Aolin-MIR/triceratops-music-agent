@@ -22,6 +22,8 @@ Triceratops is a music Agent VST3 for REAPER. Describe an idea naturally or use 
 
 The EXE includes the plug-in, configuration utility and Python seed. **Large weights are downloaded by setup, not embedded in the EXE.** Allow approximately 15 GB of free disk space; model weights total about 4 GB. CPU is the default. At least 16 GB RAM is recommended, with 32 GB preferred for comfortable generation. CUDA requires an NVIDIA GPU, a compatible driver and CUDA-enabled Torch. Setup checks the selected device and reports failure rather than switching devices silently.
 
+Use **中文 / English** in the plug-in header to switch buttons, status text, hints and operation reports. The language preference is remembered; chat defaults to the selected interface language.
+
 ## Features
 
 | Action | Implementation |

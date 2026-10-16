@@ -3,6 +3,7 @@
 #include <JuceHeader.h>
 #include <future>
 #include "PluginProcessor.h"
+#include "UiStrings.h"
 
 class AnimatedButton final : public juce::TextButton, private juce::Timer
 {
@@ -16,8 +17,11 @@ public:
     void setPrimary(bool isPrimary) { isPrimaryStyle = isPrimary; repaint(); }
     void setSpinning(bool spinning) { isSpinning = spinning; repaint(); }
     bool getSpinning() const noexcept { return isSpinning; }
+    void setChinese(bool value) { chinese = value; repaint(); }
 
 private:
+    juce::String ui(const juce::String& value) const { return triceratopsUi(value, chinese); }
+    bool chinese = false;
     void timerCallback() override;
     float amount = 0.0f, target = 0.0f;
     float spinnerAngle = 0.0f;
@@ -40,8 +44,11 @@ public:
     ScoreStaveComponent();
     void loadMidiFile(const juce::File& file);
     void paint(juce::Graphics& g) override;
+    void setChinese(bool value) { chinese = value; repaint(); }
 
 private:
+    juce::String ui(const juce::String& value) const { return triceratopsUi(value, chinese); }
+    bool chinese = false;
     struct SimpleNote { int pitch; double time; };
     std::vector<SimpleNote> notes;
 };
@@ -59,6 +66,9 @@ public:
     void filesDropped(const juce::StringArray&, int, int) override;
 
 private:
+    juce::String ui(const juce::String& value) const { return triceratopsUi(value, chinese); }
+    juce::File languageFile() const;
+    void applyLanguage();
     void timerCallback() override;
     void sendMessage();
     void pollStatus();
@@ -93,7 +103,7 @@ private:
     double progress = 0.0;
     float eqPhase = 0.0f;
 
-    AnimatedButton send { "Send", true }, cancel { "Stop", false },
+    AnimatedButton languageBtn { "中文" }, send { "Send", true }, cancel { "Stop", false },
                    clearChatBtn { "Clear Chat" }, autoImportBtn { "Auto-Import: ON", true },
                    importReaperBtn { "Import to REAPER", true },
                    sidebarToggleBtn { "Plan / History" },
@@ -118,6 +128,7 @@ private:
     juce::int64 visibleSinceMs = 0;
 
     bool modelIsWarmingUp = true;
+    bool chinese = juce::SystemStats::getUserLanguage().startsWithIgnoreCase("zh");
     bool sessionStartupRequested = false;
     bool sessionOpened = false;
     bool autoImportToReaper = true;

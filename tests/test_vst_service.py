@@ -141,3 +141,10 @@ def test_host_context_accepts_structured_time_signature():
     context = _host_context({"time_signature": [6, 8]})
 
     assert "Time Signature: 6/8" in context
+
+
+def test_chat_rejects_unsupported_language_without_starting_task(service_api):
+    state,post=service_api
+    code,result=post("/chat",{"message":"analyze","language":"fr"})
+    assert code==400 and "language must be zh or en" in result["error"]
+    assert not state.busy

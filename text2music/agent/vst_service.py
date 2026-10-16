@@ -340,6 +340,7 @@ class TriceratopsState:
 
     def run_chat(self, payload: dict[str, Any]) -> None:
         message = str(payload.get("message", "")).strip()
+        language = str(payload.get("language", "zh"))
         host = payload.get("host") if isinstance(payload.get("host"), dict) else {}
         midi_raw = str(payload.get("midi_path", "")).strip()
         audio_raw = str(payload.get("audio_path", "")).strip()
@@ -347,6 +348,7 @@ class TriceratopsState:
         audio = _windows_to_wsl(audio_raw) if audio_raw else None
         try:
             context = _host_context(host)
+            context += "\nDefault reply language: " + ("Chinese" if language == "zh" else "English") + ". Follow an explicit user request for another language."
         except (ValueError, TypeError) as exc:
             with self.lock:
                 self.last_error = f"Invalid host context: {exc}"
@@ -547,7 +549,7 @@ class TriceratopsState:
             report_error = ""
             if payload.get("action"):
                 from text2music.agent.operation_report import operation_report
-                reply, report_error = operation_report(str(payload["action"]), decision.trace)
+                reply, report_error = operation_report(str(payload["action"]), decision.trace, language=language)
             with self.lock:
                 self.last_result = result
                 self.last_reply = reply
@@ -690,6 +692,9 @@ class Handler(BaseHTTPRequestHandler):
                     self._json(400, {**APP.snapshot(), "error": "No MIDI file path available to import"})
             elif self.path == "/chat":
                 from text2music.agent.tool_loop import DESCRIPTIONS
+                if payload.get("language", "zh") not in ("zh", "en"):
+                    self._json(400, {"error": "language must be zh or en"})
+                    return
                 action = payload.get("action", "")
                 if not isinstance(action, str) or (action and action not in DESCRIPTIONS):
                     self._json(400, {"error": "action must identify a supported tool"})
