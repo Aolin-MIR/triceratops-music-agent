@@ -1,4 +1,4 @@
-name: macOS VST3
+name: macOS VST3 and Logic AU
 on:
   workflow_dispatch:
 permissions:
@@ -10,13 +10,13 @@ jobs:
       - uses: actions/checkout@v4
         with:
           submodules: recursive
-      - name: Build universal REAPER VST3
+      - name: Build universal REAPER VST3 and Logic Audio Units
         run: |
           cmake -S vst3 -B vst3/build-macos -DCMAKE_BUILD_TYPE=Release -DCMAKE_OSX_ARCHITECTURES="arm64;x86_64" -DCMAKE_OSX_DEPLOYMENT_TARGET=13.0
-          cmake --build vst3/build-macos --target Triceratops_VST3 --parallel 3
+          cmake --build vst3/build-macos --target Triceratops_VST3 TriceratopsMidiAU_AU TriceratopsAudioAU_AU --parallel 3
       - name: Package native setup
         run: |
-          python3 vst3/installer/package_release.py --platform macos --plugin vst3/build-macos/Triceratops_artefacts/Release/VST3/Triceratops.vst3 --output vst3/package/macos
+          python3 vst3/installer/package_release.py --platform macos --plugin vst3/build-macos/Triceratops_artefacts/Release/VST3/Triceratops.vst3 --output vst3/package/macos --au-plugin "vst3/build-macos/TriceratopsMidiAU_artefacts/Release/AU/Triceratops MIDI.component" --au-plugin "vst3/build-macos/TriceratopsAudioAU_artefacts/Release/AU/Triceratops Audio.component"
           cd vst3/package/macos
           ditto -c -k --sequesterRsrc --keepParent . ../Triceratops-0.9.0-macOS-AppleSilicon.zip
       - uses: actions/upload-artifact@v4

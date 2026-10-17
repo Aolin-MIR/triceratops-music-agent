@@ -2,8 +2,18 @@
 from __future__ import annotations
 import argparse
 import importlib
+import sys
 from pathlib import Path
 from text2music.agent.runtime import configure
+
+
+def available_hosts(settings: dict) -> list[str]:
+    hosts = []
+    if settings.get("reaper") and Path(settings["reaper"]).is_file():
+        hosts.append("REAPER")
+    if sys.platform == "darwin" and settings.get("logic") and Path(settings["logic"]).is_file():
+        hosts.append("Logic Pro")
+    return hosts
 
 
 def check(config: Path) -> None:
@@ -13,8 +23,10 @@ def check(config: Path) -> None:
                  "soundfile", "demucs", "sphn", "basic_pitch", "onnxruntime", "midigpt", "anticipation"):
         importlib.import_module(name)
         print(f"Import OK: {name}", flush=True)
-    if not Path(settings["reaper"]).is_file():
-        raise RuntimeError("Configured REAPER executable is missing")
+    hosts = available_hosts(settings)
+    if not hosts:
+        raise RuntimeError("No configured supported host executable exists; configure REAPER or macOS Logic Pro")
+    print("Host executables found: " + ", ".join(hosts), flush=True)
     if settings["device"] == "cuda" and not torch.cuda.is_available():
         raise RuntimeError("CUDA was selected but Torch cannot use your NVIDIA GPU; update the driver or explicitly select CPU")
     if settings["device"] == "mps" and not torch.backends.mps.is_available():

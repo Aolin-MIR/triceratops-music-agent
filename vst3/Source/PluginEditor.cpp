@@ -222,9 +222,17 @@ TriceratopsAudioProcessorEditor::TriceratopsAudioProcessorEditor(TriceratopsAudi
         if (object->hasProperty("auto_import"))
             autoImportToReaper = static_cast<bool>(object->getProperty("auto_import"));
     }
-    setSize(1180, 780);
     setResizable(true, true);
+   #if JucePlugin_Build_AU
+    const auto* display = juce::Desktop::getInstance().getDisplays().getPrimaryDisplay();
+    const auto width = display != nullptr ? juce::jlimit(900, 1000, display->userArea.getWidth() - 40) : 1000;
+    const auto height = display != nullptr ? juce::jlimit(520, 600, display->userArea.getHeight() - 140) : 600;
+    setResizeLimits(900, 520, 1920, 1200);
+    setSize(width, height);
+   #else
     setResizeLimits(900, 650, 1920, 1200);
+    setSize(1180, 780);
+   #endif
 
     // Setup Text Editors
     for (auto* editor : { &chatDisplay, &prompt, &arrangement, &history })
@@ -275,7 +283,7 @@ TriceratopsAudioProcessorEditor::TriceratopsAudioProcessorEditor(TriceratopsAudi
                           &newMusic, &editMidi, &analyze, &continueFour, &moreEnergy, &tightenTiming,
                           &undoBtn, &keepBtn, &rejectBtn, &stems, &audioMidi,
                           &loadMidi, &loadAudio, &clearMidiBtn, &clearAudioBtn,
-                          &playMidi, &dragMidi, &capture, &captureAudio })
+                          &playMidi, static_cast<AnimatedButton*>(&dragMidi), &capture, &captureAudio })
         addAndMakeVisible(button);
 
     languageBtn.onClick = [this] {
@@ -320,7 +328,7 @@ TriceratopsAudioProcessorEditor::TriceratopsAudioProcessorEditor(TriceratopsAudi
     clearAudioBtn.onClick = [this] { clearAudio(); };
 
     playMidi.onClick  = [this] { ownerProcessor.armGeneratedClip(); };
-    dragMidi.onClick  = [this] { dragLatestMidi(); };
+    dragMidi.onFileDrag = [this] { dragLatestMidi(); };
     capture.onClick   = [this] { toggleMidiCapture(); };
     captureAudio.onClick = [this] { toggleAudioCapture(); };
 
@@ -347,8 +355,6 @@ TriceratopsAudioProcessorEditor::TriceratopsAudioProcessorEditor(TriceratopsAudi
         {}
     });
     applyLanguage();
-    autoImportBtn.setButtonText(autoImportToReaper ? ui("Auto-Import: ON") : ui("Auto-Import: OFF"));
-    autoImportBtn.setPrimary(autoImportToReaper);
     updateChatDisplay();
 
     startTimer(100);
@@ -848,7 +854,7 @@ void TriceratopsAudioProcessorEditor::handleStatus(const juce::var& value)
                     latestStemResult = stemKey;
                     latestStemFiles = *files;
                     latestResultMidi.clear();
-                    if (autoImportToReaper && requestKind != RequestKind::open)
+                    if (ownerProcessor.supportsReaperImport() && autoImportToReaper && requestKind != RequestKind::open)
                         deferredAutoImport = true;
                 }
             }
@@ -868,7 +874,7 @@ void TriceratopsAudioProcessorEditor::handleStatus(const juce::var& value)
                 // Load and paint score stave visualizer
                 scoreStave.loadMidiFile(juce::File(midi));
 
-                if (autoImportToReaper && requestKind != RequestKind::open)
+                if (ownerProcessor.supportsReaperImport() && autoImportToReaper && requestKind != RequestKind::open)
                 {
                     // Defer to the timer so the REAPER import request runs on a
                     // background future instead of blocking the message thread.
@@ -1045,6 +1051,16 @@ void TriceratopsAudioProcessorEditor::importToReaper()
         return;
     }
 
+    if (!ownerProcessor.supportsReaperImport())
+    {
+        // AU has no public API to insert a region in Logic's timeline. Reveal
+        // the actual output for native drag/import instead of calling REAPER.
+        const auto output = fileToImport.isNotEmpty() ? fileToImport
+            : latestStemFiles.getFirst().toString();
+        juce::File(output).revealToUser();
+        return;
+    }
+
     // Never destroy a future that is still running: if another request is in
     // flight, retry once it completes (the timer drives the deferred import).
     if (pending.valid()
@@ -1075,7 +1091,8 @@ void TriceratopsAudioProcessorEditor::importToReaper()
 
 void TriceratopsAudioProcessorEditor::chooseMidi()
 {
-    auto chooser = std::make_shared<juce::FileChooser>(ui("Load MIDI"), juce::File(), "*.mid;*.midi");
+    auto chooser = std::make_shared<juce::FileChooser>(ui("Load MIDI"), juce::File(), "*.mid;*.midi",
+                                                    !JucePlugin_Build_AU, false, this);
     const juce::Component::SafePointer<TriceratopsAudioProcessorEditor> safeThis(this);
     chooser->launchAsync(juce::FileBrowserComponent::openMode | juce::FileBrowserComponent::canSelectFiles,
                          [safeThis, chooser](const juce::FileChooser& selected) {
@@ -1095,7 +1112,8 @@ void TriceratopsAudioProcessorEditor::chooseMidi()
 
 void TriceratopsAudioProcessorEditor::chooseAudio()
 {
-    auto chooser = std::make_shared<juce::FileChooser>(ui("Load Audio"), juce::File(), "*.wav;*.flac;*.mp3;*.ogg");
+    auto chooser = std::make_shared<juce::FileChooser>(ui("Load Audio"), juce::File(), "*.wav;*.flac;*.mp3;*.ogg",
+                                                    !JucePlugin_Build_AU, false, this);
     const juce::Component::SafePointer<TriceratopsAudioProcessorEditor> safeThis(this);
     chooser->launchAsync(juce::FileBrowserComponent::openMode | juce::FileBrowserComponent::canSelectFiles,
                          [safeThis, chooser](const juce::FileChooser& selected) {
@@ -1129,8 +1147,15 @@ void TriceratopsAudioProcessorEditor::clearAudio()
 
 void TriceratopsAudioProcessorEditor::dragLatestMidi()
 {
-    if (juce::File(latestResultMidi).existsAsFile())
-        juce::DragAndDropContainer::performExternalDragDropOfFiles({ latestResultMidi }, false, this);
+    const auto file = juce::File(midiPath);
+    if (!file.existsAsFile())
+        return;
+    const auto started = juce::DragAndDropContainer::performExternalDragDropOfFiles({ midiPath }, false, &dragMidi);
+    chatTurns.push_back({ "assistant", started
+        ? ui("MIDI file drag started: ") + file.getFileName()
+        : ui("Could not start MIDI file drag."),
+        juce::Time::getCurrentTime().formatted("%H:%M:%S"), "", {} });
+    updateChatDisplay();
 }
 
 void TriceratopsAudioProcessorEditor::setStarter(const juce::String& text)
@@ -1269,13 +1294,29 @@ void TriceratopsAudioProcessorEditor::applyLanguage()
     for (auto* button : { &send, &cancel, &clearChatBtn, &autoImportBtn, &importReaperBtn,
         &sidebarToggleBtn, &newMusic, &editMidi, &analyze, &continueFour, &moreEnergy,
         &tightenTiming, &undoBtn, &keepBtn, &rejectBtn, &stems, &audioMidi, &loadMidi,
-        &loadAudio, &playMidi, &dragMidi, &capture, &captureAudio })
+        &loadAudio, &playMidi, static_cast<AnimatedButton*>(&dragMidi), &capture, &captureAudio })
     {
         button->setChinese(chinese);
         button->setButtonText(ui(button->getButtonText()));
         button->setTooltip(ui(button->getTooltip()));
     }
     languageBtn.setButtonText(chinese ? "English" : juce::String::fromUTF8("中文"));
+    const auto reaperImport = ownerProcessor.supportsReaperImport();
+    importReaperBtn.setButtonText(reaperImport ? ui("Import to REAPER") : ui("Show output file"));
+    autoImportBtn.setButtonText(reaperImport
+        ? (autoImportToReaper ? ui("Auto-Import: ON") : ui("Auto-Import: OFF"))
+        : ui("Drag / import into host"));
+    autoImportBtn.setEnabled(reaperImport);
+    autoImportBtn.setPrimary(reaperImport && autoImportToReaper);
+    capture.setEnabled(ownerProcessor.acceptsMidi());
+    playMidi.setEnabled(ownerProcessor.producesMidi());
+    captureAudio.setEnabled(!ownerProcessor.isMidiEffect());
+    captureAudio.setTooltip(ownerProcessor.isMidiEffect()
+        ? ui("Record audio with Triceratops Audio in an Audio FX slot.") : juce::String());
+    const auto midiHelp = ui("Use Triceratops MIDI in a MIDI FX slot before an instrument.");
+    dragMidi.setTooltip(ui("Drag this button into a MIDI track to import the current file."));
+    capture.setTooltip(ownerProcessor.acceptsMidi() ? juce::String() : midiHelp);
+    playMidi.setTooltip(ownerProcessor.producesMidi() ? juce::String() : midiHelp);
     languageBtn.setTooltip(juce::String::fromUTF8("切换界面语言 / Switch interface language"));
     scoreStave.setChinese(chinese);
     for (auto* label : { &statusLabel, &progressLabel, &warmupBanner, &midiLabel, &audioLabel })

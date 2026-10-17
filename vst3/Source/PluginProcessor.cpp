@@ -3,8 +3,11 @@
 
 TriceratopsAudioProcessor::TriceratopsAudioProcessor()
     : AudioProcessor(BusesProperties()
+                        #if !JucePlugin_IsMidiEffect
                          .withInput("Input", juce::AudioChannelSet::stereo(), true)
-                         .withOutput("Output", juce::AudioChannelSet::stereo(), true))
+                         .withOutput("Output", juce::AudioChannelSet::stereo(), true)
+                        #endif
+                     )
 {
 }
 
@@ -19,9 +22,13 @@ void TriceratopsAudioProcessor::releaseResources() {}
 
 bool TriceratopsAudioProcessor::isBusesLayoutSupported(const BusesLayout& layouts) const
 {
+   #if JucePlugin_IsMidiEffect
+    return layouts.inputBuses.isEmpty() && layouts.outputBuses.isEmpty();
+   #else
     return layouts.getMainInputChannelSet() == layouts.getMainOutputChannelSet()
         && (layouts.getMainOutputChannelSet() == juce::AudioChannelSet::mono()
             || layouts.getMainOutputChannelSet() == juce::AudioChannelSet::stereo());
+   #endif
 }
 
 void TriceratopsAudioProcessor::processBlock(juce::AudioBuffer<float>& buffer,
@@ -108,6 +115,7 @@ juce::var TriceratopsAudioProcessor::hostSnapshot() const
 {
     auto result = new juce::DynamicObject();
     result->setProperty("name", getWrapperTypeDescription(wrapperType));
+    result->setProperty("host_application", juce::PluginHostType().getHostDescription());
     result->setProperty("tempo", currentTempo.load());
     result->setProperty("ppq", currentPpq.load());
     result->setProperty("playing", playing.load());

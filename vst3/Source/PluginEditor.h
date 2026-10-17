@@ -5,7 +5,7 @@
 #include "PluginProcessor.h"
 #include "UiStrings.h"
 
-class AnimatedButton final : public juce::TextButton, private juce::Timer
+class AnimatedButton : public juce::TextButton, private juce::Timer
 {
 public:
     explicit AnimatedButton(const juce::String& text, bool primary = false);
@@ -27,6 +27,21 @@ private:
     float spinnerAngle = 0.0f;
     bool isPrimaryStyle = false;
     bool isSpinning = false;
+};
+
+class MidiDragButton final : public AnimatedButton
+{
+public:
+    explicit MidiDragButton(const juce::String& text) : AnimatedButton(text) {}
+    std::function<void()> onFileDrag;
+    void mouseDown(const juce::MouseEvent& event) override
+    {
+        AnimatedButton::mouseDown(event);
+        // Native drag sessions need the live down/drag event, never onClick's
+        // mouse-up event. Starting while held also works in Logic's AU view bridge.
+        if (event.mods.isLeftButtonDown() && onFileDrag)
+            onFileDrag();
+    }
 };
 
 struct ChatTurn
@@ -115,8 +130,9 @@ private:
                    stems { "Stem split" },
                    audioMidi { "Audio -> MIDI" }, loadMidi { "Load MIDI" },
                    loadAudio { "Load audio" }, clearMidiBtn { "x" }, clearAudioBtn { "x" },
-                   playMidi { "Play VST" }, dragMidi { "Drag MIDI" },
+                   playMidi { "Play VST" },
                    capture { "Rec MIDI" }, captureAudio { "Rec audio" };
+    MidiDragButton dragMidi { "Drag MIDI" };
 
     juce::String midiPath, audioPath, latestResultMidi, latestStemResult;
     juce::Array<juce::var> latestStemFiles;

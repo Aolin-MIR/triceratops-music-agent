@@ -1,4 +1,4 @@
-"""Localhost service used by the Triceratops REAPER VST3 plug-in."""
+"""Localhost service shared by the Triceratops VST3 and Audio Unit plug-ins."""
 from __future__ import annotations
 
 import json
@@ -215,7 +215,8 @@ def _host_context(host: dict[str, Any]) -> str:
     if numerator_value <= 0 or denominator_value <= 0:
         raise ValueError("time_signature values must be positive integers")
     return (
-        f"Host: {host.get('name', 'VST3 host')}\n"
+        f"Host: {host.get('host_application') or host.get('name', 'Audio plug-in host')}\n"
+        f"Plugin format: {host.get('name', 'unknown')}\n"
         f"Tempo: {float(host.get('tempo', 120)):.2f} BPM\n"
         f"Time Signature: {numerator_value}/{denominator_value}\n"
         f"PPQ Position: {float(host.get('ppq', 0)):.3f}\n"
@@ -625,7 +626,7 @@ APP = TriceratopsState()
 
 
 class Handler(BaseHTTPRequestHandler):
-    server_version = "Triceratops/0.9.1"
+    server_version = "Triceratops/0.9.0"
 
     def log_message(self, format: str, *args: Any) -> None:
         return

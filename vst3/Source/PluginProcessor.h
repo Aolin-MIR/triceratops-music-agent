@@ -16,10 +16,11 @@ public:
 
     juce::AudioProcessorEditor* createEditor() override;
     bool hasEditor() const override { return true; }
-    const juce::String getName() const override { return "Triceratops"; }
-    bool acceptsMidi() const override { return true; }
-    bool producesMidi() const override { return true; }
-    bool isMidiEffect() const override { return false; }
+    const juce::String getName() const override { return JucePlugin_Name; }
+    bool acceptsMidi() const override { return JucePlugin_WantsMidiInput; }
+    bool producesMidi() const override { return JucePlugin_ProducesMidiOutput; }
+    bool isMidiEffect() const override { return JucePlugin_IsMidiEffect; }
+    bool supportsReaperImport() const { return juce::PluginHostType().isReaper(); }
     double getTailLengthSeconds() const override { return 0.0; }
     int getNumPrograms() override { return 1; }
     int getCurrentProgram() override { return 0; }

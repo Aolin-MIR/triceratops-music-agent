@@ -30,6 +30,15 @@ if [[ -e "$plugin" ]]; then
   cp -R "$plugin" "$data/Triceratops-vst3-backup-$(date +%Y%m%d-%H%M%S)"
 fi
 ditto "$root/Triceratops.vst3" "$plugin"
+for component in "$root"/*.component; do
+  [[ -d "$component" ]] || continue
+  destination="$HOME/Library/Audio/Plug-Ins/Components/$(basename "$component")"
+  mkdir -p "$HOME/Library/Audio/Plug-Ins/Components"
+  if [[ -e "$destination" ]]; then
+    cp -R "$destination" "$data/$(basename "$component")-backup-$(date +%Y%m%d-%H%M%S)"
+  fi
+  ditto "$component" "$destination"
+done
 "$runtime" - "$root" "$data" <<'PY'
 import json,sys
 from pathlib import Path
@@ -39,4 +48,4 @@ settings=json.loads((data/'runtime.json').read_text())
  entry=str(root/'backend/text2music/agent/runtime.py'),config=str(data/'runtime.json')),indent=2))
 PY
 unset TRICERATOPS_SETUP_KEY
-echo 'Setup complete. Rescan Triceratops in REAPER. Keep this extracted directory in place.'
+echo 'Setup complete. Rescan the VST3 in REAPER or the Audio Units in Logic Pro. Keep this extracted directory in place.'

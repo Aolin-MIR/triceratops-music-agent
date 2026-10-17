@@ -73,3 +73,46 @@ if(WIN32)
 endif()
 
 juce_generate_juce_header(Triceratops)
+
+# Logic routes MIDI processors before an instrument, and audio effects after it.
+# Separate AU identities let both paths use the same tested agent/backend.
+if(APPLE)
+    foreach(kind IN ITEMS Midi Audio)
+        set(target Triceratops${kind}AU)
+        if(kind STREQUAL "Midi")
+            set(product "Triceratops MIDI")
+            set(code TrMi)
+            set(midi TRUE)
+            set(au_type kAudioUnitType_MIDIProcessor)
+        else()
+            set(product "Triceratops Audio")
+            set(code TrAu)
+            set(midi FALSE)
+            set(au_type kAudioUnitType_Effect)
+        endif()
+        juce_add_plugin(${target}
+            COMPANY_NAME "Triceratops Audio"
+            BUNDLE_ID "audio.triceratops.agent.${kind}"
+            PLUGIN_MANUFACTURER_CODE Tric
+            PLUGIN_CODE ${code}
+            FORMATS AU
+            PRODUCT_NAME "${product}"
+            DESCRIPTION "Music agent for Logic Pro"
+            IS_SYNTH FALSE
+            NEEDS_MIDI_INPUT ${midi}
+            NEEDS_MIDI_OUTPUT ${midi}
+            IS_MIDI_EFFECT ${midi}
+            AU_MAIN_TYPE ${au_type}
+            EDITOR_WANTS_KEYBOARD_FOCUS TRUE
+            COPY_PLUGIN_AFTER_BUILD FALSE)
+        get_target_property(shared_sources Triceratops SOURCES)
+        target_sources(${target} PRIVATE ${shared_sources})
+        target_compile_definitions(${target} PUBLIC
+            JUCE_USE_WINDOWS_MEDIA_FORMAT=0 JUCE_WEB_BROWSER=0 JUCE_USE_CURL=0)
+        target_link_libraries(${target} PRIVATE
+            juce::juce_audio_utils juce::juce_gui_extra
+            juce::juce_recommended_config_flags juce::juce_recommended_lto_flags
+            juce::juce_recommended_warning_flags)
+        juce_generate_juce_header(${target})
+    endforeach()
+endif()

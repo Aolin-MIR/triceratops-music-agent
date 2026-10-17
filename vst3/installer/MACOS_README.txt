@@ -1,4 +1,4 @@
-Triceratops 0.9.1 for REAPER on Apple Silicon
+Triceratops 0.9.1 local build for REAPER and Logic Pro on Apple Silicon
 
 Requires macOS 14 or newer and native ARM64 Python 3.10 or 3.11.
 The model backend does not support Intel Macs or Python running under Rosetta.
@@ -10,6 +10,18 @@ The model backend does not support Intel Macs or Python running under Rosetta.
 3. Enter your own OpenAI-compatible API key at the hidden prompt.
    An empty response preserves the existing key.
 4. Rescan VST3 plug-ins in REAPER and insert Triceratops.
+   In Logic Pro, scan the included Audio Units in Plug-in Manager:
+   - Triceratops MIDI: MIDI FX slot before a software instrument.
+   - Triceratops Audio: Audio FX slot for input-audio capture and file tools.
+   AU bundles install into ~/Library/Audio/Plug-Ins/Components.
+   A Logic-only installation can set the "logic" executable path in runtime.json;
+   REAPER is not required when doctor finds that configured Logic executable.
+5. In Logic, drag the current MIDI into a track or use Logic's MIDI import command.
+   "Show output file" reveals MIDI or separated audio files. Automatic timeline
+   import is currently a REAPER integration; AU never sends an import to REAPER.
+   To record generated MIDI directly, enable Logic's "Record MIDI to Track Here"
+   after Triceratops MIDI, click Play MIDI, then start Logic's recording transport.
+   For audio capture, route audio through Triceratops Audio, then use Rec audio.
 
 Settings: ~/Library/Application Support/Triceratops/runtime.json
 The installer preserves existing paths, device, API endpoint and chat model.

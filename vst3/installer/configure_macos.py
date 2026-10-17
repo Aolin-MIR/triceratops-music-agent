@@ -15,7 +15,8 @@ def write_config(data: Path, python: Path, api_key: str = "") -> dict:
     if not isinstance(settings, dict):
         raise ValueError("runtime.json must contain an object")
     defaults = dict(python=str(python), runs_dir=str(data / "runs"), model_home=str(data / "models"),
-                    reaper="/Applications/REAPER.app/Contents/MacOS/REAPER", device="cpu",
+                    reaper="/Applications/REAPER.app/Contents/MacOS/REAPER",
+                    logic="/Applications/Logic Pro.app/Contents/MacOS/Logic Pro", device="cpu",
                     base_url="https://dashscope.aliyuncs.com/compatible-mode/v1", chat_model="qwen-plus")
     for key, value in defaults.items():
         settings.setdefault(key, value)

@@ -12,13 +12,19 @@ AGENT_MODULES = (
 )
 
 
-def package(plugin: Path, output: Path, platform: str, python_seed: Path | None = None):
+def package(plugin: Path, output: Path, platform: str, python_seed: Path | None = None,
+            au_plugins: list[Path] | None = None):
     if not plugin.is_dir():
         raise FileNotFoundError(plugin)
+    for component in au_plugins or []:
+        if platform != "macos" or component.suffix != ".component" or not component.is_dir():
+            raise ValueError(f"Invalid macOS Audio Unit bundle: {component}")
     if output.exists() and any(output.iterdir()):
         raise ValueError(f"Output must be empty: {output}")
     output.mkdir(parents=True, exist_ok=True)
     shutil.copytree(plugin, output / "Triceratops.vst3")
+    for component in au_plugins or []:
+        shutil.copytree(component, output / component.name)
     backend = output / "backend"
     agent = backend / "text2music" / "agent"
     agent.mkdir(parents=True)
@@ -51,5 +57,6 @@ if __name__ == "__main__":
     parser.add_argument("--plugin", type=Path, required=True)
     parser.add_argument("--output", type=Path, required=True)
     parser.add_argument("--python-seed", type=Path)
+    parser.add_argument("--au-plugin", type=Path, action="append", default=[])
     args = parser.parse_args()
-    package(args.plugin, args.output, args.platform, args.python_seed)
+    package(args.plugin, args.output, args.platform, args.python_seed, args.au_plugin)
