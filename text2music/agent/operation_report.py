@@ -13,14 +13,27 @@ def operation_report(action: str, trace: list[dict], *, language: str = "zh") ->
         detail = str(events[-1].get("result", {}).get("error", "工具没有执行完成")) if events else "工具没有执行完成"
         return "操作未完成：" + detail, detail
     data = events[-1]["result"]
-    if action == "continue_midi":
+    if action == "generate_draft" and "postprocess" in data:
+        raw, final, changes = data["postprocess"]["raw_validation"], data["validation"], data["postprocess"]
+        reply = (f"MIDI-LLM 已生成 MIDI。原始输出：{raw['note_count']} 个音符，其中 {raw['drum_notes']} 个鼓音符。\n"
+                 f"交付版本：{final['note_count']} 个音符，其中 {final['drum_notes']} 个鼓音符，时长 {final['duration_seconds']} 秒。\n"
+                 f"后处理：移除 {changes['removed_drum_events']} 条鼓事件，修改 {changes['changed_program_events']} 条音色事件，"
+                 f"补充 {changes['inserted_program_events']} 条音色设置。\n原始 MIDI 保留：{data['raw_midi']}\n"
+                 "情绪、留白及音乐质量仍需试听判断。")
+    elif action == "continue_midi":
         reply = (f"MIDI-GPT 已新生成 {data['added_bars']} 小节。原片段 {data['original_bars']} 小节，"
                  f"总计 {data['original_bars'] + data['added_bars']} 小节。\n"
                  "原 MIDI 事件流完整保留，新生成内容追加在原片段之后。")
+        if data.get("continuation_postprocess"):
+            audit = data["continuation_postprocess"]
+            reply += (f"\n小节边界处理：裁剪 {audit['clipped_note_offs']} 条越界音符尾部，"
+                      f"移除 {audit['discarded_late_note_ons']} 个越界起音，"
+                      f"关闭 {audit['closed_unterminated_notes']} 个未结束音符。"
+                      f"\n原始生成尾段保留：{data['raw_tail_midi']}")
     elif action == "transform_midi":
         reply = f"MIDI 修改完成：{data['original_notes']} → {data['output_notes']} 个音符。"
         if data.get("quantized"):
-            reply += "\n音符起点和终点已对齐十六分音符网格。"
+            reply += "\n音符按十六分音符网格量化；短音符保留至少 1 tick，避免零时值。"
         if data.get("transposed"):
             reply += f"\n移调：{data['transposed']} 个半音。"
     elif action == "separate_stems":
@@ -43,6 +56,19 @@ def operation_report(action: str, trace: list[dict], *, language: str = "zh") ->
     elif action in {"accept", "reject", "undo"}:
         reply = {"accept": "已保留这个版本，并记录偏好。", "reject": "已记录不喜欢此版本的反馈。",
                  "undo": "已在插件中恢复上一个 MIDI 版本。"}[action]
+    elif action == "remember_fact":
+        reply = "已保存项目记忆：" + str(data.get("remembered", ""))
+    elif action == "update_fact":
+        reply = "已更新项目记忆：" + str(data.get("remembered", ""))
+    elif action == "recall_facts":
+        reply = (f"已从本机文件读取 {len(data['facts'])} 条已保存记忆：\n"
+                 + "\n".join(str(item['fact']) for item in data['facts'])
+                 + "\n保存位置：" + data['storage_path'])
+    elif action == "forget_fact":
+        reply = f"已删除 {data.get('removed', 0)} 条项目记忆。"
+    elif action == "search_knowledge":
+        matches = data.get("matches", [])
+        reply = f"已检索到 {len(matches)} 条本地知识：\n" + "\n".join(str(item["source"]) for item in matches)
     else:
         reply = str(data.get("reply") or json.dumps(data, ensure_ascii=False, default=str))
     midi = data.get("midi_windows") or data.get("midi")
@@ -57,14 +83,27 @@ def _english_report(action: str, trace: list[dict]) -> tuple[str, str]:
         detail = str(events[-1].get("result", {}).get("error", "The tool did not complete")) if events else "The tool did not complete"
         return "Operation did not complete: " + detail, detail
     data = events[-1]["result"]
-    if action == "continue_midi":
+    if action == "generate_draft" and "postprocess" in data:
+        raw, final, changes = data["postprocess"]["raw_validation"], data["validation"], data["postprocess"]
+        reply = (f"MIDI-LLM generated MIDI. Raw output: {raw['note_count']} notes, including {raw['drum_notes']} drum notes.\n"
+                 f"Delivered: {final['note_count']} notes, including {final['drum_notes']} drum notes; {final['duration_seconds']} seconds.\n"
+                 f"Postprocessing removed {changes['removed_drum_events']} drum events, changed {changes['changed_program_events']} "
+                 f"program events and inserted {changes['inserted_program_events']} program settings.\n"
+                 f"Raw MIDI retained: {data['raw_midi']}\nMood, space and musical quality still require listening.")
+    elif action == "continue_midi":
         reply = (f"MIDI-GPT generated {data['added_bars']} new bars. Original: {data['original_bars']} bars; "
                  f"total: {data['original_bars'] + data['added_bars']} bars.\n"
                  "Original MIDI event streams were preserved; new content was appended.")
+        if data.get("continuation_postprocess"):
+            audit = data["continuation_postprocess"]
+            reply += (f"\nBar-boundary processing clipped {audit['clipped_note_offs']} note releases, "
+                      f"removed {audit['discarded_late_note_ons']} late note onsets and closed "
+                      f"{audit['closed_unterminated_notes']} unterminated notes."
+                      f"\nRaw generated tail retained: {data['raw_tail_midi']}")
     elif action == "transform_midi":
         reply = f"MIDI edit complete: {data['original_notes']} -> {data['output_notes']} notes."
         if data.get("quantized"):
-            reply += "\nNote starts and ends were aligned to the sixteenth-note grid."
+            reply += "\nNotes were quantized to the sixteenth-note grid; short notes retain at least 1 tick."
         if data.get("transposed"):
             reply += f"\nTransposition: {data['transposed']} semitones."
     elif action == "separate_stems":
@@ -85,6 +124,19 @@ def _english_report(action: str, trace: list[dict]) -> tuple[str, str]:
     elif action in {"accept", "reject", "undo"}:
         reply = {"accept": "Version kept; preference saved.", "reject": "Version rejected; feedback saved.",
                  "undo": "The previous MIDI version is restored in the plug-in."}[action]
+    elif action == "remember_fact":
+        reply = "Project memory saved: " + str(data.get("remembered", ""))
+    elif action == "update_fact":
+        reply = "Project memory updated: " + str(data.get("remembered", ""))
+    elif action == "recall_facts":
+        reply = (f"Read {len(data['facts'])} saved facts from local storage:\n"
+                 + "\n".join(str(item['fact']) for item in data['facts'])
+                 + "\nStorage: " + data['storage_path'])
+    elif action == "forget_fact":
+        reply = f"Removed {data.get('removed', 0)} project facts."
+    elif action == "search_knowledge":
+        matches = data.get("matches", [])
+        reply = f"Retrieved {len(matches)} local passages:\n" + "\n".join(str(item["source"]) for item in matches)
     else:
         reply = str(data.get("reply") or json.dumps(data, ensure_ascii=False, default=str))
     midi = data.get("midi_windows") or data.get("midi")

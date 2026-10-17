@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import importlib.util
+import hashlib
 import json
 import os
 import re
@@ -17,6 +18,7 @@ MAJOR_PROFILE = np.array([6.35, 2.23, 3.48, 2.33, 4.38, 4.09, 2.52, 5.19, 2.39, 
 MINOR_PROFILE = np.array([6.33, 2.68, 3.52, 5.38, 2.60, 3.53, 2.54, 4.75, 3.98, 2.69, 3.34, 3.17])
 PITCH_NAMES = ("C", "C#", "D", "Eb", "E", "F", "F#", "G", "Ab", "A", "Bb", "B")
 AUDIO_EXTENSIONS = {".wav", ".flac", ".mp3", ".ogg", ".m4a", ".aiff", ".aif"}
+BASIC_PITCH_ONNX_SHA256 = "2c3c1d144bfa61ad236e92e169c13535c880469a12a047d4e73451f2c059a0ec"
 
 
 def windows_to_wsl(path: str) -> Path:
@@ -86,17 +88,24 @@ def separate_stems(path: Path, output_dir: Path) -> list[Path]:
     return files
 
 
+def basic_pitch_model_path() -> Path:
+    from basic_pitch import FilenameSuffix, build_icassp_2022_model_path
+    model_path = build_icassp_2022_model_path(FilenameSuffix.onnx)
+    if not model_path.is_file():
+        raise FileNotFoundError(f"Basic Pitch ONNX weights are missing: {model_path}")
+    if hashlib.sha256(model_path.read_bytes()).hexdigest() != BASIC_PITCH_ONNX_SHA256:
+        raise RuntimeError("Basic Pitch ONNX model checksum mismatch")
+    return model_path
+
+
 def audio_to_midi(path: Path, output_dir: Path) -> list[Path]:
     if importlib.util.find_spec("basic_pitch") is None:
         raise RuntimeError("Basic Pitch is not installed")
     output_dir.mkdir(parents=True, exist_ok=True)
     if importlib.util.find_spec("onnxruntime") is None:
         raise RuntimeError("Basic Pitch requires onnxruntime; install the audio dependencies")
-    from basic_pitch import FilenameSuffix, build_icassp_2022_model_path
     from basic_pitch.inference import predict
-    model_path = build_icassp_2022_model_path(FilenameSuffix.onnx)
-    if not model_path.is_file():
-        raise FileNotFoundError(f"Basic Pitch ONNX weights are missing: {model_path}")
+    model_path = basic_pitch_model_path()
     _, midi, _ = predict(str(path), model_or_model_path=model_path)
     destination = output_dir / f"{path.stem}_basic_pitch.mid"
     midi.write(str(destination))

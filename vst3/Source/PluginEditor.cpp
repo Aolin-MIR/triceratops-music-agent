@@ -217,7 +217,11 @@ TriceratopsAudioProcessorEditor::TriceratopsAudioProcessorEditor(TriceratopsAudi
 {
     const auto stored = juce::JSON::parse(languageFile());
     if (auto* object = stored.getDynamicObject())
+    {
         chinese = object->getProperty("language").toString() == "zh";
+        if (object->hasProperty("auto_import"))
+            autoImportToReaper = static_cast<bool>(object->getProperty("auto_import"));
+    }
     setSize(1180, 780);
     setResizable(true, true);
     setResizeLimits(900, 650, 1920, 1200);
@@ -276,11 +280,7 @@ TriceratopsAudioProcessorEditor::TriceratopsAudioProcessorEditor(TriceratopsAudi
 
     languageBtn.onClick = [this] {
         chinese = !chinese;
-        auto settings = new juce::DynamicObject();
-        settings->setProperty("language", chinese ? "zh" : "en");
-        const auto file = languageFile();
-        file.getParentDirectory().createDirectory();
-        file.replaceWithText(juce::JSON::toString(juce::var(settings)));
+        saveUiSettings();
         applyLanguage();
     };
     send.onClick          = [this] { sendMessage(); };
@@ -290,6 +290,7 @@ TriceratopsAudioProcessorEditor::TriceratopsAudioProcessorEditor(TriceratopsAudi
         autoImportToReaper = !autoImportToReaper;
         autoImportBtn.setButtonText(autoImportToReaper ? ui("Auto-Import: ON") : ui("Auto-Import: OFF"));
         autoImportBtn.setPrimary(autoImportToReaper);
+        saveUiSettings();
     };
     importReaperBtn.onClick = [this] { importToReaper(); };
     sidebarToggleBtn.onClick = [this] { showSidebar = !showSidebar; resized(); };
@@ -346,6 +347,8 @@ TriceratopsAudioProcessorEditor::TriceratopsAudioProcessorEditor(TriceratopsAudi
         {}
     });
     applyLanguage();
+    autoImportBtn.setButtonText(autoImportToReaper ? ui("Auto-Import: ON") : ui("Auto-Import: OFF"));
+    autoImportBtn.setPrimary(autoImportToReaper);
     updateChatDisplay();
 
     startTimer(100);
@@ -495,6 +498,12 @@ void TriceratopsAudioProcessorEditor::resized()
 void TriceratopsAudioProcessorEditor::timerCallback()
 {
     repaint();
+    const auto midiCaptureText = ui(ownerProcessor.isCapturingMidi() ? "Save MIDI" : "Rec MIDI");
+    const auto audioCaptureText = ui(ownerProcessor.isCapturingAudio() ? "Save audio" : "Rec audio");
+    if (capture.getButtonText() != midiCaptureText)
+        capture.setButtonText(midiCaptureText);
+    if (captureAudio.getButtonText() != audioCaptureText)
+        captureAudio.setButtonText(audioCaptureText);
 
     // Hosts may construct an editor during plug-in scanning merely to query
     // its size. Starting WSL, HTTP, or GPU work at that point can stall the
@@ -1146,8 +1155,8 @@ juce::File TriceratopsAudioProcessorEditor::nextCaptureFile(const juce::String& 
                             .getChildFile("Triceratops")
                             .getChildFile("Captures");
     folder.createDirectory();
-    return folder.getChildFile("capture-"
-        + juce::Time::getCurrentTime().formatted("%Y%m%d-%H%M%S") + extension);
+    return folder.getNonexistentChildFile("capture-"
+        + juce::Time::getCurrentTime().formatted("%Y%m%d-%H%M%S"), extension, false);
 }
 
 void TriceratopsAudioProcessorEditor::toggleMidiCapture()
@@ -1236,6 +1245,18 @@ juce::File TriceratopsAudioProcessorEditor::languageFile() const
     return juce::File::getSpecialLocation(juce::File::userApplicationDataDirectory)
         .getChildFile("Triceratops/ui-settings.json");
    #endif
+}
+
+void TriceratopsAudioProcessorEditor::saveUiSettings() const
+{
+    auto settings = juce::JSON::parse(languageFile());
+    if (settings.getDynamicObject() == nullptr)
+        settings = juce::var(new juce::DynamicObject());
+    settings.getDynamicObject()->setProperty("language", chinese ? "zh" : "en");
+    settings.getDynamicObject()->setProperty("auto_import", autoImportToReaper);
+    const auto file = languageFile();
+    file.getParentDirectory().createDirectory();
+    file.replaceWithText(juce::JSON::toString(settings));
 }
 
 void TriceratopsAudioProcessorEditor::applyLanguage()

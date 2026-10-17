@@ -1,4 +1,7 @@
 # Release runtime only; training, Gradio and legacy Text2Score are not installed.
+# resampy 0.4.x (Basic Pitch) still imports pkg_resources at runtime.
+setuptools==80.9.0
+psutil>=5.9,<8
 numpy==1.26.4
 torch==2.13.0
 transformers==5.14.1

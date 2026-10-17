@@ -3,7 +3,7 @@ from __future__ import annotations
 
 import json
 import re
-from collections import Counter
+from collections import Counter, defaultdict, deque
 from pathlib import Path
 from statistics import median
 from typing import Any
@@ -188,7 +188,7 @@ def transform_midi_file(source: Path, request: str, destination: Path, *, operat
         preserve_melody = operations.get("preserve_melody", False)
     if not any((transpose, velocity_delta, quantize, extend, power)):
         raise ValueError("No supported MIDI edit was specified; no file was changed")
-    grid = max(1, midi.ticks_per_beat // 4)
+    grid = max(1.0, midi.ticks_per_beat / 4)
 
     pitch_averages: list[float] = []
     for track in midi.tracks:
@@ -207,12 +207,30 @@ def transform_midi_file(source: Path, request: str, destination: Path, *, operat
         absolute = 0
         events: list[tuple[int, int, Any]] = []
         note_events: list[tuple[int, int, Any]] = []
+        quantized_times = {}
+        if quantize:
+            track_end = sum(message.time for message in track)
+            active = defaultdict(deque)
+            for order, message in enumerate(track):
+                absolute += message.time
+                if message.type not in {"note_on", "note_off"}:
+                    continue
+                tick = round(round(absolute / grid) * grid)
+                key = (message.channel, message.note)
+                if message.type == "note_on" and message.velocity > 0:
+                    if tick >= track_end and track_end > 0:
+                        tick = max(0, round(((track_end - 1) // grid) * grid))
+                    active[key].append(tick)
+                elif active[key]:
+                    tick = min(track_end, max(tick, active[key].popleft() + 1))
+                quantized_times[order] = tick
+            absolute = 0
         for order, message in enumerate(track):
             absolute += message.time
             if message.type == "end_of_track":
                 continue
             item = message.copy(time=0)
-            event_time = round(absolute / grid) * grid if quantize and message.type in {"note_on", "note_off"} else absolute
+            event_time = quantized_times.get(order, absolute)
             if message.type in {"note_on", "note_off"} and getattr(message, "channel", -1) != 9:
                 is_melody = preserve_melody and track_index == melody_track
                 if transpose and not is_melody:
@@ -231,8 +249,9 @@ def transform_midi_file(source: Path, request: str, destination: Path, *, operat
                     events.append((event_time, order * 2 + 1, fifth))
                     note_events.append((event_time, order * 2 + 1, fifth.copy()))
             else:
-                events.append((absolute, order * 2, item))
+                events.append((event_time, order * 2, item))
                 if message.type == "note_on" and message.velocity > 0:
+                    item.velocity = max(1, min(127, item.velocity + velocity_delta))
                     original_notes += 1
                     output_notes += 1
                 if message.type in {"note_on", "note_off"}:
@@ -249,7 +268,8 @@ def transform_midi_file(source: Path, request: str, destination: Path, *, operat
         for event_time, _, message in events:
             result_track.append(message.copy(time=max(0, event_time - previous)))
             previous = event_time
-        result_track.append(MetaMessage("end_of_track", time=0))
+        end_tick = max(absolute, repeat_span * 2 if extend and note_events else absolute)
+        result_track.append(MetaMessage("end_of_track", time=max(0, end_tick - previous)))
         output.tracks.append(result_track)
     destination.parent.mkdir(parents=True, exist_ok=True)
     output.save(destination)
@@ -257,5 +277,6 @@ def transform_midi_file(source: Path, request: str, destination: Path, *, operat
         "source": str(source), "midi": str(destination), "original_notes": original_notes,
         "output_notes": output_notes, "tracks": len(output.tracks), "transposed": transpose,
         "quantized": quantize, "extended": extend, "power_chords": power,
+        "velocity_delta": velocity_delta,
         "preserved_melody": preserve_melody,
     }

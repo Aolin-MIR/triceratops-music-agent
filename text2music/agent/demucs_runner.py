@@ -10,7 +10,8 @@ def load_pinned_model(name="hf://htdemucs", repo=None):
     from huggingface_hub import hf_hub_download
     from demucs.apply import BagOfModels
     from demucs.hf import load_safetensors_model
-    from text2music.agent.download_models import DEMUCS_REVISION
+    from text2music.agent.download_models import DEMUCS_REVISION, verify_demucs
+    verify_demucs()
     def local(filename):
         return hf_hub_download("adefossez/HTDemucs", filename, revision=DEMUCS_REVISION,
                                local_files_only=True)

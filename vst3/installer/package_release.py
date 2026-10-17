@@ -8,7 +8,7 @@ ROOT = Path(__file__).resolve().parents[2]
 AGENT_MODULES = (
     "__init__.py", "audio_tools.py", "capabilities.py", "knowledge.py", "midi_tools.py",
     "operation_report.py", "project_memory.py", "router.py", "service.py", "symbolic_models.py",
-    "tool_loop.py", "vst_service.py", "runtime.py", "doctor.py", "download_models.py", "midi_llm_runner.py", "demucs_runner.py",
+    "tool_loop.py", "vst_service.py", "runtime.py", "doctor.py", "download_models.py", "midi_llm_runner.py", "demucs_runner.py", "model_job.py", "errors.py", "midi_merge.py", "midi_postprocess.py",
 )
 
 

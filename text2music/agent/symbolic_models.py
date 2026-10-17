@@ -6,9 +6,9 @@ silently fall back to a different generator when a requested model is missing.
 from __future__ import annotations
 
 import os
+import json
 import sys
 import copy
-import tempfile
 import subprocess
 import time
 from pathlib import Path
@@ -73,8 +73,11 @@ def release_text2score_worker(runs_dir: Path, timeout: float = 30.0) -> None:
 
 
 def generate_midi_llm(prompt: str, output_dir: Path, *, max_tokens: int = 768,
-                      temperature: float = 1.0, top_p: float = 0.98) -> dict[str, Any]:
+                      temperature: float = 1.0, top_p: float = 0.98,
+                      constraints: dict | None = None) -> dict[str, Any]:
     """Run the official Transformers inference script against the local model."""
+    from text2music.agent.midi_postprocess import validate_constraints, constrain_generated_midi
+    constraints = validate_constraints(constraints)
     _require_model("midi_llm")
     if not prompt.strip():
         raise ValueError("MIDI-LLM requires a non-empty musical description")
@@ -101,8 +104,28 @@ def generate_midi_llm(prompt: str, output_dir: Path, *, max_tokens: int = 768,
     if not created:
         raise RuntimeError("MIDI-LLM completed without producing a MIDI file")
     midi = created[-1]
-    return {"backend": "midi_llm", "midi": str(midi),
+    from mido import MidiFile
+    parsed = MidiFile(midi)
+    notes = [event for track in parsed.tracks for event in track
+             if event.type == "note_on" and event.velocity > 0]
+    if not notes or parsed.length <= 0:
+        raise RuntimeError("MIDI-LLM produced an empty or zero-duration MIDI clip")
+    measurement = output_dir / "runtime-device.json"
+    runtime = json.loads(measurement.read_text()) if measurement.exists() else {}
+    constrained = constrain_generated_midi(midi, constraints)
+    return {"backend": "midi_llm", **constrained, "runtime": runtime,
+            "max_tokens": max(96, min(2046, int(max_tokens))),
             "elapsed_seconds": round(time.monotonic() - started, 2)}
+
+
+def _engine_device(engine) -> str:
+    model = getattr(engine, "_model", None)
+    if model is not None and hasattr(model, "parameters"):
+        return str(next(model.parameters()).device)
+    cache = getattr(engine, "_initial_kv", None)
+    if cache:
+        return str(cache[0][0].device)
+    return "unavailable"
 
 
 def infill_midi_gpt(source: Path, destination: Path, *, track_ids: list[int],
@@ -133,12 +156,16 @@ def infill_midi_gpt(source: Path, destination: Path, *, track_ids: list[int],
                              model_dim=4, mask_mode="attention")
     started = time.monotonic()
     engine = InferenceEngine.from_checkpoint(str(MIDI_GPT_MODEL), device=os.environ.get("TRICERATOPS_DEVICE", "cuda"))
+    load_seconds = time.monotonic() - started
+    device = _engine_device(engine)
     generated = engine.session(score, GenerationRequest(tracks=prompts, config=config)).run()
-    destination.parent.mkdir(parents=True, exist_ok=True)
-    generated.to_midi(str(destination))
+    from text2music.agent.midi_merge import merge_infill
+    preservation = merge_infill(source, destination, score, generated, selected_tracks, selected_bars)
     if not destination.is_file() or destination.stat().st_size == 0:
         raise RuntimeError("MIDI-GPT completed without producing a MIDI file")
     return {"backend": "midi_gpt", "midi": str(destination),
+            **preservation,
+            "runtime": {"actual_device": device, "load_seconds": round(load_seconds, 3)},
             "tracks": selected_tracks, "bars": selected_bars,
             "elapsed_seconds": round(time.monotonic() - started, 2)}
 
@@ -171,6 +198,8 @@ def continue_midi_gpt(source: Path, destination: Path, *, bar_count: int = 4,
     )
     started = time.monotonic()
     engine = InferenceEngine.from_checkpoint(str(MIDI_GPT_MODEL), device=os.environ.get("TRICERATOPS_DEVICE", "cuda"))
+    load_seconds = time.monotonic() - started
+    device = _engine_device(engine)
     generated = engine.session(score, request).run().resample(original.resolution)
     if len(generated.tracks) != len(original.tracks):
         raise RuntimeError("Continuation changed the number of source tracks")
@@ -178,7 +207,7 @@ def continue_midi_gpt(source: Path, destination: Path, *, bar_count: int = 4,
         raise RuntimeError("MIDI-GPT returned no notes in the continuation")
     # Keep the original MIDI event streams, including pitch bends, CCs and
     # tempo changes. The model's MIDI writer only exports notes/programs.
-    from mido import MidiFile, MidiTrack
+    from mido import MidiFile
     source_midi = MidiFile(source)
     if source_midi.type == 2:
         raise ValueError("Continuation requires synchronous MIDI tracks (type 0 or 1)")
@@ -189,25 +218,17 @@ def continue_midi_gpt(source: Path, destination: Path, *, bar_count: int = 4,
         if len(track.bars) < first_bar + bar_count:
             raise RuntimeError("MIDI-GPT returned fewer bars than requested")
         track.bars = track.bars[first_bar:first_bar + bar_count]
+    tail_beats = max(sum(bar.beat_length for bar in track.bars) for track in generated.tracks)
+    end_tick = boundary_tick + round(tail_beats * source_midi.ticks_per_beat)
     destination.parent.mkdir(parents=True, exist_ok=True)
-    with tempfile.TemporaryDirectory(dir=destination.parent) as temporary:
-        tail_path = Path(temporary) / "tail.mid"
-        generated.to_midi(str(tail_path))
-        tail = MidiFile(tail_path)
-    combined = MidiFile(type=1, ticks_per_beat=source_midi.ticks_per_beat)
-    combined.tracks.extend(MidiTrack(event.copy() for event in track) for track in source_midi.tracks)
-    for track in tail.tracks:
-        result_track = MidiTrack()
-        absolute, previous = 0, 0
-        for event in track:
-            absolute += event.time
-            if event.type == "set_tempo":
-                continue
-            tick = boundary_tick + round(absolute * combined.ticks_per_beat / tail.ticks_per_beat)
-            result_track.append(event.copy(time=tick-previous))
-            previous = tick
-        combined.tracks.append(result_track)
+    tail_path = destination.with_name(destination.stem + "-raw-tail.mid")
+    generated.to_midi(str(tail_path))
+    from text2music.agent.midi_merge import append_bounded_continuation
+    combined, audit = append_bounded_continuation(source_midi, MidiFile(tail_path),
+                                                 boundary_tick=boundary_tick, end_tick=end_tick)
     combined.save(destination)
     return {"backend": "midi_gpt", "midi": str(destination), "source": str(source),
+            "raw_tail_midi": str(tail_path), "continuation_postprocess": audit,
+            "runtime": {"actual_device": device, "load_seconds": round(load_seconds, 3)},
             "original_bars": first_bar, "added_bars": bar_count, "bars": target_bars,
             "elapsed_seconds": round(time.monotonic()-started, 2)}

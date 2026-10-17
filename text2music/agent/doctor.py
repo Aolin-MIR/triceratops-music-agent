@@ -25,11 +25,11 @@ def check(config: Path) -> None:
     for name, status in model_status().items():
         if not status["ready"]:
             raise RuntimeError(f"{name}: incomplete model or decoder source")
-    from basic_pitch import FilenameSuffix, build_icassp_2022_model_path
+    from text2music.agent.audio_tools import basic_pitch_model_path
     from text2music.agent.demucs_runner import load_pinned_model
     load_pinned_model()
     import onnxruntime
-    onnxruntime.InferenceSession(str(build_icassp_2022_model_path(FilenameSuffix.onnx)),
+    onnxruntime.InferenceSession(str(basic_pitch_model_path()),
                                 providers=["CPUExecutionProvider"])
     print("Runtime, model checksums and Basic Pitch ONNX session OK", flush=True)
 

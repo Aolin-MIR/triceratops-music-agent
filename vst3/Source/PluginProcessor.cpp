@@ -70,8 +70,9 @@ void TriceratopsAudioProcessor::processBlock(juce::AudioBuffer<float>& buffer,
                                                    capturedAudio.getNumChannels()); ++channel)
             capturedAudio.copyFrom(channel, capturedAudioSamples, buffer, channel, 0, writable);
         capturedAudioSamples += writable;
-        if (writable < buffer.getNumSamples())
-            captureAudio.store(false);
+        // At the two-minute capacity, retain the pending recording and its
+        // Save state. Clearing the flag here made the next click start a new
+        // capture and discard the full buffer instead of saving it.
     }
 
     if (clipArmed.load() && playing.load())

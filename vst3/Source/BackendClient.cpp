@@ -77,7 +77,10 @@ juce::var BackendClient::status()
 {
     auto payload = new juce::DynamicObject();
     payload->setProperty("session", sessionId);
-    return request("/session/ping", "POST", juce::var(payload));
+    auto result = request("/session/ping", "POST", juce::var(payload));
+    // The editor can remain alive when its backend exits. Re-establish the
+    // session on the existing asynchronous polling thread, never the audio thread.
+    return result.isVoid() ? openSession() : result;
 }
 
 juce::var BackendClient::history()

@@ -68,6 +68,7 @@ public:
 private:
     juce::String ui(const juce::String& value) const { return triceratopsUi(value, chinese); }
     juce::File languageFile() const;
+    void saveUiSettings() const;
     void applyLanguage();
     void timerCallback() override;
     void sendMessage();

@@ -15,6 +15,9 @@ def configure(path: Path) -> dict:
             raise ValueError(f"Missing runtime configuration: {name}")
     if config["device"] not in {"cpu", "cuda", "mps"}:
         raise ValueError("device must be cpu, cuda or mps")
+    precision = config.get("midi_llm_dtype", "default")
+    if precision not in {"default", "float32", "float16", "bfloat16"}:
+        raise ValueError("midi_llm_dtype must be default, float32, float16 or bfloat16")
     root = Path(__file__).resolve().parents[2]
     model_home = Path(config["model_home"])
     os.environ.update({
@@ -24,6 +27,7 @@ def configure(path: Path) -> dict:
         "MIDI_LLM_MODEL": str(model_home / "midi-llm"),
         "MIDI_GPT_MODEL": str(model_home / "midi-gpt" / "yellow_medium-final.safetensors"),
         "TRICERATOPS_REAPER": config["reaper"], "TRICERATOPS_DEVICE": config["device"],
+        "TRICERATOPS_MIDI_LLM_DTYPE": precision,
         "HF_ENDPOINT": config.get("hf_endpoint", "https://hf-mirror.com"),
         "QWEN_API_KEY": config.get("api_key", ""),
         "QWEN_BASE_URL": config.get("base_url", "https://dashscope.aliyuncs.com/compatible-mode/v1"),

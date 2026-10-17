@@ -23,7 +23,7 @@ class Client:
         return SimpleNamespace(choices=[SimpleNamespace(message=next(self.answers))])
 
 def test_chat_does_not_execute_music_tools():
-    client = Client([Answer("你好，可以一起讨论编曲。")])
+    client = Client([Answer(tool="respond", arguments={"message": "你好，可以一起讨论编曲。"})])
     result = run_tool_loop("你好", client=client, execute=lambda *a: pytest.fail("unexpected mutation"))
     assert result.tool == "chat"
     assert result.reply.startswith("你好")
@@ -46,7 +46,7 @@ def test_button_does_not_accept_a_promise_without_execution():
 def test_observe_execute_and_report_actual_results():
     client = Client([Answer(tool="inspect_project"),
                      Answer(tool="transform_midi", arguments={"request": "transpose up 2 semitones"}),
-                     Answer("已完成升高两个半音。")])
+                     Answer(tool="respond", arguments={"message": "已完成升高两个半音。"})])
     calls = []
     def execute(name, args):
         calls.append((name, args))
@@ -55,15 +55,39 @@ def test_observe_execute_and_report_actual_results():
     assert len(calls) == 1
     assert calls[0][1]["request"] == "transpose up 2 semitones"
     assert result.trace[-1]["result"]["notes"] == 8
-    assert json.loads(client.requests[-1]["messages"][-1]["content"])["midi"] == "/tmp/revised.mid"
+    assert result.tool == "transform_midi"
+    assert len(client.requests) == 2
 
-def test_tool_failure_is_returned_to_model_without_fallback():
-    client = Client([Answer(tool="audio_to_midi"), Answer("转录失败，缺少模型。")])
+def test_failed_mutation_stops_before_model_can_invent_a_fallback():
+    client = Client([Answer(tool="audio_to_midi"), Answer("Switching to another model; generating now.")])
     def execute(*args):
         raise RuntimeError("missing model")
     result = run_tool_loop("转录音频", client=client, execute=execute)
     assert result.trace[0]["state"] == "failed"
-    assert "missing model" in client.requests[-1]["messages"][-1]["content"]
+    assert "missing model" in result.trace[0]["result"]["error"]
+    assert len(client.requests) == 1
+    assert "generating" not in result.reply
+
+
+def test_saving_deletable_test_memory_does_not_allow_a_second_deletion():
+    client = Client([Answer(tool="remember_fact", arguments={"fact": "deletable test", "category": "project"}),
+                     Answer(tool="forget_fact", arguments={"text": "deletable test"})])
+    calls = []
+    result = run_tool_loop("Save this deletable test fact", client=client,
+                           execute=lambda name,args: calls.append(name) or {"remembered": args['fact']})
+    assert calls == ['remember_fact']
+    assert result.tool == 'remember_fact'
+    assert len(client.requests) == 1
+
+
+def test_knowledge_question_progresses_from_lookup_to_native_answer():
+    client = Client([Answer(tool='search_knowledge', arguments={'query': 'MIDI-GPT'}),
+                     Answer(tool='respond', arguments={'message': 'Continuation and infill. Source: manual.md'})])
+    result = run_tool_loop('What does MIDI-GPT do?', client=client,
+        execute=lambda name,args: {'matches': [{'source': 'manual.md', 'text': 'Continuation and infill'}]})
+    assert len(result.trace) == 1
+    assert result.reply.endswith('manual.md')
+    assert client.requests[1]['tool_choice']['function']['name'] == 'respond'
 
 def test_model_failure_is_not_replaced_with_generation():
     class Broken(Client):
@@ -132,7 +156,7 @@ def test_broad_prompt_is_rewritten_into_actionable_generation_request():
     rewritten = "A melancholic solo piano piece at a slow tempo in a minor key, with a gentle 4/4 pulse."
     client = Client([
         Answer(tool="generate_draft", arguments={"request": rewritten, "backend": "auto"}),
-        Answer("已经按这个情绪生成好了。"),
+        Answer(tool="respond", arguments={"message": "已经按这个情绪生成好了。"}),
     ])
     calls = []
     result = run_tool_loop(
@@ -142,15 +166,25 @@ def test_broad_prompt_is_rewritten_into_actionable_generation_request():
         execute=lambda name, args: calls.append((name, args)) or {"midi": "/tmp/sad.mid"},
     )
     assert calls == [("generate_draft", {"request": rewritten, "backend": "auto"})]
-    assert result.reply == "已经按这个情绪生成好了。"
+    assert result.tool == "generate_draft"
+    assert result.reply == ""
+    assert len(client.requests) == 1
     system = client.requests[0]["messages"][0]["content"]
     assert "Never require a prompt template" in system
     assert "sensible defaults" in system
 
 
 def test_generation_schema_requires_rewritten_request():
-    client = Client([Answer("ok")])
+    client = Client([Answer(tool="respond", arguments={"message": "ok"})])
     run_tool_loop("随便来点", client=client)
     generate = next(item for item in client.requests[0]["tools"]
                     if item["function"]["name"] == "generate_draft")
     assert generate["function"]["parameters"]["required"] == ["request"]
+
+
+def test_natural_request_cannot_complete_with_a_plain_text_promise():
+    client = Client([Answer("I will create that music immediately.")])
+    with pytest.raises(RuntimeError, match="required native tool call"):
+        run_tool_loop("Sparse piano, no drums", client=client,
+                      execute=lambda *args: pytest.fail("No actual tool was selected"))
+    assert client.requests[0]["tool_choice"] == "required"

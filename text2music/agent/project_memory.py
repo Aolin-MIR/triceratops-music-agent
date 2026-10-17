@@ -44,10 +44,26 @@ class ProjectMemory:
         data = self.load()
         before = data.get("facts", [])
         needle = text.casefold().strip()
+        if not needle:
+            raise ValueError("Specify the memory fact to remove")
         after = [item for item in before if needle not in str(item.get("fact", "")).casefold()]
         data["facts"] = after
         self._save(data)
         return {"removed": len(before) - len(after)}
+
+    def update(self, text: str, fact: str, category: str = "constraint") -> dict[str, Any]:
+        needle, replacement = text.casefold().strip(), fact.strip()
+        if not needle or not replacement:
+            raise ValueError("Updating memory requires an existing fact and its replacement")
+        data = self.load()
+        matches = [item for item in data.get("facts", [])
+                   if needle in str(item.get("fact", "")).casefold()]
+        if len(matches) != 1:
+            raise ValueError("Memory update must identify exactly one existing fact")
+        previous = matches[0]["fact"]
+        matches[0].update(fact=replacement, category=category, updated=time.time())
+        self._save(data)
+        return {"updated_from": previous, "remembered": replacement, "category": category}
 
     def context(self) -> str:
         data = self.load()
@@ -56,6 +72,12 @@ class ProjectMemory:
         lines = [f"- [{item.get('category', 'fact')}] {item.get('fact', '')}" for item in facts]
         return "\n".join((["Project memory:", *lines] if lines else []) +
                          (["Conversation summary: " + summary] if summary else []))
+
+    def recall(self, text: str) -> dict[str, Any]:
+        needle = text.casefold().strip()
+        facts = [item for item in self.load().get("facts", [])
+                 if needle in str(item.get("fact", "")).casefold()]
+        return {"facts": facts, "storage_path": str(self.path)}
 
     def set_summary(self, summary: str) -> None:
         data = self.load()

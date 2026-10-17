@@ -14,6 +14,7 @@ from typing import Any
 
 from text2music.agent.knowledge import KnowledgeBase
 from text2music.agent.project_memory import ProjectMemory, project_key
+from text2music.agent.errors import redact_error
 
 HOST = "127.0.0.1"
 PORT = int(os.environ.get("TRICERATOPS_PORT", "49327"))
@@ -249,7 +250,8 @@ class TriceratopsState:
     def snapshot(self) -> dict[str, Any]:
         with self.lock:
             data = {
-                "service": "ready", "busy": self.busy, "sessions": len(self.sessions),
+                "service": "ready", "version": "0.9.0", "backend_entry": str(Path(__file__).resolve()),
+                "busy": self.busy, "sessions": len(self.sessions),
                 "reply": self.last_reply, "error": self.last_error,
                 "result": self.last_result, "history": _history(),
             }
@@ -392,7 +394,8 @@ class TriceratopsState:
             from text2music.agent.symbolic_models import (
                 generate_midi_llm, infill_midi_gpt, continue_midi_gpt, model_status, release_text2score_worker,
             )
-            from text2music.agent.tool_loop import run_tool_loop
+            from text2music.agent.tool_loop import run_tool_loop, FACTUAL_REPORT_TOOLS
+            from text2music.agent.model_job import run_model_job
 
             project_memory = ProjectMemory(RUNS_DIR, project_key(host))
             knowledge = KnowledgeBase(
@@ -447,7 +450,8 @@ class TriceratopsState:
                         raise ValueError("Load or capture MIDI before asking for a continuation")
                     release_text2score_worker(RUNS_DIR)
                     output = RUNS_DIR / "vst_midi" / f"continuation-{uuid.uuid4().hex}.mid"
-                    result.update(continue_midi_gpt(midi, output, bar_count=arguments.get("bar_count", 4)))
+                    result.update(run_model_job("continue_midi", dict(source=midi, destination=output,
+                        bar_count=arguments.get("bar_count", 4)), cancelled=self.cancel_event.is_set))
                     result["midi_windows"] = _windows_path(output)
                     reply = f"MIDI-GPT generated {result['added_bars']} new bars after the original clip."
                 elif tool == "infill_midi":
@@ -455,28 +459,32 @@ class TriceratopsState:
                         raise ValueError("Drop or capture a MIDI clip before asking for generative infill")
                     release_text2score_worker(RUNS_DIR)
                     output = RUNS_DIR / "vst_midi" / f"infill-{uuid.uuid4().hex}.mid"
-                    generated = infill_midi_gpt(
-                        midi, output,
+                    generated = run_model_job("infill_midi", dict(
+                        source=midi, destination=output,
                         track_ids=arguments.get("track_ids") or [],
                         bar_ids=arguments.get("bar_ids") or [],
                         seed=int(arguments.get("seed", -1)),
                         temperature=float(arguments.get("temperature", 1.0)),
-                    )
+                    ), cancelled=self.cancel_event.is_set)
                     result.update(generated)
                     result["midi_windows"] = _windows_path(output)
                     reply = "MIDI-GPT infill is ready."
                 elif tool == "separate_stems":
                     if not audio or not audio.exists():
                         raise ValueError("Drop an audio file or capture plug-in input first")
-                    paths = separate_stems(audio, RUNS_DIR / "vst_stems" / uuid.uuid4().hex)
-                    result["files"] = [_windows_path(path) for path in paths]
+                    paths = run_model_job("separate_stems", dict(path=audio,
+                        output_dir=RUNS_DIR / "vst_stems" / uuid.uuid4().hex),
+                        cancelled=self.cancel_event.is_set)["files"]
+                    result["files"] = [_windows_path(Path(path)) for path in paths]
                     reply = f"Separated {len(paths)} stems."
                 elif tool == "audio_to_midi":
                     if not audio or not audio.exists():
                         raise ValueError("Drop an audio file or capture plug-in input first")
-                    paths = audio_to_midi(audio, RUNS_DIR / "vst_audio_midi" / uuid.uuid4().hex)
+                    paths = run_model_job("audio_to_midi", dict(path=audio,
+                        output_dir=RUNS_DIR / "vst_audio_midi" / uuid.uuid4().hex),
+                        cancelled=self.cancel_event.is_set)["files"]
                     result["midi"] = str(paths[0])
-                    result["midi_windows"] = _windows_path(paths[0])
+                    result["midi_windows"] = _windows_path(Path(paths[0]))
                     reply = "Audio-to-MIDI conversion is ready."
                 elif tool == "generate_draft":
                     requested_backend = str(arguments.get("backend", "auto"))
@@ -485,10 +493,11 @@ class TriceratopsState:
                     request = request_text + "\n\nVST3 host context:\n" + context
                     if backend == "midi_llm":
                         release_text2score_worker(RUNS_DIR)
-                        entry = generate_midi_llm(
-                            request_text, RUNS_DIR / "midi_llm" / uuid.uuid4().hex,
+                        entry = run_model_job("generate_draft", dict(
+                            prompt=request_text, output_dir=RUNS_DIR / "midi_llm" / uuid.uuid4().hex,
                             max_tokens=int(arguments.get("max_tokens", 768)),
-                        )
+                            constraints=arguments.get("constraints"),
+                        ), cancelled=self.cancel_event.is_set)
                         history_entry = {**entry, "request": request_text,
                                          "time": time.strftime("%Y-%m-%d %H:%M:%S")}
                         with HISTORY.open("a", encoding="utf-8") as handle:
@@ -519,6 +528,14 @@ class TriceratopsState:
                 elif tool == "forget_fact":
                     result.update(project_memory.forget(str(arguments.get("text", ""))))
                     reply = "Project memory updated."
+                elif tool == "update_fact":
+                    result.update(project_memory.update(str(arguments.get("text", "")),
+                                                        str(arguments.get("fact", "")),
+                                                        str(arguments.get("category", "constraint"))))
+                    reply = "Project memory updated."
+                elif tool == "recall_facts":
+                    result.update(project_memory.recall(str(arguments.get("text", ""))))
+                    reply = "Saved project memory read."
                 elif tool == "list_capabilities":
                     from text2music.agent.tool_loop import DESCRIPTIONS
                     result["capabilities"] = DESCRIPTIONS
@@ -534,9 +551,11 @@ class TriceratopsState:
                             handle.write(json.dumps(entry, ensure_ascii=False) + "\n")
                 return {**result, "reply": reply}
 
+            execution_events = {}
             def on_event(event):
+                execution_events[event["step"], event["tool"]] = dict(event)
                 with self.lock:
-                    self.last_result = {**result, "event": event}
+                    self.last_result = {**result, "event": event, "trace": list(execution_events.values())}
                 _write_status("working", "30", f"{event['tool']}: {event['state']}")
 
             decision = run_tool_loop(message, context=context,
@@ -547,14 +566,22 @@ class TriceratopsState:
             result["trace"] = decision.trace
             reply = decision.reply
             report_error = ""
-            if payload.get("action"):
+            failures = [event for event in decision.trace if event.get("state") == "failed"]
+            cancelled = self.cancel_event.is_set()
+            if cancelled:
+                result["cancelled"] = True
+                reply = "任务已取消，本地模型进程已停止。" if language == "zh" else "Task cancelled; local model processes stopped."
+            elif failures:
                 from text2music.agent.operation_report import operation_report
-                reply, report_error = operation_report(str(payload["action"]), decision.trace, language=language)
+                reply, report_error = operation_report(failures[-1]["tool"], [failures[-1]], language=language)
+            elif payload.get("action") or result.get("tool") in FACTUAL_REPORT_TOOLS:
+                from text2music.agent.operation_report import operation_report
+                reply, report_error = operation_report(str(payload.get("action") or result["tool"]), decision.trace, language=language)
             with self.lock:
                 self.last_result = result
                 self.last_reply = reply
                 self.last_error = report_error
-            _write_status("failed" if report_error else "completed", "100",
+            _write_status("cancelled" if cancelled else "failed" if report_error else "completed", "100",
                           result.get("comparison", {}).get("summary", reply)
                           if isinstance(result.get("comparison"), dict) else reply)
             self.append_turn("assistant", reply, decision.tool)
@@ -565,11 +592,11 @@ class TriceratopsState:
         except Exception as exc:
             import traceback
             tb = traceback.format_exc()
-            err_msg = f"{type(exc).__name__}: {exc}\n{tb}"
+            err_msg = redact_error(f"{type(exc).__name__}: {exc}\n{tb}")
             with self.lock:
                 self.last_error = err_msg
-                self.last_reply = f"Error: {type(exc).__name__}: {exc}"
-            _write_status("failed", "100", f"{type(exc).__name__}: {exc}")
+                self.last_reply = redact_error(f"Error: {type(exc).__name__}: {exc}")
+            _write_status("failed", "100", redact_error(f"{type(exc).__name__}: {exc}"))
             self.append_turn("assistant", self.last_reply, "error")
         finally:
             with self.lock:
@@ -579,7 +606,7 @@ APP = TriceratopsState()
 
 
 class Handler(BaseHTTPRequestHandler):
-    server_version = "Triceratops/0.9.0"
+    server_version = "Triceratops/0.9.1"
 
     def log_message(self, format: str, *args: Any) -> None:
         return
@@ -724,7 +751,7 @@ class Handler(BaseHTTPRequestHandler):
             else:
                 self._json(404, {"error": "not found"})
         except Exception as exc:
-            self._json(500, {"error": f"{type(exc).__name__}: {exc}"})
+            self._json(500, {"error": redact_error(f"{type(exc).__name__}: {exc}")})
 
 
 def main() -> None:
