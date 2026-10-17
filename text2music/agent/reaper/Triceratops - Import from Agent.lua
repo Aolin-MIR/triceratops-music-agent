@@ -1,7 +1,7 @@
 -- @description Triceratops: Import generated media from agent
 -- @version 0.9
 -- One-shot consumer for reaper-command.txt written by the Triceratops backend.
--- Invoked through REAPER 6.80+ script command-line support (-nonewinst).
+-- Run inside the owning REAPER instance; receipt includes this request and project.
 local ROOT = nil -- injected by vst_service
 assert(ROOT, "Run this importer through Triceratops, which supplies the configured data folder")
 local cmd_path = ROOT .. "/reaper-command.txt"
@@ -18,13 +18,15 @@ local payload = f and f:read("*a") or ""
 if f then f:close() end
 os.remove(taken)
 
+local request_id = value(payload, "REQUEST_ID")
 local command = value(payload, "COMMAND")
 if command ~= "import_midi_file" and command ~= "import_audio_stems" then return end
 local files = value(payload, "FILES")
 if files == "" then return end
 
-reaper.Undo_BeginBlock()
 local imported = 0
+reaper.Undo_BeginBlock()
+local ok, failure = xpcall(function()
 for file in files:gmatch("[^|]+") do
   local source = reaper.PCM_Source_CreateFromFile(file)
   if not source then error("Cannot load generated media: " .. file) end
@@ -50,11 +52,17 @@ for file in files:gmatch("[^|]+") do
   reaper.SetMediaItemInfo_Value(item, "D_LENGTH", length)
   imported = imported + 1
 end
+end, debug.traceback)
 reaper.TrackList_AdjustWindows(false)
 reaper.Undo_EndBlock("Triceratops import generated media", -1)
 reaper.UpdateArrange()
-local result = io.open(ROOT .. "/reaper-import-result.txt", "w")
+local _, project_path = reaper.EnumProjects(-1, "")
+local result_path = ROOT .. "/reaper-import-result.txt"
+local temporary = result_path .. "." .. request_id .. ".tmp"
+local result = io.open(temporary, "w")
 if result then
-  result:write("COMMAND: " .. command .. "\nIMPORTED: " .. imported .. "\nFILES: " .. files .. "\n")
+  result:write("REQUEST_ID: " .. request_id .. "\nPROJECT: " .. (project_path or "") .. "\nERROR: " .. (ok and "" or tostring(failure):gsub("[\r\n]", " ")) .. "\nCOMMAND: " .. command .. "\nIMPORTED: " .. imported .. "\nFILES: " .. files .. "\n")
   result:close()
+  os.remove(result_path) -- Windows rename does not replace an existing file.
+  assert(os.rename(temporary, result_path), "Cannot publish import receipt")
 end

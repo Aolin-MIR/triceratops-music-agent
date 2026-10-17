@@ -38,6 +38,7 @@ def test_model_verification_rejects_incomplete_download(tmp_path):
 def test_reaper_importer_uses_configured_runs_directory(tmp_path, monkeypatch):
     monkeypatch.setattr(vst_service, "RUNS_DIR", tmp_path / "another install")
     monkeypatch.setattr(vst_service, "_find_reaper_executable", lambda: "")
+    vst_service._prepare_reaper_import("import_midi_file", "C:\\music\\test.mid")
     result = vst_service._trigger_reaper_import("import_midi_file", "C:\\music\\test.mid")
     script = (vst_service.RUNS_DIR / "Triceratops - Import.lua").read_text()
     assert "local ROOT = nil" not in script
@@ -111,3 +112,33 @@ runtime.main()
     result = subprocess.run([sys.executable, "-c", code, str(config)], capture_output=True, timeout=10)
     import signal
     assert result.returncode == -signal.SIGTERM, result.stderr.decode()
+
+
+def test_windows_import_retains_nonewinst_and_native_paths(monkeypatch):
+    monkeypatch.setattr(vst_service.sys, "platform", "win32")
+    script = Path("C:/music/Triceratops - Import.lua")
+    assert vst_service._reaper_import_argv("C:/REAPER/reaper.exe", script) == [
+        "C:/REAPER/reaper.exe", "-nonewinst", "C:\\music\\Triceratops - Import.lua"]
+
+
+def test_import_receipt_rejects_stale_success_and_reports_actual_project(tmp_path, monkeypatch):
+    monkeypatch.setattr(vst_service, "RUNS_DIR", tmp_path)
+    old_id, new_id = "a" * 32, "b" * 32
+    receipt = tmp_path / "reaper-import-result.txt"
+    receipt.write_text(f"REQUEST_ID: {old_id}\nIMPORTED: 1\nPROJECT: /old.rpp\nERROR: \n")
+    assert vst_service._read_import_receipt(new_id) is None
+    receipt.write_text(f"REQUEST_ID: {new_id}\nIMPORTED: 1\nPROJECT: /current.rpp\nERROR: \n")
+    result = vst_service._read_import_receipt(new_id)
+    assert result["ok"] and result["project_path"] == "/current.rpp"
+    receipt.write_text(f"REQUEST_ID: {new_id}\nIMPORTED: 0\nERROR: Cannot load media\n")
+    assert not vst_service._read_import_receipt(new_id)["ok"]
+    with pytest.raises(ValueError, match="identifier"):
+        vst_service._read_import_receipt("../another-file")
+
+
+def test_unavailable_host_does_not_leave_a_new_command_for_another_consumer(tmp_path, monkeypatch):
+    monkeypatch.setattr(vst_service, "RUNS_DIR", tmp_path)
+    monkeypatch.setattr(vst_service, "_find_reaper_executable", lambda: "")
+    result = vst_service._trigger_reaper_import("import_midi_file", "/missing.mid")
+    assert not result["triggered"]
+    assert not (tmp_path / "reaper-command.txt").exists()

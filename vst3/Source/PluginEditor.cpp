@@ -541,7 +541,25 @@ void TriceratopsAudioProcessorEditor::timerCallback()
     if (requestKind != RequestKind::none && pending.valid()
         && pending.wait_for(std::chrono::seconds(0)) == std::future_status::ready)
     {
-        handleStatus(pending.get());
+        auto response = pending.get();
+        if (requestKind == RequestKind::import_reaper || requestKind == RequestKind::import_receipt)
+        {
+            importReaperBtn.setEnabled(true);
+            auto* object = response.getDynamicObject();
+            const auto error = object != nullptr ? object->getProperty("error").toString()
+                : ui("Backend connection failed. Check the local service and retry.");
+            juce::String message;
+            if (error.isNotEmpty())
+                message = ui("Operation failed:\n") + error;
+            else if (object != nullptr && static_cast<bool>(object->getProperty("ok")))
+                message = object->getProperty("reply").toString();
+            else
+                message = "REAPER import was not confirmed.";
+            chatTurns.push_back({ "assistant", message,
+                juce::Time::getCurrentTime().formatted("%H:%M:%S"), "", {} });
+            updateChatDisplay();
+        }
+        handleStatus(response);
         if (requestKind == RequestKind::open)
             sessionOpened = true;
         requestKind = RequestKind::none;
@@ -1041,6 +1059,8 @@ void TriceratopsAudioProcessorEditor::cancelCurrentTask()
 
 void TriceratopsAudioProcessorEditor::importToReaper()
 {
+    if (requestKind == RequestKind::import_reaper || requestKind == RequestKind::import_receipt)
+        return;
     const auto fileToImport = latestStemFiles.isEmpty() ? midiPath : juce::String();
     const juce::var filesToImport(latestStemFiles);
     if (fileToImport.isEmpty() && latestStemFiles.isEmpty())
@@ -1074,6 +1094,7 @@ void TriceratopsAudioProcessorEditor::importToReaper()
         return ownerProcessor.backend().importReaperTrack(fileToImport, filesToImport);
     });
     requestKind = RequestKind::import_reaper;
+    importReaperBtn.setEnabled(false);
 
     juce::String msg = fileToImport.isNotEmpty()
         ? (ui("Importing ") + juce::File(fileToImport).getFileName() + ui(" into REAPER track..."))

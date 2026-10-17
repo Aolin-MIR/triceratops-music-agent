@@ -102,14 +102,21 @@ juce::var BackendClient::cancelTask()
     return request("/cancel", "POST", juce::var(payload));
 }
 
-juce::var BackendClient::importReaperTrack(const juce::String& filePath, const juce::var& files)
+juce::var BackendClient::importReaperTrack(const juce::String& filePath, const juce::var& files, bool inHost)
 {
     auto payload = new juce::DynamicObject();
     payload->setProperty("session", sessionId);
     payload->setProperty("file", filePath);
     if (files.isArray())
         payload->setProperty("files", files);
-    return request("/import_reaper", "POST", juce::var(payload));
+    return request(inHost ? "/prepare_import_reaper" : "/import_reaper", "POST", juce::var(payload));
+}
+
+juce::var BackendClient::reaperImportReceipt(const juce::String& requestId)
+{
+    auto payload = new juce::DynamicObject();
+    payload->setProperty("request_id", requestId);
+    return request("/import_reaper_receipt", "POST", juce::var(payload));
 }
 
 juce::var BackendClient::chat(const juce::String& message, const juce::var& host,

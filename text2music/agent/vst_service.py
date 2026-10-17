@@ -5,6 +5,7 @@ import json
 import os
 import re
 import subprocess
+import sys
 import threading
 import time
 import uuid
@@ -64,40 +65,72 @@ def _find_reaper_executable() -> str:
     return ""
 
 
-def _write_reaper_command(command: str, files: str) -> None:
-    """Atomically publish a command for REAPER-side consumers (the one-shot
-    import action or the agent panel, whichever claims it first)."""
+def _write_reaper_command(command: str, files: str) -> str:
+    """Publish a uniquely identified command; stale receipts cannot confirm it."""
+    request_id = uuid.uuid4().hex
     cmd_file = RUNS_DIR / "reaper-command.txt"
     RUNS_DIR.mkdir(parents=True, exist_ok=True)
     tmp = cmd_file.with_suffix(".txt.tmp")
-    tmp.write_text(f"COMMAND: {command}\nFILES: {files}\n", encoding="utf-8")
+    tmp.write_text(f"REQUEST_ID: {request_id}\nCOMMAND: {command}\nFILES: {files}\n", encoding="utf-8")
     os.replace(tmp, cmd_file)
+    return request_id
+
+
+def _prepare_reaper_import(command: str, files: str) -> dict[str, Any]:
+    template = AGENT_DIR / "reaper" / "Triceratops - Import from Agent.lua"
+    if not template.is_file():
+        raise RuntimeError("REAPER import script is missing")
+    request_id = _write_reaper_command(command, files)
+    script = RUNS_DIR / "Triceratops - Import.lua"
+    script.write_text(template.read_text(encoding="utf-8").replace(
+        "local ROOT = nil -- injected by vst_service",
+        "local ROOT = " + json.dumps(_windows_path(RUNS_DIR), ensure_ascii=False)
+    ), encoding="utf-8")
+    return {"request_id": request_id, "script_path": _windows_path(script)}
+
+
+def _read_import_receipt(request_id: str) -> dict[str, Any] | None:
+    if not re.fullmatch(r"[0-9a-f]{32}", request_id):
+        raise ValueError("Invalid import request identifier")
+    try:
+        fields = dict(line.split(": ", 1) for line in
+                      (RUNS_DIR / "reaper-import-result.txt").read_text(encoding="utf-8").splitlines()
+                      if ": " in line)
+    except FileNotFoundError:
+        return None
+    if fields.get("REQUEST_ID") != request_id:
+        return None
+    count = int(fields.get("IMPORTED", "0"))
+    error = fields.get("ERROR", "")
+    return {"request_id": request_id, "imported": count,
+            "project_path": fields.get("PROJECT", ""),
+            "ok": count > 0 and not error,
+            "error": error or ("REAPER imported no media" if count == 0 else "")}
+
+
+def _reaper_import_argv(reaper_exe: str, script: Path) -> list[str]:
+    return [reaper_exe, "-nonewinst", _windows_path(script)]
 
 
 def _trigger_reaper_import(command: str, files: str) -> dict[str, Any]:
-    """Publish media and run the one-shot importer in the existing REAPER host."""
-    _write_reaper_command(command, files)
-    reaper_exe = _find_reaper_executable()
-    script = RUNS_DIR / "Triceratops - Import.lua"
-    template = AGENT_DIR / "reaper" / "Triceratops - Import from Agent.lua"
-    if template.is_file():
-        root = _windows_path(RUNS_DIR)
-        # JSON strings are valid Lua strings here, including Windows backslashes.
-        script.write_text(template.read_text(encoding="utf-8").replace(
-            "local ROOT = nil -- injected by vst_service", "local ROOT = " + json.dumps(root, ensure_ascii=False)
-        ), encoding="utf-8")
-    if script.is_file() and reaper_exe:
-        try:
-            subprocess.Popen([reaper_exe, "-nonewinst", _windows_path(script)], start_new_session=True,
-                             stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
-            return {"triggered": True, "detail": ""}
-        except Exception:
-            return {"triggered": False,
-                    "detail": "Failed to launch REAPER to run the import action"}
-    if not script.is_file():
-        return {"triggered": False,
-                "detail": "REAPER import script is missing"}
-    return {"triggered": False, "detail": "REAPER executable not found"}
+    """Legacy command-line route; success requires this request's real receipt."""
+    try:
+        reaper_exe = _find_reaper_executable()
+        if not reaper_exe:
+            raise RuntimeError("REAPER executable not found")
+        argv = _reaper_import_argv(reaper_exe, RUNS_DIR / "Triceratops - Import.lua")
+        prepared = _prepare_reaper_import(command, files)
+        subprocess.Popen(argv,
+                         start_new_session=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+        deadline = time.monotonic() + 4.0
+        while time.monotonic() < deadline:
+            receipt = _read_import_receipt(prepared["request_id"])
+            if receipt is not None:
+                return {**prepared, **receipt, "triggered": receipt["ok"], "detail": receipt["error"]}
+            time.sleep(0.05)
+        raise RuntimeError("REAPER did not confirm this import request; check the host before retrying")
+    except Exception as exc:
+        return {"triggered": False, "detail": redact_error(f"{type(exc).__name__}: {exc}")}
 
 
 def _archive_and_clear_conversation() -> None:
@@ -717,7 +750,17 @@ class Handler(BaseHTTPRequestHandler):
                     APP.last_reply = "Cancellation requested; waiting for the active tool to stop."
                 _write_status("cancelling" if APP.busy else "ready", "0", APP.last_reply)
                 self._json(200, {"cancelled": True, **APP.snapshot()})
-            elif self.path == "/import_reaper":
+            elif self.path == "/import_reaper_receipt":
+                receipt = _read_import_receipt(str(payload.get("request_id", "")))
+                if receipt is None:
+                    self._json(409, {**APP.snapshot(), "error": "REAPER did not confirm this import request"})
+                else:
+                    response = {**APP.snapshot(), **receipt}
+                    if receipt["ok"]:
+                        project = Path(receipt["project_path"]).name or "untitled project"
+                        response["reply"] = f"Imported {receipt['imported']} item(s) into {project}."
+                    self._json(200 if receipt["ok"] else 503, response)
+            elif self.path in {"/import_reaper", "/prepare_import_reaper"}:
                 file_path = str(payload.get("file", "")).strip()
                 stem_files = payload.get("files", [])
                 if not isinstance(stem_files, list) or any(not isinstance(path, str) or not path.strip() for path in stem_files):
@@ -729,9 +772,17 @@ class Handler(BaseHTTPRequestHandler):
                         stem_files = APP.last_result.get("files") or []
                 if file_path or stem_files:
                     win_path = _windows_path(Path(file_path)) if file_path else "|".join(stem_files)
-                    trigger = _trigger_reaper_import("import_midi_file" if file_path else "import_audio_stems", win_path)
+                    command = "import_midi_file" if file_path else "import_audio_stems"
+                    if self.path == "/prepare_import_reaper":
+                        prepared = _prepare_reaper_import(command, win_path)
+                        self._json(200, {**APP.snapshot(), **prepared})
+                        return
+                    trigger = _trigger_reaper_import(command, win_path)
                     response = {**APP.snapshot(), "ok": trigger["triggered"], "file": win_path,
                                 "bridge": trigger}
+                    if trigger["triggered"] and "imported" in trigger:
+                        project = Path(trigger.get("project_path", "")).name or "untitled project"
+                        response["reply"] = f"Imported {trigger['imported']} item(s) into {project}."
                     if not trigger["triggered"]:
                         response["error"] = trigger["detail"]
                     self._json(200 if trigger["triggered"] else 503, response)

@@ -1,5 +1,6 @@
 from text2music.agent.vst_service import _host_context
 import json
+from pathlib import Path
 import threading
 from http.server import ThreadingHTTPServer
 from urllib.error import HTTPError
@@ -183,3 +184,21 @@ def test_undo_missing_parent_never_restores_an_unrelated_file(tmp_path, monkeypa
         vst_service._previous_midi_version(current)
     with pytest.raises(ValueError, match="Load the MIDI version"):
         vst_service._previous_midi_version(None)
+
+
+def test_host_import_preparation_and_matching_receipt(service_api, tmp_path, monkeypatch):
+    state, post = service_api
+    monkeypatch.setattr(vst_service, "RUNS_DIR", tmp_path)
+    def forbidden_launch(*args, **kwargs):
+        raise AssertionError("Host preparation must not launch another process")
+    monkeypatch.setattr(vst_service.subprocess, "Popen", forbidden_launch)
+    code, prepared = post("/prepare_import_reaper", {"file": str(tmp_path / "real-output.mid")})
+    assert code == 200 and len(prepared["request_id"]) == 32
+    assert Path(prepared["script_path"]).is_file()
+    assert prepared["request_id"] in (tmp_path / "reaper-command.txt").read_text()
+    assert post("/import_reaper_receipt", {"request_id": prepared["request_id"]})[0] == 409
+    (tmp_path / "reaper-import-result.txt").write_text(
+        f"REQUEST_ID: {prepared['request_id']}\nIMPORTED: 1\nPROJECT: /host/project.rpp\nERROR: \n")
+    code, result = post("/import_reaper_receipt", {"request_id": prepared["request_id"]})
+    assert code == 200 and result["ok"] and result["imported"] == 1
+    assert result["project_path"] == "/host/project.rpp"

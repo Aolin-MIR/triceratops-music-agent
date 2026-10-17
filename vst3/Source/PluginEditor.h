@@ -106,7 +106,7 @@ private:
     void toggleAudioCapture();
     juce::File nextCaptureFile(const juce::String& extension) const;
 
-    enum class RequestKind { none, open, status, chat, clear_chat, import_reaper };
+    enum class RequestKind { none, open, status, chat, clear_chat, import_reaper, import_receipt };
 
     TriceratopsAudioProcessor& ownerProcessor;
 
