@@ -40,7 +40,7 @@ def package(plugin: Path, output: Path, platform: str, python_seed: Path | None 
             raise ValueError("Windows packaging requires --python-seed")
         shutil.copytree(python_seed, output / "python", ignore=shutil.ignore_patterns("__pycache__", "*.pyc"))
     else:
-        for name in ("setup-macos.sh", "requirements-runtime.txt"):
+        for name in ("setup-macos.sh", "configure_macos.py", "requirements-runtime.txt", "MACOS_README.txt"):
             shutil.copy2(ROOT / "vst3/installer" / name, output / name)
         (output / "setup-macos.sh").chmod(0o755)
 

@@ -56,8 +56,8 @@ def _require_model(name: str) -> None:
 
 def release_text2score_worker(runs_dir: Path, timeout: float = 30.0) -> None:
     """Release the warm Text2Score worker before another CUDA model is loaded."""
-    if sys.platform == "win32":
-        return  # Legacy Linux worker is not part of the native Windows release.
+    if sys.platform in {"win32", "darwin"}:
+        return  # The legacy Linux worker is not part of either native release.
     shutdown = runs_dir / "worker_queue" / "shutdown"
     shutdown.parent.mkdir(parents=True, exist_ok=True)
     shutdown.write_text("switching symbolic model\n", encoding="utf-8")

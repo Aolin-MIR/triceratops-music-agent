@@ -1151,9 +1151,14 @@ void TriceratopsAudioProcessorEditor::runQuickAction(const juce::String& text, c
 
 juce::File TriceratopsAudioProcessorEditor::nextCaptureFile(const juce::String& extension) const
 {
+   #if JUCE_MAC
+    const auto folder = juce::File::getSpecialLocation(juce::File::userHomeDirectory)
+                            .getChildFile("Library/Application Support/Triceratops/Captures");
+   #else
     const auto folder = juce::File::getSpecialLocation(juce::File::userApplicationDataDirectory)
                             .getChildFile("Triceratops")
                             .getChildFile("Captures");
+   #endif
     folder.createDirectory();
     return folder.getNonexistentChildFile("capture-"
         + juce::Time::getCurrentTime().formatted("%Y%m%d-%H%M%S"), extension, false);
