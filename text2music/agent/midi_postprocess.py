@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import hashlib
+from collections import defaultdict, deque
 from pathlib import Path
 from mido import Message, MidiFile, MidiTrack
 
@@ -27,14 +28,68 @@ def midi_summary(path: Path) -> dict:
                                 if event.type == "program_change"})}
 
 
-def constrain_generated_midi(raw: Path, constraints: dict | None) -> dict:
+def _normalize_retriggers(events: list, report: dict) -> list:
+    """Make same-key polyphony representable by hosts that keep one voice/key.
+
+    Pair releases FIFO; retain each distinct onset, merging only simultaneous
+    duplicates. Keep original controllers, metadata, pitches and onset velocities.
+    """
+    active = defaultdict(deque)
+    voices = defaultdict(list)
+    kept = []
+    end = max((tick for tick, _ in events), default=0)
+    for tick, event in events:
+        if event.type not in {"note_on", "note_off"} or event.channel == 9:
+            kept.append((tick, event))
+            continue
+        key = (event.channel, event.note)
+        if event.type == "note_on" and event.velocity > 0:
+            note = {"start": tick, "on": event, "end": None, "off": None}
+            voices[key].append(note)
+            active[key].append(note)
+        elif active[key]:
+            note = active[key].popleft()
+            note.update(end=tick, off=event)
+        else:
+            report["removed_orphan_note_offs"] += 1
+    for notes in voices.values():
+        merged = []
+        for note in notes:
+            if note["end"] is None:
+                note.update(end=max(end, note["start"] + 1),
+                            off=Message("note_off", channel=note["on"].channel, note=note["on"].note))
+                report["closed_unterminated_notes"] += 1
+            if merged and note["start"] == merged[-1]["start"]:
+                merged[-1]["end"] = max(merged[-1]["end"], note["end"])
+                report["merged_simultaneous_note_ons"] += 1
+            else:
+                merged.append(note)
+        for index, note in enumerate(merged):
+            release = max(note["start"] + 1, note["end"])
+            if release != note["end"]:
+                report["extended_zero_duration_notes"] += 1
+            if index + 1 < len(merged) and release > merged[index + 1]["start"]:
+                release = merged[index + 1]["start"]
+                report["clipped_overlapping_note_offs"] += 1
+            kept.extend([(note["start"], note["on"]), (release, note["off"])])
+    # Releases precede retriggers at the same tick. End-of-track stays last.
+    def order(row):
+        tick, event = row
+        priority = (3 if event.type == "end_of_track" else
+                    0 if event.type == "note_off" or (event.type == "note_on" and event.velocity == 0) else
+                    2 if event.type == "note_on" else 1)
+        return tick, priority
+    return sorted(kept, key=order)
+
+
+def constrain_generated_midi(raw: Path, constraints: dict | None, *, normalize_retriggers: bool = False) -> dict:
     """Never synthesize replacement notes or modify an existing source clip."""
     constraints = validate_constraints(constraints)
     before = midi_summary(raw)
     digest = hashlib.sha256(raw.read_bytes()).hexdigest()
     report = {"requested": constraints, "raw_sha256": digest, "raw_validation": before,
               "removed_drum_events": 0, "changed_program_events": 0, "inserted_program_events": 0}
-    if not constraints or (not constraints.get("exclude_drums") and "program" not in constraints):
+    if not normalize_retriggers and (not constraints or (not constraints.get("exclude_drums") and "program" not in constraints)):
         return {"midi": str(raw), "raw_midi": str(raw), "postprocess": report, "validation": before}
     midi = MidiFile(raw)
     for index, track in enumerate(midi.tracks):
@@ -57,6 +112,11 @@ def constrain_generated_midi(raw: Path, constraints: dict | None) -> dict:
                         for channel in sorted(channels - initialized)]
             report["inserted_program_events"] += len(injected)
             events = injected + events
+        if normalize_retriggers:
+            audit = report.setdefault("note_retriggers", dict(
+                merged_simultaneous_note_ons=0, clipped_overlapping_note_offs=0,
+                closed_unterminated_notes=0, removed_orphan_note_offs=0, extended_zero_duration_notes=0))
+            events = _normalize_retriggers(events, audit)
         replacement = MidiTrack()
         previous = 0
         for tick, event in events:

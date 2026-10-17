@@ -20,6 +20,10 @@ def operation_report(action: str, trace: list[dict], *, language: str = "zh") ->
                  f"后处理：移除 {changes['removed_drum_events']} 条鼓事件，修改 {changes['changed_program_events']} 条音色事件，"
                  f"补充 {changes['inserted_program_events']} 条音色设置。\n原始 MIDI 保留：{data['raw_midi']}\n"
                  "情绪、留白及音乐质量仍需试听判断。")
+        if changes.get("note_retriggers"):
+            audit = changes["note_retriggers"]
+            reply += (f"\n起音整理：合并 {audit['merged_simultaneous_note_ons']} 个同刻同音高重复起音，"
+                      f"裁剪 {audit['clipped_overlapping_note_offs']} 个重触发前的重叠尾音。")
     elif action == "continue_midi":
         reply = (f"MIDI-GPT 已新生成 {data['added_bars']} 小节。原片段 {data['original_bars']} 小节，"
                  f"总计 {data['original_bars'] + data['added_bars']} 小节。\n"
@@ -91,6 +95,10 @@ def _english_report(action: str, trace: list[dict]) -> tuple[str, str]:
                  f"Postprocessing removed {changes['removed_drum_events']} drum events, changed {changes['changed_program_events']} "
                  f"program events and inserted {changes['inserted_program_events']} program settings.\n"
                  f"Raw MIDI retained: {data['raw_midi']}\nMood, space and musical quality still require listening.")
+        if changes.get("note_retriggers"):
+            audit = changes["note_retriggers"]
+            reply += (f"\nRetrigger cleanup merged {audit['merged_simultaneous_note_ons']} simultaneous same-key onsets "
+                      f"and clipped {audit['clipped_overlapping_note_offs']} overlapping releases before retriggers.")
     elif action == "continue_midi":
         reply = (f"MIDI-GPT generated {data['added_bars']} new bars. Original: {data['original_bars']} bars; "
                  f"total: {data['original_bars'] + data['added_bars']} bars.\n"

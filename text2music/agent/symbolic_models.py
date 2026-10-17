@@ -112,7 +112,7 @@ def generate_midi_llm(prompt: str, output_dir: Path, *, max_tokens: int = 768,
         raise RuntimeError("MIDI-LLM produced an empty or zero-duration MIDI clip")
     measurement = output_dir / "runtime-device.json"
     runtime = json.loads(measurement.read_text()) if measurement.exists() else {}
-    constrained = constrain_generated_midi(midi, constraints)
+    constrained = constrain_generated_midi(midi, constraints, normalize_retriggers=True)
     return {"backend": "midi_llm", **constrained, "runtime": runtime,
             "max_tokens": max(96, min(2046, int(max_tokens))),
             "elapsed_seconds": round(time.monotonic() - started, 2)}
