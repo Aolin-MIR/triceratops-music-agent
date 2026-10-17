@@ -1213,6 +1213,9 @@ void TriceratopsAudioProcessorEditor::toggleMidiCapture()
     else
     {
         capture.setButtonText(ui("Capture MIDI"));
+        chatTurns.push_back({ "assistant", ui("No MIDI notes saved. Check host MIDI routing, the recording point and capture-folder permissions."),
+            juce::Time::getCurrentTime().formatted("%H:%M:%S"), "", {} });
+        updateChatDisplay();
     }
 }
 

@@ -185,7 +185,10 @@ void TriceratopsAudioProcessor::setCaptureMidi(bool shouldCapture)
 bool TriceratopsAudioProcessor::saveCapturedMidi(const juce::File& file)
 {
     const juce::ScopedLock lock(clipLock);
-    if (capturedClip.getNumEvents() == 0)
+    bool hasNotes = false;
+    for (int index = 0; index < capturedClip.getNumEvents(); ++index)
+        hasNotes = hasNotes || capturedClip.getEventPointer(index)->message.isNoteOn();
+    if (!hasNotes)
         return false;
     juce::MidiFile midi;
     auto copy = capturedClip;
