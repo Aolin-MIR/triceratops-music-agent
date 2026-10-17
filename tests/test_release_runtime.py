@@ -114,6 +114,12 @@ runtime.main()
     assert result.returncode == -signal.SIGTERM, result.stderr.decode()
 
 
+def test_mac_command_line_import_is_rejected_instead_of_starting_another_host(monkeypatch):
+    monkeypatch.setattr(vst_service.sys, "platform", "darwin")
+    with pytest.raises(RuntimeError, match="in-host REAPER API"):
+        vst_service._reaper_import_argv("/Applications/REAPER.app/Contents/MacOS/REAPER", Path("/tmp/import.lua"))
+
+
 def test_windows_import_retains_nonewinst_and_native_paths(monkeypatch):
     monkeypatch.setattr(vst_service.sys, "platform", "win32")
     script = Path("C:/music/Triceratops - Import.lua")

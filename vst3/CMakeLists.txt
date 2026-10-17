@@ -73,6 +73,10 @@ if(WIN32)
 endif()
 
 juce_generate_juce_header(Triceratops)
+if(APPLE)
+    target_include_directories(Triceratops PRIVATE
+        vendor/JUCE/modules/juce_audio_processors_headless/format_types/VST3_SDK)
+endif()
 
 # Logic routes MIDI processors before an instrument, and audio effects after it.
 # Separate AU identities let both paths use the same tested agent/backend.

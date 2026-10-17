@@ -1,6 +1,90 @@
 #include "PluginProcessor.h"
 #include "PluginEditor.h"
 
+#if JUCE_MAC && JucePlugin_Build_VST3
+#include <pluginterfaces/base/funknown.h>
+namespace triceratops_reaper
+{
+    using namespace Steinberg;
+    #include "../vendor/JUCE/examples/Plugins/extern/reaper_vst3_interfaces.h"
+    DEF_CLASS_IID(IReaperHostApplication)
+}
+#endif
+
+juce::VST3ClientExtensions* TriceratopsAudioProcessor::getVST3ClientExtensions()
+{
+   #if JUCE_MAC
+    return this;
+   #else
+    return nullptr;
+   #endif
+}
+
+void TriceratopsAudioProcessor::setIHostApplication(Steinberg::FUnknown* host)
+{
+   #if JUCE_MAC && JucePlugin_Build_VST3
+    ++reaperHostCallbacks;
+    if (host == nullptr)
+        return;
+    void* result = nullptr;
+    const auto query = host->queryInterface(triceratops_reaper::IReaperHostApplication::iid, &result);
+    reaperHostQuery.store(query);
+    if (query != Steinberg::kResultOk)
+        return;
+    auto* reaper = static_cast<triceratops_reaper::IReaperHostApplication*>(result);
+    registerReaperScript.store(reinterpret_cast<RegisterScript>(reaper->getReaperApi("AddRemoveReaScript")));
+    runReaperCommand.store(reinterpret_cast<RunCommand>(reaper->getReaperApi("Main_OnCommand")));
+    enumReaperProjects.store(reinterpret_cast<EnumProjects>(reaper->getReaperApi("EnumProjects")));
+    const juce::ScopedLock lock(reaperHostLock);
+    if (reaperHostInterface != nullptr)
+        static_cast<triceratops_reaper::IReaperHostApplication*>(reaperHostInterface)->release();
+    reaperHostInterface = reaper; // queryInterface's reference is released at destruction.
+   #else
+    juce::ignoreUnused(host);
+   #endif
+}
+
+void* TriceratopsAudioProcessor::currentReaperProject() const
+{
+   #if JUCE_MAC && JucePlugin_Build_VST3
+    const juce::ScopedLock lock(reaperHostLock);
+    // REAPER assigns the parent after VST3 initialization. Resolve it when
+    // needed on the UI thread, rather than caching a null during startup.
+    if (reaperHostInterface != nullptr)
+        return static_cast<triceratops_reaper::IReaperHostApplication*>(reaperHostInterface)->getReaperParent(3);
+   #endif
+    return nullptr;
+}
+
+juce::String TriceratopsAudioProcessor::reaperImportDiagnostics() const
+{
+    return "callbacks=" + juce::String(reaperHostCallbacks.load())
+        + ", query=" + juce::String(reaperHostQuery.load())
+        + ", register=" + juce::String(static_cast<int>(registerReaperScript.load() != nullptr))
+        + ", run=" + juce::String(static_cast<int>(runReaperCommand.load() != nullptr))
+        + ", projects=" + juce::String(static_cast<int>(enumReaperProjects.load() != nullptr))
+        + ", parent=" + juce::String(static_cast<int>(currentReaperProject() != nullptr));
+}
+
+bool TriceratopsAudioProcessor::canRunReaperScript() const
+{
+    return registerReaperScript.load() != nullptr && runReaperCommand.load() != nullptr
+        && enumReaperProjects.load() != nullptr && currentReaperProject() != nullptr;
+}
+
+bool TriceratopsAudioProcessor::runReaperScript(const juce::String& path)
+{
+    if (!canRunReaperScript() || !juce::MessageManager::getInstance()->isThisTheMessageThread())
+        return false;
+    if (enumReaperProjects.load()(-1, nullptr, 0) != currentReaperProject())
+        return false;
+    const auto action = registerReaperScript.load()(true, 0, path.toRawUTF8(), true);
+    if (action == 0)
+        return false;
+    runReaperCommand.load()(action, 0);
+    return true;
+}
+
 TriceratopsAudioProcessor::TriceratopsAudioProcessor()
     : AudioProcessor(BusesProperties()
                         #if !JucePlugin_IsMidiEffect
@@ -11,7 +95,14 @@ TriceratopsAudioProcessor::TriceratopsAudioProcessor()
 {
 }
 
-TriceratopsAudioProcessor::~TriceratopsAudioProcessor() = default;
+TriceratopsAudioProcessor::~TriceratopsAudioProcessor()
+{
+   #if JUCE_MAC && JucePlugin_Build_VST3
+    const juce::ScopedLock lock(reaperHostLock);
+    if (reaperHostInterface != nullptr)
+        static_cast<triceratops_reaper::IReaperHostApplication*>(reaperHostInterface)->release();
+   #endif
+}
 
 void TriceratopsAudioProcessor::prepareToPlay(double sampleRate, int)
 {

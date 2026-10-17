@@ -109,6 +109,8 @@ def _read_import_receipt(request_id: str) -> dict[str, Any] | None:
 
 
 def _reaper_import_argv(reaper_exe: str, script: Path) -> list[str]:
+    if sys.platform == "darwin":
+        raise RuntimeError("macOS import requires the plug-in's in-host REAPER API; no additional instance was launched")
     return [reaper_exe, "-nonewinst", _windows_path(script)]
 
 

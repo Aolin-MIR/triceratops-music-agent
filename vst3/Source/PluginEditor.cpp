@@ -542,6 +542,22 @@ void TriceratopsAudioProcessorEditor::timerCallback()
         && pending.wait_for(std::chrono::seconds(0)) == std::future_status::ready)
     {
         auto response = pending.get();
+        if (requestKind == RequestKind::import_reaper)
+        {
+            if (auto* object = response.getDynamicObject(); object != nullptr && object->hasProperty("script_path"))
+            {
+                if (ownerProcessor.runReaperScript(object->getProperty("script_path").toString()))
+                {
+                    const auto requestId = object->getProperty("request_id").toString();
+                    pending = std::async(std::launch::async, [this, requestId] {
+                        return ownerProcessor.backend().reaperImportReceipt(requestId);
+                    });
+                    requestKind = RequestKind::import_receipt;
+                    return;
+                }
+                object->setProperty("error", ui("REAPER could not run the import. Activate the plug-in's project and retry."));
+            }
+        }
         if (requestKind == RequestKind::import_reaper || requestKind == RequestKind::import_receipt)
         {
             importReaperBtn.setEnabled(true);
@@ -1090,8 +1106,19 @@ void TriceratopsAudioProcessorEditor::importToReaper()
         return;
     }
 
-    pending = std::async(std::launch::async, [this, fileToImport, filesToImport] {
-        return ownerProcessor.backend().importReaperTrack(fileToImport, filesToImport);
+   #if JUCE_MAC
+    if (!ownerProcessor.canRunReaperScript())
+    {
+        chatTurns.push_back({ "assistant", ui("REAPER host API is unavailable; no other instance was launched.")
+            + "\n" + ownerProcessor.reaperImportDiagnostics(),
+            juce::Time::getCurrentTime().formatted("%H:%M:%S"), "", {} });
+        updateChatDisplay();
+        return;
+    }
+   #endif
+    const auto inHost = ownerProcessor.canRunReaperScript();
+    pending = std::async(std::launch::async, [this, fileToImport, filesToImport, inHost] {
+        return ownerProcessor.backend().importReaperTrack(fileToImport, filesToImport, inHost);
     });
     requestKind = RequestKind::import_reaper;
     importReaperBtn.setEnabled(false);

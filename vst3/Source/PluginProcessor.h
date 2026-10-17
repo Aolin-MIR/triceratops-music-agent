@@ -3,7 +3,8 @@
 #include <JuceHeader.h>
 #include "BackendClient.h"
 
-class TriceratopsAudioProcessor final : public juce::AudioProcessor
+class TriceratopsAudioProcessor final : public juce::AudioProcessor,
+                                       private juce::VST3ClientExtensions
 {
 public:
     TriceratopsAudioProcessor();
@@ -21,6 +22,10 @@ public:
     bool producesMidi() const override { return JucePlugin_ProducesMidiOutput; }
     bool isMidiEffect() const override { return JucePlugin_IsMidiEffect; }
     bool supportsReaperImport() const { return juce::PluginHostType().isReaper(); }
+    juce::VST3ClientExtensions* getVST3ClientExtensions() override;
+    bool canRunReaperScript() const;
+    juce::String reaperImportDiagnostics() const;
+    bool runReaperScript(const juce::String& path);
     double getTailLengthSeconds() const override { return 0.0; }
     int getNumPrograms() override { return 1; }
     int getCurrentProgram() override { return 0; }
@@ -47,6 +52,17 @@ public:
     BackendClient& backend() noexcept { return backendClient; }
 
 private:
+    void setIHostApplication(Steinberg::FUnknown*) override;
+    void* currentReaperProject() const;
+    using RegisterScript = int (*)(bool, int, const char*, bool);
+    using RunCommand = void (*)(int, int);
+    using EnumProjects = void* (*)(int, char*, int);
+    std::atomic<RegisterScript> registerReaperScript { nullptr };
+    std::atomic<RunCommand> runReaperCommand { nullptr };
+    std::atomic<EnumProjects> enumReaperProjects { nullptr };
+    mutable juce::CriticalSection reaperHostLock;
+    void* reaperHostInterface = nullptr;
+    std::atomic<int> reaperHostCallbacks { 0 }, reaperHostQuery { -1 };
     mutable juce::CriticalSection clipLock;
     juce::MidiMessageSequence generatedClip;
     juce::MidiMessageSequence capturedClip;
