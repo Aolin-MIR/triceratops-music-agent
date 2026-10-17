@@ -18,7 +18,7 @@ public:
     juce::var clearChat();
     juce::var cancelTask();
     juce::var importReaperTrack(const juce::String& filePath, const juce::var& files = {}, bool inHost = false);
-    juce::var reaperImportReceipt(const juce::String& requestId);
+    juce::var reaperImportReceipt(const juce::String& requestId, bool discard = false);
     juce::var chat(const juce::String& message, const juce::var& host,
                    const juce::String& midiPath, const juce::String& audioPath,
                    const juce::String& action = {}, const juce::String& language = "en");

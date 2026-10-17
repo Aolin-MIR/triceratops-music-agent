@@ -364,7 +364,15 @@ TriceratopsAudioProcessorEditor::~TriceratopsAudioProcessorEditor()
 {
     stopTimer();
     if (pending.valid())
+    {
         pending.wait();
+        if (requestKind == RequestKind::import_reaper)
+        {
+            auto response = pending.get();
+            if (auto* object = response.getDynamicObject(); object != nullptr && object->hasProperty("script_path"))
+                ownerProcessor.backend().reaperImportReceipt(object->getProperty("request_id").toString(), true);
+        }
+    }
     if (sessionStartupRequested)
         ownerProcessor.backend().closeSession();
 }
@@ -546,16 +554,13 @@ void TriceratopsAudioProcessorEditor::timerCallback()
         {
             if (auto* object = response.getDynamicObject(); object != nullptr && object->hasProperty("script_path"))
             {
-                if (ownerProcessor.runReaperScript(object->getProperty("script_path").toString()))
-                {
-                    const auto requestId = object->getProperty("request_id").toString();
-                    pending = std::async(std::launch::async, [this, requestId] {
-                        return ownerProcessor.backend().reaperImportReceipt(requestId);
-                    });
-                    requestKind = RequestKind::import_receipt;
-                    return;
-                }
-                object->setProperty("error", ui("REAPER could not run the import. Activate the plug-in's project and retry."));
+                const auto requestId = object->getProperty("request_id").toString();
+                const auto discard = !ownerProcessor.runReaperScript(object->getProperty("script_path").toString());
+                pending = std::async(std::launch::async, [this, requestId, discard] {
+                    return ownerProcessor.backend().reaperImportReceipt(requestId, discard);
+                });
+                requestKind = RequestKind::import_receipt;
+                return;
             }
         }
         if (requestKind == RequestKind::import_reaper || requestKind == RequestKind::import_receipt)

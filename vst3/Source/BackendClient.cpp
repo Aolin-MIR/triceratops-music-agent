@@ -112,11 +112,11 @@ juce::var BackendClient::importReaperTrack(const juce::String& filePath, const j
     return request(inHost ? "/prepare_import_reaper" : "/import_reaper", "POST", juce::var(payload));
 }
 
-juce::var BackendClient::reaperImportReceipt(const juce::String& requestId)
+juce::var BackendClient::reaperImportReceipt(const juce::String& requestId, bool discard)
 {
     auto payload = new juce::DynamicObject();
     payload->setProperty("request_id", requestId);
-    return request("/import_reaper_receipt", "POST", juce::var(payload));
+    return request(discard ? "/discard_import_reaper" : "/import_reaper_receipt", "POST", juce::var(payload));
 }
 
 juce::var BackendClient::chat(const juce::String& message, const juce::var& host,

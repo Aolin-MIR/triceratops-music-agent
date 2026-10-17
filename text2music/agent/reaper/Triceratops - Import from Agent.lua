@@ -1,6 +1,6 @@
 -- @description Triceratops: Import generated media from agent
 -- @version 0.9
--- One-shot consumer for reaper-command.txt written by the Triceratops backend.
+-- One-shot consumer for one request-private command folder.
 -- Run inside the owning REAPER instance; receipt includes this request and project.
 local ROOT = nil -- injected by vst_service
 assert(ROOT, "Run this importer through Triceratops, which supplies the configured data folder")
@@ -8,8 +8,7 @@ local cmd_path = ROOT .. "/reaper-command.txt"
 
 local function value(s, k) return (s or ""):match(k .. ": ([^\r\n]+)") or "" end
 
--- Claim the command file atomically so concurrent consumers (the Triceratops
--- agent panel, if it happens to be open) cannot double-import the payload.
+-- Claim only this request. Other plug-ins and legacy panels use other folders.
 local taken = cmd_path .. ".taken"
 if os.rename(cmd_path, taken) ~= true then return end
 

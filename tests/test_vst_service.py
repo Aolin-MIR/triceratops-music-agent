@@ -195,10 +195,24 @@ def test_host_import_preparation_and_matching_receipt(service_api, tmp_path, mon
     code, prepared = post("/prepare_import_reaper", {"file": str(tmp_path / "real-output.mid")})
     assert code == 200 and len(prepared["request_id"]) == 32
     assert Path(prepared["script_path"]).is_file()
-    assert prepared["request_id"] in (tmp_path / "reaper-command.txt").read_text()
+    directory = Path(prepared["script_path"]).parent
+    assert prepared["request_id"] in (directory / "reaper-command.txt").read_text()
     assert post("/import_reaper_receipt", {"request_id": prepared["request_id"]})[0] == 409
-    (tmp_path / "reaper-import-result.txt").write_text(
+    (directory / "reaper-import-result.txt").write_text(
         f"REQUEST_ID: {prepared['request_id']}\nIMPORTED: 1\nPROJECT: /host/project.rpp\nERROR: \n")
     code, result = post("/import_reaper_receipt", {"request_id": prepared["request_id"]})
     assert code == 200 and result["ok"] and result["imported"] == 1
     assert result["project_path"] == "/host/project.rpp"
+
+
+def test_discard_endpoint_removes_only_its_private_pending_import(service_api, tmp_path, monkeypatch):
+    state, post = service_api
+    monkeypatch.setattr(vst_service, "RUNS_DIR", tmp_path)
+    _, one = post("/prepare_import_reaper", {"file": "/one.mid"})
+    _, two = post("/prepare_import_reaper", {"file": "/two.mid"})
+    code, result = post("/discard_import_reaper", {"request_id": one["request_id"]})
+    assert code == 200 and not result["ok"] and result["imported"] == 0
+    assert "discarded" in result["error"]
+    assert not Path(one["script_path"]).exists()
+    assert Path(two["script_path"]).exists()
+    assert post("/discard_import_reaper", {"request_id": "../other"})[0] == 400
