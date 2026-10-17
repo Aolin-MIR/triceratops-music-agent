@@ -8,6 +8,7 @@ import os
 import re
 import subprocess
 import sys
+import time
 from pathlib import Path
 from typing import Any
 
@@ -99,16 +100,30 @@ def basic_pitch_model_path() -> Path:
 
 
 def audio_to_midi(path: Path, output_dir: Path) -> list[Path]:
+    started = time.monotonic()
     if importlib.util.find_spec("basic_pitch") is None:
         raise RuntimeError("Basic Pitch is not installed")
     output_dir.mkdir(parents=True, exist_ok=True)
     if importlib.util.find_spec("onnxruntime") is None:
         raise RuntimeError("Basic Pitch requires onnxruntime; install the audio dependencies")
-    from basic_pitch.inference import predict
+    from basic_pitch.inference import Model, predict
     model_path = basic_pitch_model_path()
-    _, midi, _ = predict(str(path), model_or_model_path=model_path)
+    load_started = time.monotonic()
+    model = Model(model_path)
+    load_seconds = time.monotonic() - load_started
+    if not hasattr(model.model, "get_providers"):
+        raise RuntimeError("Basic Pitch did not load the required ONNX execution session")
+    providers = model.model.get_providers()
+    _, midi, _ = predict(str(path), model_or_model_path=model)
     destination = output_dir / f"{path.stem}_basic_pitch.mid"
     midi.write(str(destination))
+    runtime = {"model": "Basic Pitch ICASSP 2022 ONNX", "model_sha256": BASIC_PITCH_ONNX_SHA256,
+               "actual_session_providers": providers,
+               "actual_device": "cpu" if providers == ["CPUExecutionProvider"] else None,
+               "session_load_seconds": round(load_seconds, 6),
+               "elapsed_seconds": round(time.monotonic() - started, 6),
+               "note_count": sum(len(instrument.notes) for instrument in midi.instruments)}
+    (output_dir / "runtime-device.json").write_text(json.dumps(runtime, indent=2), encoding="utf-8")
     return [destination]
 
 

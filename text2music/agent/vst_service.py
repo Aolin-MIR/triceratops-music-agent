@@ -485,6 +485,9 @@ class TriceratopsState:
                         cancelled=self.cancel_event.is_set)["files"]
                     result["midi"] = str(paths[0])
                     result["midi_windows"] = _windows_path(Path(paths[0]))
+                    runtime_path = Path(paths[0]).parent / "runtime-device.json"
+                    result["runtime"] = json.loads(runtime_path.read_text(encoding="utf-8"))
+                    result["note_count"] = result["runtime"]["note_count"]
                     reply = "Audio-to-MIDI conversion is ready."
                 elif tool == "generate_draft":
                     requested_backend = str(arguments.get("backend", "auto"))

@@ -22,6 +22,8 @@ Triceratops 是 REAPER 中的音乐 Agent VST3。用自然语言描述想法，�
 
 以上是这一台 Mac 的实测；不能外推为所有 Mac 的最低配置或速度保证。
 
+Basic Pitch 现记录实际执行该次转写的 ONNX 会话、模型校验值、加载耗时和音符数。8 秒自有双声部加鼓素材在真实宿主中转写约 4.10 秒，使用 `CPUExecutionProvider`，生成并导入 26 个音符；按音高与起音误差不超过 0.15 秒核对，匹配已知 32 个音符起点中的 26 个，遗漏 6 个低音。该结果只说明这段素材的误差，不能把文件生成成功当作完整音乐转写正确。
+
 ## 下载与安装
 
 - [Windows x64 安装程序（EXE）](https://github.com/Aolin-MIR/triceratops-music-agent/releases/download/v0.9.0/Triceratops-0.9.0-Windows-x64-Setup.exe)

@@ -39,7 +39,8 @@ def operation_report(action: str, trace: list[dict], *, language: str = "zh") ->
     elif action == "separate_stems":
         reply = f"分轨完成，已保存 {len(data['files'])} 个真实音频文件：\n" + "\n".join(data["files"])
     elif action == "audio_to_midi":
-        reply = "音频转 MIDI 已完成。"
+        reply = (f"音频转 MIDI 已完成，共 {data['note_count']} 个音符。"
+                 if "note_count" in data else "音频转 MIDI 已完成。")
     elif action == "analyze_audio":
         reply = (f"音频分析完成：时长 {data['duration_seconds']} 秒。\n"
                  f"估计速度：{data['tempo_bpm']} BPM；估计调性：{data['key']}。\n"
@@ -109,7 +110,8 @@ def _english_report(action: str, trace: list[dict]) -> tuple[str, str]:
     elif action == "separate_stems":
         reply = f"Separation complete. Saved {len(data['files'])} audio files:\n" + "\n".join(data["files"])
     elif action == "audio_to_midi":
-        reply = "Audio-to-MIDI transcription complete."
+        reply = (f"Audio-to-MIDI transcription complete: {data['note_count']} notes."
+                 if "note_count" in data else "Audio-to-MIDI transcription complete.")
     elif action == "analyze_audio":
         reply = (f"Audio analysis complete. Duration: {data['duration_seconds']} seconds.\n"
                  f"Estimated tempo: {data['tempo_bpm']} BPM; estimated key: {data['key']}.\n"
