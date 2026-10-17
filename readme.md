@@ -22,9 +22,27 @@ Triceratops 是 REAPER 中的音乐 Agent VST3。用自然语言描述想法，�
 4. 校验通过后，在 REAPER 的 **Preferences → Plug-ins → VST → Re-scan** 中扫描，插入 **Triceratops**。
 5. 更新配置或补下模型：从开始菜单再次打开配置程序。卸载插件保留用户模型、API 配置和生成结果，便于自行备份或清理。
 
-安装包包含插件、配置程序和 Python 基础运行环境；**大模型文件由配置程序另行下载，不内嵌到 EXE**。首次安装需要网络和约 15 GB 可用空间，模型约 4 GB。CPU 为默认选项，建议至少 16 GB 内存、32 GB 更舒适；生成速度随硬件变化。选择 CUDA 需要 NVIDIA GPU、兼容驱动和 CUDA 版 PyTorch，配置程序会检查，无法使用时明确失败。GPU 不可用时不会自动切换到 CPU。
+安装包包含插件、配置程序和 Python 基础运行环境；**大模型文件由配置程序另行下载，不内嵌到 EXE**。CPU 为默认选项。所选计算设备不可用时明确报错，不会静默更换设备。
 
 插件顶部提供 **中文 / English** 切换，按钮、状态、提示和操作结果支持双语，并记住语言选择。聊天默认跟随当前界面语言。
+
+## 系统要求
+
+以下区分**软件限制、建议资源预算和实测环境**；尚未在不同内存容量的电脑上测出“全功能最低配置”。建议值不是已验证的最低门槛。
+
+| 项目 | Windows | macOS |
+| --- | --- | --- |
+| 系统 / 架构 | Windows 10 / 11 x64；已实测 Windows 11，Windows 10 尚未单独验证 | Apple Silicon（M1 或更新）、macOS 14+；不支持 Intel Mac 模型运行 |
+| 宿主 | REAPER x64；已实测 7.80，建议 7.80 或更新版本 | 原生 Apple Silicon REAPER，建议 7.80 或更新版本；完整实机测试待完成 |
+| Python | 安装包自带独立 Python 3.11.9，无需 WSL | 自行安装原生 ARM64 Python 3.10 / 3.11；脚本默认查找 `python3.11` |
+| 内存预算 | CPU 模式建议 16 GB 起，32 GB 更适合同时打开音源 / 较长音频；不是实测最低值 | 统一内存建议 16 GB 起、32 GB 更宽裕；8 GB 不列为全功能建议配置，尚无 Mac 实测数据 |
+| 图形设备 | CPU 模式不要求独显；当前 CUDA 路径使用 BF16，建议支持 BF16 的 Ampere 或更新 NVIDIA GPU，16 GB 显存作为保守预算 | 当前安装脚本选择 CPU；不要求独显，也没有已验证的 MPS / MLX 加速支持 |
+| 可用空间预算 | CPU 安装预留 20 GB；CUDA 安装预留 30 GB，并为下载缓存、音频和工程另留空间 | 预留 20 GB，并为下载缓存、音频和工程另留空间 |
+| 网络 / API | 首次依赖和模型下载需要联网；当前聊天和按钮工具调度需要自配支持原生工具调用的 API | 同左；Mac 包不附带 Python，也不附带模型权重 |
+
+空间和内存数字是保守的安装 / 运行建议，尚未测定所有功能的峰值。模型文件约 4 GB，不等于安装总大小或运行内存。CPU 生成属于离线任务，不能保证实时速度。CUDA 还需要能运行安装器所选 `cu130` PyTorch 的 NVIDIA 驱动；`nvidia-smi` 显示的 CUDA 版本不能单独证明兼容。AMD / Intel GPU、Windows ARM64、Intel Mac 不在当前支持范围内。
+
+完整说明、已验证环境、各功能的资源差异和判断依据见 **[系统配置与支持范围（中英双语）](docs/SYSTEM_REQUIREMENTS.md)**。Mac 测试可使用 [完整测试 prompt](docs/MAC_TEST_PROMPT.zh-CN.md)。
 
 ## 可以做什么
 
@@ -66,4 +84,14 @@ Windows 配置：`%APPDATA%\Triceratops\runtime.json`；模型与专用 Python�
 
 ## 致谢
 
-项目起源于 [Keshav Bhandari 的 Text2Score](https://github.com/keshavbhandari/text2score)。Triceratops 的 Agent、REAPER 集成及桌面发行工作在此仓库维护。上游研究代码与第三方组件的权利归原作者所有，见 [NOTICE](NOTICE)。
+v0.9 实际调用的音乐模型与工具：
+
+- [MIDI-LLM / Shih-Lun Wu 等](https://github.com/slSeanWU/MIDI-LLM)：自然语言生成多乐器 MIDI；基于 Llama 3.2 并扩展音乐词表，Built with Llama。
+- [MIDI-GPT / Metacreation Lab](https://github.com/Metacreation/MIDI-GPT)：使用 **Yellow Medium** 权重进行续写与填充；保留 CC BY-NC 4.0 限制。
+- [HTDemucs / Alexandre Défossez 等](https://github.com/facebookresearch/demucs)：人声、鼓、贝斯和其他声部的四分轨。
+- [Basic Pitch / Spotify](https://github.com/spotify/basic-pitch)：使用 ICASSP 2022 ONNX 模型转写 MIDI。
+- [Anticipation / John Thickstun 等](https://github.com/jthickstun/anticipation)：MIDI-LLM 使用的音乐事件转换 / 解码工具；[JUCE](https://github.com/juce-framework/JUCE) 提供 VST3 框架；[librosa](https://github.com/librosa/librosa) 提供音频分析算法。
+
+聊天模型由用户的 API 配置决定，发行包不附带聊天模型权重。未接入的候选模型不列入上述使用致谢。
+
+代码来源：本仓库起源于 [Keshav Bhandari 的 Text2Score](https://github.com/keshavbhandari/text2score)，因此保留源代码归属说明；**v0.9 发行版不安装、不下载、不调用 Text2Score 训练权重**。Triceratops 的 Agent、REAPER 集成及桌面发行工作在此仓库维护。完整归属及许可见 [NOTICE](NOTICE) 和 [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md)。

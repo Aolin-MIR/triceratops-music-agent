@@ -22,9 +22,27 @@ Triceratops is a music Agent VST3 for REAPER. Describe an idea naturally or use 
 4. In REAPER, open **Preferences → Plug-ins → VST → Re-scan**, then insert **Triceratops**.
 5. Rerun configuration to change settings or download missing files. Uninstalling the application retains user models, credentials and generated work for backup or manual removal.
 
-The EXE includes the plug-in, configuration utility and Python seed. **Large weights are downloaded by setup, not embedded in the EXE.** Allow approximately 15 GB of free disk space; model weights total about 4 GB. CPU is the default. At least 16 GB RAM is recommended, with 32 GB preferred for comfortable generation. CUDA requires an NVIDIA GPU, a compatible driver and CUDA-enabled Torch. Setup checks the selected device and reports failure rather than switching devices silently.
+The EXE includes the plug-in, configuration utility and Python seed. **Large weights are downloaded by setup, not embedded in the EXE.** CPU is the default. An unavailable selected device produces an error rather than a silent device switch.
 
 Use **中文 / English** in the plug-in header to switch buttons, status text, hints and operation reports. The language preference is remembered; chat defaults to the selected interface language.
+
+## System requirements
+
+**Software constraints, suggested resource budgets and tested configurations are different.** A full-feature minimum has not been established by testing machines with different memory capacities; these recommendations are not certified minimums.
+
+| Item | Windows | macOS |
+| --- | --- | --- |
+| OS / architecture | Windows 10 / 11 x64; Windows 11 tested, Windows 10 not separately verified | Apple Silicon (M1 or newer), macOS 14+; Intel Mac model execution is unsupported |
+| Host | REAPER x64; 7.80 tested, 7.80 or newer recommended | Native Apple Silicon REAPER, 7.80 or newer recommended; full physical-machine testing pending |
+| Python | Dedicated Python 3.11.9 included; no WSL required | User-installed native ARM64 Python 3.10 / 3.11; setup looks for `python3.11` by default |
+| Memory budget | Start with 16 GB for CPU use; 32 GB gives more room for instruments / longer audio; not a measured minimum | Start with 16 GB unified memory, preferably 32 GB; 8 GB is not a recommended full-feature configuration; no Mac measurements yet |
+| Graphics | No discrete GPU needed for CPU mode; the current CUDA path uses BF16, so a BF16-capable Ampere or newer NVIDIA GPU and a conservative 16 GB VRAM budget are recommended | Setup selects CPU; no discrete GPU required; MPS / MLX acceleration is not validated |
+| Free storage budget | Reserve 20 GB for CPU or 30 GB for CUDA installation, plus download caches, audio and projects | Reserve 20 GB, plus download caches, audio and projects |
+| Network / API | Internet for initial dependencies / weights; current chat and button tool dispatch need a user-configured API with native tool calling | Same; the Mac ZIP includes neither Python nor model weights |
+
+Storage and memory figures are conservative planning recommendations, not measured peaks for every feature. Approximately 4 GB of weights does not mean a 4 GB installation or runtime footprint. CPU generation is an offline task with no real-time guarantee. CUDA also requires an NVIDIA driver that can run the installer's `cu130` PyTorch build; the CUDA version shown by `nvidia-smi` alone does not prove compatibility. AMD / Intel GPU acceleration, Windows ARM64 and Intel Mac are outside current support.
+
+See **[System requirements and support scope (中文 / English)](docs/SYSTEM_REQUIREMENTS.md)** for evidence, tested configurations and differences between features. A [complete Mac test prompt in Chinese](docs/MAC_TEST_PROMPT.zh-CN.md) is also available.
 
 ## Features
 
@@ -66,4 +84,14 @@ Open an [issue](https://github.com/Aolin-MIR/triceratops-music-agent/issues) wit
 
 ## Credits
 
-This project originated from [Keshav Bhandari/Text2Score](https://github.com/keshavbhandari/text2score). Triceratops Agent, REAPER integration and desktop distribution work are maintained here. Upstream research material and third-party components retain their authors' rights; see [NOTICE](NOTICE).
+Music models and tools actually used by v0.9:
+
+- [MIDI-LLM / Shih-Lun Wu et al.](https://github.com/slSeanWU/MIDI-LLM): text-conditioned multitrack MIDI generation, based on Llama 3.2 with an extended music vocabulary. Built with Llama.
+- [MIDI-GPT / Metacreation Lab](https://github.com/Metacreation/MIDI-GPT): **Yellow Medium** weights for continuation and infill, retaining the CC BY-NC 4.0 restriction.
+- [HTDemucs / Alexandre Défossez et al.](https://github.com/facebookresearch/demucs): four-stem separation into vocals, drums, bass and other.
+- [Basic Pitch / Spotify](https://github.com/spotify/basic-pitch): the ICASSP 2022 ONNX model for MIDI transcription.
+- [Anticipation / John Thickstun et al.](https://github.com/jthickstun/anticipation): music-event conversion / decoding used by MIDI-LLM; [JUCE](https://github.com/juce-framework/JUCE) provides the VST3 framework and [librosa](https://github.com/librosa/librosa) provides audio analysis algorithms.
+
+The chat model depends on the user's API configuration; no chat-model weights are bundled. Unintegrated candidate models are not listed as used components.
+
+Source provenance: this repository originated from [Keshav Bhandari/Text2Score](https://github.com/keshavbhandari/text2score), so source attribution is retained. **The v0.9 release does not install, download or invoke Text2Score trained weights.** Triceratops Agent, REAPER integration and desktop distribution work are maintained here. Full attribution and licenses are in [NOTICE](NOTICE) and [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md).

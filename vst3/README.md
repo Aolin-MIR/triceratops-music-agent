@@ -2,7 +2,7 @@
 
 User documentation: [中文](../readme.md) / [English](../README.en.md).
 
-Only REAPER 6.80+ is supported. The Windows release is a native x64 VST3 with a dedicated native Python runtime; it does not require WSL. macOS build/setup is experimental until verified on actual Mac hardware.
+Only REAPER is supported. Version 7.80 x64 was tested on Windows; 7.80 or newer is recommended, and the earliest compatible version has not been established. The Windows release is a native x64 VST3 with a dedicated native Python runtime; it does not require WSL. The macOS universal VST3 build passed; full model and host testing on a physical Mac is pending. See [system requirements](../docs/SYSTEM_REQUIREMENTS.md) for architecture, memory, storage and device constraints.
 
 ## Build
 

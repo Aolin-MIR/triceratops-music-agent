@@ -31,5 +31,8 @@ Do not copy developer qwen.env, runtime.json, recordings or generated histories
 into a payload. package_release.py uses an explicit module allowlist.
 
 macOS builds are provided by .github/workflows/macos-vst3.yml. The setup script
-requires Python 3.10/3.11 and installs a native venv. Mac packages are unsigned
-and experimental; real Mac REAPER functionality has not been verified here.
+requires Apple Silicon, macOS 14+ and native ARM64 Python 3.10/3.11, and installs
+a dedicated venv using CPU mode. Mac packages are unsigned / not notarized;
+full model and REAPER functionality on physical Mac hardware is not yet verified.
+See docs/SYSTEM_REQUIREMENTS.md in the repository for software constraints,
+resource budgets and the distinction between recommendations and tested limits.
