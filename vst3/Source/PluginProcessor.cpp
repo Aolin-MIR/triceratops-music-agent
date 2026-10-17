@@ -82,6 +82,7 @@ bool TriceratopsAudioProcessor::runReaperScript(const juce::String& path)
     if (action == 0)
         return false;
     runReaperCommand.load()(action, 0);
+    registerReaperScript.load()(false, 0, path.toRawUTF8(), true);
     return true;
 }
 
