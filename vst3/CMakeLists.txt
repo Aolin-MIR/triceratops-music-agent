@@ -114,5 +114,13 @@ if(APPLE)
             juce::juce_recommended_config_flags juce::juce_recommended_lto_flags
             juce::juce_recommended_warning_flags)
         juce_generate_juce_header(${target})
+        # Relinking replaces the Mach-O signature while an older bundle seal
+        # may remain. Seal the complete AU after every link, then verify it.
+        add_custom_command(TARGET ${target}_AU POST_BUILD
+            COMMAND /usr/bin/codesign --force --sign - --timestamp=none
+                    "$<TARGET_BUNDLE_DIR:${target}_AU>"
+            COMMAND /usr/bin/codesign --verify --deep --strict
+                    "$<TARGET_BUNDLE_DIR:${target}_AU>"
+            VERBATIM)
     endforeach()
 endif()
