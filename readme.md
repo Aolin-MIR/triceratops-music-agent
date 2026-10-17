@@ -10,6 +10,18 @@ Triceratops 是 REAPER 中的音乐 Agent VST3。用自然语言描述想法，�
 
 [![Triceratops 0.9 功能一览](docs/images/triceratops-0.9-overview.webp)](https://github.com/Aolin-MIR/triceratops-music-agent/releases/download/v0.9.0/Triceratops-0.9.0-Feature-Overview.png)
 
+## 本次本地修复与验证（待合入 v1.0.1）
+
+本轮基于 `main` 修复；先等待 Windows 1.0 更新，再合并、复测并统一发布 v1.0.1。当前发行附件仍为 v0.9.0，下面的本地实测不代表完整验收已通过。
+
+- **跨平台共用修复**：失败的生成或编辑立即停止并显示真实错误；取消会终止任务的模型子进程，后端退出时清理所属进程树；MIDI-GPT 填充保留范围外的原始事件与控制信息；量化保留短音符并正确处理鼓轨的时值和力度；错误信息脱敏；固定并校验 HTDemucs、Basic Pitch 和解码器资源，国内镜像失败后明确重试同一固定版本的官方来源；修复 Basic Pitch 对 `pkg_resources` 的运行时依赖。新增显式的 MIDI-LLM 精度配置，保留原默认精度，不静默切换设备；按用户约束移除鼓事件和设置音色时保留原始 MIDI 与处理记录。原生工具调用调度避免只回复“将要执行”；音乐操作完成后按实际数据报告。续写裁剪新增音符的越界尾部并保留原始生成尾段；修正非整除 PPQ 的量化网格、末尾短音符边界和尾部休止长度；插件异步重连退出的后端；编辑器重开后保留录制状态与自动导入偏好；两分钟录音达到容量后仍可保存，不覆盖同秒录音文件；记忆支持原子更新、从磁盘读取，空条件不删除，保存完成后不再擅自删除；知识查询检索成功后进入回答阶段，防止重复搜索到超限，并保留异常前的执行记录。
+- **Mac 专属修复**：拒绝 Rosetta / x86 Python 混用；保留已有运行路径、设备及 API 设置，配置和备份权限为 `0600`；安装验证成功后才替换插件，并备份原插件；原生 Mac 不扫描或关闭 Linux 的旧模型 worker；录制文件统一保存到 `~/Library/Application Support/Triceratops/Captures`。
+- **已做的真实宿主验证**：在 8 GB Apple A18 Pro、macOS 27.0.1、ARM64 Python 3.11.17、REAPER 7.82 上扫描、插入修复版 VST3，启动后端，切换中文 / English，通过 Qwen 原生工具调用执行 Basic Pitch ONNX 转写，手动和自动导入真实 MIDI 轨道，打开钢琴卷帘，并用 Apple DLSMusicDevice 渲染了 8 秒钢琴试听。还通过自然语言实际运行 MIDI-LLM（CPU/float16、512 token 上限，模型任务约 124 秒）：原始 170 音符含 45 个鼓音符，明确后处理后为 125 个钢琴音符、无鼓，保留原始非鼓事件。宿主 MIDI-GPT 续写新增 97 音符，保留原 125 音符事件流，裁剪 3 个越界尾部后为 8 小节 / 16 秒，并实际自动导入；宿主量化、力度、转调、Undo 和指定小节填充也核对了真实事件；HTDemucs 四声部实际导入、播放并渲染试听，宿主内部路由录到了 16 个 MIDI 音符和约 8 秒有效音频。音频设备由 REAPER 的用户设置决定，插件不固定声卡。
+- **已做的模型 / 后端验证**：CPU MIDI-GPT 实际续写四小节和指定范围填充，并核对原始事件；HTDemucs 对 8 秒自有素材实际运行两次四分轨（约 8.02 / 6.60 秒）；Basic Pitch 实际使用 `CPUExecutionProvider`；量化、力度、转调、Undo、反馈、记忆和本地检索均核对真实文件或事件。真实宿主还验证了长任务取消后清理所属子进程、无效 API 的 401、网络失败、缺模型和缺 MIDI 的报错及恢复；测试配置已恢复为原字段，权限为 `0600`。生成钢琴另用 Apple DLSMusicDevice 实际播放、打开钢琴卷帘并渲染八秒试听。新增回归测试后，本机测试集为 71 项通过；这些后端测试不等同于全部宿主操作已通过，也不代表 Windows 已复测。
+- **仍需完成**：声卡与系统默认输入路径、任意选中片段上下文及其余异常场景的端到端验证；录制状态、偏好保存及两分钟容量边界已在宿主复测；默认输出路径可播放，Studio 26c 单独输出仍在 CoreAudio 注册 I/O 回调处阻塞，不能宣称这张声卡已通过。已保存真实窗口采样录屏（约 0.7–1.5 fps，非连续全帧录屏），并实际重开宿主和验证后端退出后的自动恢复。宿主任意选中片段的上下文读取尚未跑通；目前续写 / 编辑验证使用插件已载入的 MIDI。VST3 尚未传入真实工程路径，已验证的记忆 CRUD 使用本机 VST3 记忆文件，不能当作工程间隔离通过；该上下文需与 Windows 1.0 功能更新一起合并验证。MIDI-LLM 默认 CPU/float32 在本机以 96 token 上限运行 300 秒超时；显式 CPU/float16 两次约 30 秒可生成有效 MIDI，但原始输出出现错误乐器或鼓，未通过“钢琴、不要鼓”的音乐要求。后处理可修正明确的乐器 / 鼓限制，不能据此宣称情绪、留白等音乐质量达标。MPS 只验证了 MIDI-GPT 的实际推理，不能据此宣称所有模型支持 GPU。
+
+以上是这一台 Mac 的实测；不能外推为所有 Mac 的最低配置或速度保证。
+
 ## 下载与安装
 
 - [Windows x64 安装程序（EXE）](https://github.com/Aolin-MIR/triceratops-music-agent/releases/download/v0.9.0/Triceratops-0.9.0-Windows-x64-Setup.exe)
@@ -35,8 +47,8 @@ Triceratops 是 REAPER 中的音乐 Agent VST3。用自然语言描述想法，�
 | 系统 / 架构 | Windows 10 / 11 x64；已实测 Windows 11，Windows 10 尚未单独验证 | Apple Silicon（M1 或更新）、macOS 14+；不支持 Intel Mac 模型运行 |
 | 宿主 | REAPER x64；已实测 7.80，建议 7.80 或更新版本 | 原生 Apple Silicon REAPER，建议 7.80 或更新版本；完整实机测试待完成 |
 | Python | 安装包自带独立 Python 3.11.9，无需 WSL | 自行安装原生 ARM64 Python 3.10 / 3.11；脚本默认查找 `python3.11` |
-| 内存预算 | CPU 模式建议 16 GB 起，32 GB 更适合同时打开音源 / 较长音频；不是实测最低值 | 统一内存建议 16 GB 起、32 GB 更宽裕；8 GB 不列为全功能建议配置，尚无 Mac 实测数据 |
-| 图形设备 | CPU 模式不要求独显；当前 CUDA 路径使用 BF16，建议支持 BF16 的 Ampere 或更新 NVIDIA GPU，16 GB 显存作为保守预算 | 当前安装脚本选择 CPU；不要求独显，也没有已验证的 MPS / MLX 加速支持 |
+| 内存预算 | CPU 模式建议 16 GB 起，32 GB 更适合同时打开音源 / 较长音频；不是实测最低值 | 统一内存建议 16 GB 起、32 GB 更宽裕；8 GB A18 Pro 已开始实测，默认 CPU/float32 MIDI-LLM 发生严重资源压力和超时，未通过全功能验收 |
+| 图形设备 | CPU 模式不要求独显；当前 CUDA 路径使用 BF16，建议支持 BF16 的 Ampere 或更新 NVIDIA GPU，16 GB 显存作为保守预算 | 当前安装脚本选择 CPU；MIDI-GPT 已单独实测 MPS 推理，其余模型加速仍待验证；未验证 MLX |
 | 可用空间预算 | CPU 安装预留 20 GB；CUDA 安装预留 30 GB，并为下载缓存、音频和工程另留空间 | 预留 20 GB，并为下载缓存、音频和工程另留空间 |
 | 网络 / API | 首次依赖和模型下载需要联网；当前聊天和按钮工具调度需要自配支持原生工具调用的 API | 同左；Mac 包不附带 Python，也不附带模型权重 |
 
@@ -72,7 +84,7 @@ MIDI 是演奏数据，需要在 REAPER 的后续轨道/插件中加载音源才
 | [HTDemucs](https://huggingface.co/adefossez/HTDemucs) | 音频四分轨 | 见模型及 Demucs 上游许可 |
 | [Basic Pitch](https://github.com/spotify/basic-pitch) | ONNX 模型随依赖包安装 | Apache 2.0 |
 
-下载器核对 MIDI-LLM 与 MIDI-GPT 的 SHA-256。模型来源、版本和校验值见 [`download_models.py`](text2music/agent/download_models.py)。代码开源不代表所有模型权重具有同一许可；尤其 MIDI-GPT 权重有非商业限制。完整第三方说明见 [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md)。
+下载器核对 MIDI-LLM、MIDI-GPT、HTDemucs 和解码器资源的 SHA-256；Basic Pitch ONNX 权重也会校验。模型来源、版本和校验值见 [`download_models.py`](text2music/agent/download_models.py)。代码开源不代表所有模型权重具有同一许可；尤其 MIDI-GPT 权重有非商业限制。完整第三方说明见 [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md)。
 
 ## 数据与配置
 
