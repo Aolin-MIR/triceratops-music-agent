@@ -166,11 +166,12 @@ def _read_status() -> dict[str, str]:
     return result
 
 
-def _history() -> list[dict[str, Any]]:
+def _history(limit: int | None = 20) -> list[dict[str, Any]]:
     if not HISTORY.exists():
         return []
     result = []
-    for line in HISTORY.read_text(encoding="utf-8", errors="replace").splitlines()[-20:]:
+    lines = HISTORY.read_text(encoding="utf-8", errors="replace").splitlines()
+    for line in lines if limit is None else lines[-limit:]:
         try:
             item = json.loads(line)
             if item.get("midi"):
@@ -179,6 +180,24 @@ def _history() -> list[dict[str, Any]]:
         except json.JSONDecodeError:
             continue
     return result
+
+
+def _previous_midi_version(current: Path | None) -> dict[str, Any]:
+    """Follow this file's provenance, never the latest unrelated global output."""
+    if current is None or not current.is_file():
+        raise ValueError("Load the MIDI version whose last change should be undone")
+    current_path = current.resolve()
+    entry = next((item for item in reversed(_history(limit=None))
+                  if item.get("midi") and _windows_to_wsl(str(item["midi"])).resolve() == current_path), None)
+    parent = (entry or {}).get("parent_midi") or (entry or {}).get("source")
+    if not parent:
+        raise ValueError("There is no recorded prior MIDI version for the loaded file")
+    previous = _windows_to_wsl(str(parent))
+    if not previous.is_file():
+        raise FileNotFoundError("Previous MIDI version is missing")
+    if previous.resolve() == current_path:
+        raise ValueError("MIDI version history contains a self-reference")
+    return {"midi": str(previous), "restored_from": str(current)}
 
 
 def _host_context(host: dict[str, Any]) -> str:
@@ -424,13 +443,8 @@ class TriceratopsState:
                     record_feedback(MEMORY, HISTORY, tool)
                     reply = "Preference saved." if tool == "accept" else "Version rejected and preference saved."
                 elif tool == "undo":
-                    versions = [item for item in _history() if item.get("midi")]
-                    previous = versions[-2] if len(versions) >= 2 else None
-                    if previous is None:
-                        raise ValueError("There is no prior MIDI version to restore")
+                    previous = _previous_midi_version(midi)
                     previous_path = Path(str(previous["midi"]))
-                    if not previous_path.is_file():
-                        raise FileNotFoundError("Previous MIDI version is missing")
                     result["midi"] = str(previous_path)
                     result["midi_windows"] = _windows_path(previous_path)
                     result["restored_version"] = previous
@@ -547,6 +561,8 @@ class TriceratopsState:
                 else:
                     raise ValueError(f"Unsupported action: {tool}")
                 if result.get("midi"):
+                    if tool in {"transform_midi", "infill_midi", "continue_midi"}:
+                        result["parent_midi"] = str(midi)
                     midi = Path(result["midi"])
                     if tool in {"transform_midi", "infill_midi", "continue_midi", "audio_to_midi"}:
                         entry = {**result, "request": request_text, "time": time.strftime("%Y-%m-%d %H:%M:%S")}

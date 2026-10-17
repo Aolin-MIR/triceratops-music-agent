@@ -148,3 +148,38 @@ def test_chat_rejects_unsupported_language_without_starting_task(service_api):
     code,result=post("/chat",{"message":"analyze","language":"fr"})
     assert code==400 and "language must be zh or en" in result["error"]
     assert not state.busy
+
+
+def test_undo_follows_loaded_files_lineage_through_interleaved_and_old_history(tmp_path, monkeypatch):
+    # Real files represent two independent edits and an unrelated project/branch.
+    original, first, second, other = [tmp_path / name for name in
+                                     ("original.mid", "first.mid", "second.mid", "other.mid")]
+    for path in (original, first, second, other):
+        path.write_bytes(b"test history identity only, not model output")
+    history = tmp_path / "history.jsonl"
+    monkeypatch.setattr(vst_service, "HISTORY", history)
+    entries = [{"midi": str(first), "source": str(original)},
+               {"midi": str(second), "parent_midi": str(first)}]
+    entries += [{"midi": str(other)} for _ in range(25)]
+    history.write_text("\n".join(json.dumps(entry) for entry in entries))
+    before = history.read_bytes()
+    restored = vst_service._previous_midi_version(second)
+    assert restored["midi"] == str(first)
+    assert vst_service._previous_midi_version(first)["midi"] == str(original)
+    with pytest.raises(ValueError, match="no recorded prior"):
+        vst_service._previous_midi_version(original)
+    with pytest.raises(ValueError, match="no recorded prior"):
+        vst_service._previous_midi_version(other)
+    assert history.read_bytes() == before
+
+
+def test_undo_missing_parent_never_restores_an_unrelated_file(tmp_path, monkeypatch):
+    current = tmp_path / "current.mid"
+    current.touch()
+    history = tmp_path / "history.jsonl"
+    monkeypatch.setattr(vst_service, "HISTORY", history)
+    history.write_text(json.dumps({"midi": str(current), "parent_midi": str(tmp_path / "missing.mid")}))
+    with pytest.raises(FileNotFoundError, match="Previous MIDI version is missing"):
+        vst_service._previous_midi_version(current)
+    with pytest.raises(ValueError, match="Load the MIDI version"):
+        vst_service._previous_midi_version(None)
