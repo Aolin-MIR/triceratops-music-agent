@@ -42,7 +42,7 @@ Triceratops 是 REAPER 中的音乐 Agent VST3。用自然语言描述想法，�
 
 空间和内存数字是保守的安装 / 运行建议，尚未测定所有功能的峰值。模型文件约 4 GB，不等于安装总大小或运行内存。CPU 生成属于离线任务，不能保证实时速度。CUDA 还需要能运行安装器所选 `cu130` PyTorch 的 NVIDIA 驱动；`nvidia-smi` 显示的 CUDA 版本不能单独证明兼容。AMD / Intel GPU、Windows ARM64、Intel Mac 不在当前支持范围内。
 
-完整说明、已验证环境、各功能的资源差异和判断依据见 **[系统配置与支持范围（中英双语）](docs/SYSTEM_REQUIREMENTS.md)**。Mac 测试可使用 [完整测试 prompt](docs/MAC_TEST_PROMPT.zh-CN.md)。
+完整说明、已验证环境、各功能的资源差异和判断依据见 **[系统配置与支持范围（中英双语）](docs/SYSTEM_REQUIREMENTS.md)**。
 
 ## 可以做什么
 

@@ -25,7 +25,7 @@
 - 统一内存：建议 16 GB 起、32 GB 更宽裕。系统、REAPER、音源和模型共享这部分内存；尚未完成 Mac 实机内存峰值和速度测量，因此不发布“8 GB 可运行全部功能”或某款芯片的速度保证。
 - 空间：安装建议预留 20 GB，再为缓存、音频和工程保留余量；不是实测峰值。保留解压目录，后端启动路径引用其中的源码。
 - 分发：当前 ZIP 未签名 / 未公证；首次打开可能需要在系统“隐私与安全性”中允许经核对来源的组件。不要关闭全局 Gatekeeper，也不要对整块磁盘移除隔离属性。若被拦截，记录实际提示和目标文件再处理。
-- 状态：已通过 universal VST3 构建；完整 Mac 安装、各模型和 REAPER 实机流程尚待测试。使用 [Mac 测试 prompt](MAC_TEST_PROMPT.zh-CN.md) 收集可复现数据后再收紧配置范围。
+- 状态：已通过 universal VST3 构建；完整 Mac 安装、各模型和 REAPER 实机流程尚待测试，取得实测数据后再收紧配置范围。
 
 ### 每项功能的资源差异
 
@@ -77,7 +77,7 @@ This page describes the v0.9 implementation. Installer constraints, planning bud
 - Budget for 16 GB unified memory, preferably 32 GB. macOS, REAPER, instruments and models share this memory. No physical Mac peak-memory or speed results are available, and 8 GB full-feature operation is not certified.
 - Reserve 20 GB plus cache, audio and project space; this is not a measured peak. Keep the extracted directory because backend launch paths reference its source.
 - The ZIP is unsigned / not notarized. If macOS blocks a verified component, inspect its actual warning and target before using the system's Privacy & Security approval flow. Do not disable Gatekeeper globally or remove quarantine recursively across a disk.
-- The universal VST3 build passed; installation, models and complete REAPER operation still need a physical Mac test. A [Chinese test prompt](MAC_TEST_PROMPT.zh-CN.md) records evidence for that work.
+- The universal VST3 build passed; installation, models and complete REAPER operation still need a physical Mac test before tightening the stated requirements.
 
 ### Resource use by feature
 
