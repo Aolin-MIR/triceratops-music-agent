@@ -4,6 +4,7 @@ import argparse
 import json
 import os
 import runpy
+import signal
 import sys
 from pathlib import Path
 
@@ -44,6 +45,10 @@ def main():
     parser.add_argument("--config", required=True, type=Path)
     args = parser.parse_args()
     configure(args.config)
+    # AU/VST host processes may ignore SIGTERM. Ignored dispositions survive
+    # exec on POSIX; restore termination for this dedicated backend only.
+    if os.name != "nt":
+        signal.signal(signal.SIGTERM, signal.SIG_DFL)
     runpy.run_module("text2music.agent.vst_service", run_name="__main__")
 
 

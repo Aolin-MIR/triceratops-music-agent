@@ -88,3 +88,26 @@ def test_logic_only_mac_install_does_not_require_reaper(tmp_path, monkeypatch):
     assert doctor.available_hosts(settings) == ["Logic Pro"]
     monkeypatch.setattr(doctor.sys, "platform", "win32")
     assert doctor.available_hosts(settings) == []
+
+
+@pytest.mark.skipif(os.name == "nt", reason="POSIX inherited signal dispositions")
+def test_backend_restores_sigterm_from_host_ignored_disposition(tmp_path):
+    import subprocess
+    import sys
+    config = tmp_path / "runtime.json"
+    config.write_text(json.dumps(dict(python=sys.executable, runs_dir=str(tmp_path / "runs"),
+        model_home=str(tmp_path / "models"), reaper="/unused/reaper", device="cpu")))
+    code = """
+import signal, sys, runpy, os
+from text2music.agent import runtime
+signal.signal(signal.SIGTERM, signal.SIG_IGN)
+def service(*args, **kwargs):
+    os.kill(os.getpid(), signal.SIGTERM)
+    raise RuntimeError('SIGTERM was still ignored')
+runtime.runpy.run_module = service
+sys.argv = ['runtime', '--config', sys.argv[1]]
+runtime.main()
+"""
+    result = subprocess.run([sys.executable, "-c", code, str(config)], capture_output=True, timeout=10)
+    import signal
+    assert result.returncode == -signal.SIGTERM, result.stderr.decode()
