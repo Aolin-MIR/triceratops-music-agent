@@ -101,6 +101,14 @@ def generate_midi_llm(prompt: str, output_dir: Path, *, max_tokens: int = 768,
     if not created:
         raise RuntimeError("MIDI-LLM completed without producing a MIDI file")
     midi = created[-1]
+    try:
+        import mido
+        generated = mido.MidiFile(midi)
+    except Exception as exc:
+        raise RuntimeError("MIDI-LLM produced an unreadable MIDI file") from exc
+    if not any(message.type == "note_on" and message.velocity > 0
+               for track in generated.tracks for message in track):
+        raise RuntimeError("MIDI-LLM produced a MIDI file without playable notes")
     return {"backend": "midi_llm", "midi": str(midi),
             "elapsed_seconds": round(time.monotonic() - started, 2)}
 

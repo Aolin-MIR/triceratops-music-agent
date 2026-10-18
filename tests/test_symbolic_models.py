@@ -28,6 +28,51 @@ def test_missing_model_fails_instead_of_falling_back(monkeypatch, tmp_path: Path
         symbolic_models.generate_midi_llm("piano", tmp_path / "out")
 
 
+def test_text_to_midi_returns_only_parseable_midi_with_notes(monkeypatch, tmp_path: Path):
+    import mido
+    from types import SimpleNamespace
+
+    output = tmp_path / "output"
+    output.mkdir()
+    monkeypatch.setattr(symbolic_models, "_require_model", lambda _: None)
+
+    def generate(*args, **kwargs):
+        midi = mido.MidiFile()
+        track = mido.MidiTrack()
+        midi.tracks.append(track)
+        track.extend([mido.Message("note_on", note=60, velocity=80, time=0),
+                      mido.Message("note_off", note=60, velocity=0, time=120)])
+        midi.save(output / "generated.mid")
+        return SimpleNamespace(returncode=0, stdout="", stderr="")
+
+    monkeypatch.setattr(symbolic_models.subprocess, "run", generate)
+    result = symbolic_models.generate_midi_llm("a sparse piano phrase", output)
+    assert result["midi"] == str(output / "generated.mid")
+
+
+@pytest.mark.parametrize("content, expected", [
+    (b"not a midi file", "unreadable MIDI file"),
+    (b"", "without playable notes"),
+])
+def test_text_to_midi_rejects_invalid_or_silent_output(monkeypatch, tmp_path: Path, content, expected):
+    import mido
+    from types import SimpleNamespace
+
+    output = tmp_path / "output"
+    output.mkdir()
+    monkeypatch.setattr(symbolic_models, "_require_model", lambda _: None)
+    def generate(*args, **kwargs):
+        destination = output / "generated.mid"
+        if content:
+            destination.write_bytes(content)
+        else:
+            mido.MidiFile().save(destination)
+        return SimpleNamespace(returncode=0, stdout="", stderr="")
+    monkeypatch.setattr(symbolic_models.subprocess, "run", generate)
+    with pytest.raises(RuntimeError, match=expected):
+        symbolic_models.generate_midi_llm("a sparse piano phrase", output)
+
+
 def test_model_status_checks_concrete_files(monkeypatch, tmp_path: Path):
     monkeypatch.setattr(symbolic_models, "MIDI_LLM_ROOT", tmp_path / "code")
     monkeypatch.setattr(symbolic_models, "MIDI_LLM_MODEL", tmp_path / "model")

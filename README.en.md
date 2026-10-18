@@ -12,7 +12,7 @@ Triceratops is a music Agent VST3 for REAPER. Describe an idea naturally or use 
 
 ## This update · 1.0 integration
 
-Current checks: the local Qwen3.5 4B model completed 21 real chat and tool-flow scenarios through the native Windows llama.cpp/Vulkan backend (21/21 passed). Tests verified native tool calls, tool-result replay, and GPU residency on the RTX 3080 Laptop GPU before and after the run. Startup logs confirmed all 33/33 model layers were offloaded to the GPU. Another 51 focused unit tests covering configuration, chat and MIDI tools passed. This validates the tested local model and scenarios, not every API, computer or combination of music models.
+Current checks: local Qwen3.5 4B completed 21 real chat/tool-flow scenarios through the native Windows llama.cpp/Vulkan backend (21/21 passed), plus 13 local-GPU scenarios covering small talk, capability discovery, ambiguity, out-of-scope requests, memory and mixed intent (13/13 passed). A real text-guided MIDI generation check preserved a detailed Chinese request as a natural English MIDI-LLM prompt and returned a parseable MIDI containing notes. Startup logs confirmed all 33/33 chat-model layers were offloaded to the RTX 3080 Laptop GPU. Another 115 Python unit tests passed. These checks cover the stated inputs and devices; they do not guarantee musical quality for every prompt or validate every model/device combination.
 
 This source update is part of the **1.0 integration**; download links below still point to the existing **v0.9 installers**, which do not include unrepackaged 1.0 changes. Physical Mac validation remains pending, and the 1.0 installer has not been released.
 
@@ -82,7 +82,7 @@ The local LLM uses an explicit **CPU / GPU** choice and remains resident, withou
 
 | Action | Implementation |
 | --- | --- |
-| Chat / New score | Native LLM tool-calling loop, intent rewriting and local MIDI-LLM generation |
+| Chat / New score | Broad Chinese or English requests, small talk and intent rewriting; preserves concrete and abstract musical descriptions for text-conditioned MIDI-LLM generation. Unsupported requests receive a clear scope response |
 | Edit MIDI / More energy / Tighten timing | Explicit transposition, velocity and timing edits |
 | Continue 4 bars / bar infill | MIDI-GPT generates new content; continuation appends bars while retaining original MIDI events |
 | Analyze | MIDI note and rhythm statistics; estimated audio tempo/key, onsets and sections |
