@@ -1092,14 +1092,14 @@ void TriceratopsAudioProcessorEditor::updateChatDisplay()
         {
             chatDisplay.setCaretPosition(chatDisplay.getText().length());
             chatDisplay.insertTextAtCaret("--------------------------------------------------\n");
-            chatDisplay.insertTextAtCaret(ui("USER [") + turn.timestamp + "]\n");
+            chatDisplay.insertTextAtCaret(turn.timestamp.isEmpty() ? ui("USER [").dropLastCharacters(1).trimEnd() + "\n" : ui("USER [") + turn.timestamp + "]\n");
             chatDisplay.insertTextAtCaret(turn.message + "\n\n");
         }
         else
         {
             chatDisplay.setCaretPosition(chatDisplay.getText().length());
             chatDisplay.insertTextAtCaret("--------------------------------------------------\n");
-            chatDisplay.insertTextAtCaret(ui("TRICERATOPS AGENT [") + turn.timestamp + "]\n");
+            chatDisplay.insertTextAtCaret(turn.timestamp.isEmpty() ? ui("TRICERATOPS AGENT [").dropLastCharacters(1).trimEnd() + "\n" : ui("TRICERATOPS AGENT [") + turn.timestamp + "]\n");
 
             if (!turn.thinkingTrace.empty())
             {
