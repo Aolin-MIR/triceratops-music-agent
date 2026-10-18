@@ -30,6 +30,10 @@ def ensure_ollama(config: dict, report) -> None:
         system_binary = shutil.which('ollama')
         if system_binary:
             executable = Path(system_binary)
+    if not executable.is_file() and __import__('sys').platform == 'darwin':
+        from text2music.agent.macos_bootstrap import install_ollama
+        data = Path(config['model_home']).parent
+        executable = install_ollama(data, config.get('runtime_download_source', config.get('model_source', 'auto')), report) / 'ollama'
     if not executable.is_file():
         raise RuntimeError('The bundled local-chat runtime is missing. Install the complete Triceratops package, or start Ollama at the selected URL.')
     env = os.environ.copy()

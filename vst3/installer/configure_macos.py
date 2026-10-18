@@ -24,6 +24,10 @@ def write_config(data: Path, python: Path, api_key: str = "") -> dict:
                     base_url="https://dashscope.aliyuncs.com/compatible-mode/v1", chat_model="qwen-plus")
     for key, value in defaults.items():
         settings.setdefault(key, value)
+    from text2music.agent.macos_bootstrap import OLLAMA_VERSION
+    settings.setdefault('ollama_runtime', str(data / 'runtimes' / ('ollama-' + OLLAMA_VERSION)))
+    settings.setdefault('runtime_download_source', os.environ.get('TRICERATOPS_DOWNLOAD_SOURCE', 'auto'))
+    settings.setdefault('model_source', os.environ.get('TRICERATOPS_DOWNLOAD_SOURCE', 'auto'))
     if api_key:
         settings["api_key"] = api_key
     if config.exists():

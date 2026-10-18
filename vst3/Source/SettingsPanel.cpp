@@ -115,6 +115,9 @@ void SettingsPanel::setChinese(bool value)
             juce::StringArray labels;
             if (field->key == "chat_policy") labels = chinese ? juce::StringArray{juce::String::fromUTF8("推荐 / 按硬件验证"), juce::String::fromUTF8("本地对话 / GPU"), juce::String::fromUTF8("云端对话"), juce::String::fromUTF8("仅操作按钮")} : juce::StringArray{"Recommended / hardware checked", "Local GPU", "Cloud service", "Direct buttons only"};
             else if (field->key == "model_source") labels = chinese ? juce::StringArray{juce::String::fromUTF8("自动 / 公网 IP"), juce::String::fromUTF8("官方源"), juce::String::fromUTF8("国内镜像（如有）")} : juce::StringArray{"Auto / IP country", "Official", "China mirror (if available)"};
+           #if JUCE_MAC
+            else if (field->key == "midi_llm_dtype") labels = chinese ? juce::StringArray{juce::String::fromUTF8("自动：原始优先 / 低内存 FP16"), juce::String::fromUTF8("原始精度（随设备）"), "FLOAT32", "FLOAT16", "BFLOAT16"} : juce::StringArray{"Auto: original / low-RAM FP16", "Original / device default", "FLOAT32", "FLOAT16", "BFLOAT16"};
+           #endif
             else for (const auto& option : field->values)
             {
                 if (option == "auto")
@@ -243,6 +246,17 @@ void SettingsPanel::consume(const juce::var& value, bool load)
                 + tr(", continue/fill=", "，续写填充=") + devices->getProperty("midi_gpt_device").toString() + tr(", stems=", "，分轨=") + devices->getProperty("stem_device").toString();
     if (auto* route = showAdvanced ? object->getProperty("model_sources").getDynamicObject() : nullptr)
         text += "\n" + tr("Model source: ", "模型来源：") + route->getProperty("hf_endpoint").toString();
+   #if JUCE_MAC
+    if (auto* precision = object->getProperty("composition_precision").getDynamicObject())
+    {
+        const auto reason = precision->getProperty("reason").toString();
+        const auto dtype = precision->getProperty("resolved").toString();
+        text += "\n" + tr("Composition precision: ", "作曲精度：")
+            + (reason == "auto-low-memory" ? tr("FP16 (automatic 8 GB memory tier)", "FP16（8 GB 低内存档自动减精度）")
+               : reason == "manual" ? tr("Manual / ", "手动 / ") + dtype.toUpperCase()
+               : tr("Original / device default", "原始精度（随设备）"));
+    }
+   #endif
     if (text.isNotEmpty() && status.getText() != text) status.setText(text);
     for (auto& field : fields) { field->text.setEnabled(!jobBusy); field->choice.setEnabled(!jobBusy); }
     cancel.setEnabled(jobBusy);

@@ -37,6 +37,8 @@ def detect_hardware() -> dict[str, Any]:
     chip = _sysctl("machdep.cpu.brand_string") or _sysctl("hw.model")
     if platform.system() != "Darwin":
         profile = "generic"
+    elif arch == "arm64" and memory_gb <= 0:
+        profile = "mac-memory-unknown"
     elif arch == "arm64" and memory_gb <= 8.5:
         profile = "mac-low-memory"
     elif arch == "arm64" and memory_gb < 24:
@@ -57,11 +59,16 @@ def detect_hardware() -> dict[str, Any]:
 def _auto_policy(hardware: dict[str, Any]) -> dict[str, str]:
     """Choose model-specific defaults from tested, conservative paths."""
     profile = hardware["profile"]
-    # MIDI-LLM MPS was not usable in the local A18 Pro/8 GB test. Keep this on
-    # CPU/float16 until a model-specific MPS validation exists.
+    # Precision and device are separate decisions. The tested 8 GB Mac needs
+    # FP16; other Mac profiles keep the runner's original device precision
+    # (CPU=float32). Missing memory information never implies a low-end Mac.
+    # Preserve the existing non-Mac policy; Windows setup pins its own dtype.
+    mac_profile = profile.startswith("mac-")
+    precision = "float16" if not mac_profile or profile == "mac-low-memory" else "default"
+    # MPS stays opt-in until a model-specific device/operator test passes.
     result = {
         "midi_llm_device": "cpu",
-        "midi_llm_dtype": "float16",
+        "midi_llm_dtype": precision,
         "midi_gpt_device": "cpu",
         "audio_device": "cpu",
         "chat_deployment": "remote",
@@ -107,4 +114,18 @@ def resolve_policy(config: dict[str, Any], hardware: dict[str, Any] | None = Non
     if resolved["chat_deployment"] not in VALID_CHAT_DEPLOYMENTS:
         raise ValueError("chat_deployment must be remote or local-openai")
     return {"hardware": hardware, "policy": policy, **resolved}
+
+
+def precision_status(config: dict[str, Any], hardware: dict[str, Any] | None = None) -> dict[str, Any]:
+    """Expose the automatic decision separately from an intentional override."""
+    resolved = resolve_policy(config, hardware)
+    requested = config.get("midi_llm_dtype", "auto")
+    if requested not in VALID_DTYPES | {"auto"}:
+        raise ValueError("Invalid MIDI-LLM dtype")
+    automatic = requested == "auto"
+    dtype = resolved["midi_llm_dtype"] if automatic else requested
+    reduced = automatic and resolved["hardware"]["profile"] == "mac-low-memory"
+    return {"requested": requested, "resolved": dtype,
+            "hardware_profile": resolved["hardware"]["profile"],
+            "reason": "auto-low-memory" if reduced else "auto-original" if automatic else "manual"}
 

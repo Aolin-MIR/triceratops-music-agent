@@ -76,12 +76,14 @@ def public_config(path: Path) -> dict:
     for key in ('llm_choice', 'midi_llm_choice', 'midi_gpt_choice', 'stem_choice'):
         fields[key] = config.get(key, 'auto')
     fields['midi_llm_dtype'] = config.get('midi_llm_dtype', 'auto' if sys.platform == 'darwin' else 'default')
+    from text2music.agent.model_policy import precision_status
+    precision = precision_status(config) if sys.platform == 'darwin' else None
     return {'revision': revision(path), 'settings': fields, 'api_key_configured': bool(config.get('api_key')),
             'setup_required': not config.get('setup_complete', False), 'provider': provider,
             'api_requirement': config.get('api_requirement', 'unknown'),
             'devices': {key: config.get(key, config.get('device', 'cpu')) for key in ('llm_device', 'midi_llm_device', 'midi_gpt_device', 'stem_device')},
             'hardware_plan': config.get('hardware_plan', {}), 'model_sources': config.get('model_sources', {}),
-            'local_error': config.get('local_error', '')}
+            'local_error': config.get('local_error', ''), 'composition_precision': precision}
 
 
 def include_resident_gpu(hardware: dict, config: dict) -> dict:
@@ -289,8 +291,29 @@ def worker(path: Path, request: Path, output: Path):
             requirements = Path(__file__).with_name('requirements-runtime.txt')
             if not requirements.exists(): requirements = root / 'vst3' / 'installer' / 'requirements-runtime.txt'
             report('Installing dedicated Python dependencies')
-            run([sys.executable, '-m', 'pip', 'install', '-r', str(requirements), '--disable-pip-version-check'])
-            run([sys.executable, '-m', 'pip', 'install', '--no-deps', 'https://codeload.github.com/jthickstun/anticipation/tar.gz/af37397922665a0fb8d474d7988b0f3755a38d45'])
+            if measured['system'] == 'Darwin':
+                # Keep the Windows deployment unchanged. Transport selection
+                # affects package downloads only, never API requests.
+                china = route.get('music_models') == 'china-mirror'
+                indexes = (['https://mirrors.aliyun.com/pypi/simple/', 'https://pypi.org/simple']
+                           if china else ['https://pypi.org/simple', 'https://mirrors.aliyun.com/pypi/simple/'])
+                for index_number, index in enumerate(indexes):
+                    try:
+                        report('Installing dependencies from ' + index)
+                        run([sys.executable, '-m', 'pip', 'install', '-r', str(requirements),
+                             '--disable-pip-version-check', '--timeout', '20', '--retries', '2', '--index-url', index])
+                        break
+                    except RuntimeError:
+                        if index_number == len(indexes)-1: raise
+                        report('Dependency source failed; retrying the alternate package index')
+                from text2music.agent.macos_bootstrap import download
+                decoder = download('https://github.com/jthickstun/anticipation/archive/af37397922665a0fb8d474d7988b0f3755a38d45.tar.gz',
+                    'a002ec7c4e5aa695eef8bc569d49612b950b27bf801fdf0e3408046167d2e90f', 38847,
+                    Path(config['model_home']).parent/'downloads', 'china' if china else 'auto', report)
+                run([sys.executable, '-m', 'pip', 'install', '--no-deps', '--no-build-isolation', str(decoder)])
+            else:
+                run([sys.executable, '-m', 'pip', 'install', '-r', str(requirements), '--disable-pip-version-check'])
+                run([sys.executable, '-m', 'pip', 'install', '--no-deps', 'https://codeload.github.com/jthickstun/anticipation/tar.gz/af37397922665a0fb8d474d7988b0f3755a38d45'])
             report('Downloading pinned music models from '+route['hf_endpoint'])
             from text2music.agent.download_models import install
             install(Path(config['model_home']), route['hf_endpoint'], report=report)

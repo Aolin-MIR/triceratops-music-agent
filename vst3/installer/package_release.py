@@ -6,7 +6,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[2]
 AGENT_MODULES = (
-    "__init__.py", "model_policy.py", "model_job.py", "process_entry.py", "errors.py", "midi_merge.py", "midi_postprocess.py", "configuration.py", "first_run.py", "local_runtime.py", "model_sources.py", "hardware.py", "audio_tools.py", "capabilities.py", "knowledge.py", "midi_tools.py",
+    "__init__.py", "model_policy.py", "model_job.py", "process_entry.py", "errors.py", "midi_merge.py", "midi_postprocess.py", "configuration.py", "first_run.py", "local_runtime.py", "macos_bootstrap.py", "model_sources.py", "hardware.py", "audio_tools.py", "capabilities.py", "knowledge.py", "midi_tools.py",
     "operation_report.py", "direct_actions.py", "llm_backend.py", "project_memory.py", "symbolic_models.py",
     "tool_loop.py", "vst_service.py", "runtime.py", "doctor.py", "download_models.py", "midi_llm_runner.py", "demucs_runner.py",
 )
@@ -55,9 +55,10 @@ def package(plugin: Path, output: Path, platform: str, python_seed: Path | None 
         if ollama_runtime is not None:
             if not (ollama_runtime / "ollama").is_file(): raise ValueError("Missing macOS Ollama executable")
             shutil.copytree(ollama_runtime, output / "ollama")
-        for name in ("setup-macos.sh", "configure_macos.py", "requirements-runtime.txt", "MACOS_README.txt"):
+        for name in ("setup-macos.sh", "bootstrap-python.sh", "Install Triceratops.command", "configure_macos.py", "requirements-runtime.txt", "MACOS_README.txt"):
             shutil.copy2(ROOT / "vst3/installer" / name, output / name)
-        (output / "setup-macos.sh").chmod(0o755)
+        for name in ("setup-macos.sh", "bootstrap-python.sh", "Install Triceratops.command"):
+            (output / name).chmod(0o755)
 
 
 if __name__ == "__main__":

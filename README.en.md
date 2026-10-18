@@ -17,7 +17,7 @@
 
 Describe style, mood, instruments and structure in Chinese or English without JSON or a fixed prompt format.
 
-Mac requires native ARM64 Python 3.10 / 3.11. Intel / Rosetta model backends are unsupported. Audio devices are selected in the host.
+The Mac installer downloads native ARM64 Python and the local-chat runtime when needed. Intel / Rosetta model backends are unsupported. Audio devices are selected in the host.
 
 ## ✨ From 1.0 to 1.0.2
 
@@ -48,7 +48,7 @@ Generated music and transcription may contain errors. Successful file generation
 
 ## ⚙️ Install and configure
 
-Choose an actual platform attachment from [Releases](https://github.com/Aolin-MIR/triceratops-music-agent/releases). On Mac, extract and run `bash setup-macos.sh`, then use Settings in the plug-in to detect, download, verify and apply. Windows uses its native installer without WSL.
+Choose an actual platform attachment from [Releases](https://github.com/Aolin-MIR/triceratops-music-agent/releases). On Mac, extract and double-click `Install Triceratops.command`. Download sources are selected automatically, with verified alternatives on failure. The installer downloads and verifies Python and the local-chat runtime; use plug-in Settings to download and verify dependencies and model weights. Large runtimes and weights stay outside the small installer ZIP. Public-file proxies must match the pinned official SHA-256. Music weights support Hugging Face and HF-Mirror; local chat weights use the official registry. Windows uses its native installer without WSL.
 
 | Function | Default weights | Recommended deployment |
 | --- | --- | --- |
@@ -57,6 +57,8 @@ Choose an actual platform attachment from [Releases](https://github.com/Aolin-MI
 | Four audio stems | ~80 MiB | Start with CPU; verify GPU separately |
 | Audio-to-MIDI | ~225 KiB | CPU |
 | Local conversation | Default 4B / 4-bit | Sufficient memory and GPU; tool calling and residency must pass |
+
+Mac text composition keeps the original device precision by default (FP32 on CPU); only the detected 8 GB low-memory tier automatically uses FP16. Advanced settings retain explicit precision overrides. Unknown RAM is not classified as low memory. These are deployment rules, not performance certification for other Macs or automatic approval of GPU paths.
 
 Weight sizes are not working-memory requirements. Local chat uses native deployment with a compatible NVIDIA GPU on Windows and native Metal deployment on Apple Silicon. A complete local 4B host workflow on an 8 GB Mac is not certified; compatible cloud chat is available. Advanced settings retain custom model IDs, endpoints, precision and devices.
 

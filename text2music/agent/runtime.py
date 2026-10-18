@@ -32,7 +32,9 @@ def configure(path: Path) -> dict:
         if audio not in VALID_DEVICES:
             raise ValueError("stem_device must be cpu, cuda, mps or auto")
         resolved["audio_device"] = audio
-    precision = config.get("midi_llm_dtype", "default" if config["device"] != "auto" else "auto")
+    # A saved CPU device must not bypass the Mac low-memory precision policy.
+    precision_default = "auto" if sys.platform == "darwin" else "default" if config["device"] != "auto" else "auto"
+    precision = config.get("midi_llm_dtype", precision_default)
     if precision not in VALID_DTYPES | {"auto"}:
         raise ValueError("Invalid MIDI-LLM dtype")
     if precision != "auto":

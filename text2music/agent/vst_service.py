@@ -826,8 +826,10 @@ class Handler(BaseHTTPRequestHandler):
 
 def main() -> None:
     RUNS_DIR.mkdir(parents=True, exist_ok=True)
-    _write_status("ready", "0", "Service ready")
     server = ThreadingHTTPServer((HOST, PORT), Handler)
+    # A competing launcher must acquire the port before publishing status.
+    # Otherwise its failed bind can overwrite the active server's music task.
+    _write_status("ready", "0", "Service ready")
     APP.server = server
     threading.Thread(target=APP.session_watchdog, daemon=True).start()
     STATE.write_text(json.dumps({"pid": os.getpid(), "host": HOST, "port": PORT}), encoding="utf-8")
