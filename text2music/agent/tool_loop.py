@@ -35,7 +35,7 @@ DESCRIPTIONS = {
     "remember_fact": "Persist an explicit user preference or project constraint for future sessions.",
     "forget_fact": "Remove a stored project fact only when the user explicitly asks to forget or delete it.",
     "update_fact": "Atomically replace exactly one existing project fact with the user's correction.",
-    "recall_facts": "Read saved project facts from persistent local memory. Use this when asked what was remembered.",
+    "recall_facts": "Read saved facts AND the current style, tempo, meter, key/mode, instruments and exclusions. Use for questions about existing or remembered musical requirements, including an empty workspace. This does not change memory.",
     "list_capabilities": "Return the tools that are currently installed and usable.",
 }
 OBSERVATION_TOOLS = {"inspect_project", "analyze_selected_midi", "analyze_audio"}
@@ -175,6 +175,8 @@ def run_tool_loop(message: str, *, context: str = "", selection: Path | None = N
         "swing, humanization, reharmonization, lyrics and audio effects are not currently installed tools. "
         "For generate_draft encode no-drums as exclude_drums=true and solo acoustic piano as program=0. "
         "Report raw compliance separately from postprocessing. Do not infer key/cadences from pitch frequency or invent measurements. "
+        "Reading or asking about existing musical requirements is READ-ONLY: call recall_facts, even if nothing is saved. "
+        "Never call update_music_context with empty updates or for a question without explicit new values. "
         "Before music execution, save any new explicit style/tempo/meter/key/mode/instrument/exclusion with update_music_context. "
         "Active musical requirements are authoritative; never resurrect cleared fields from historical quotes. "
         "Omit unspecified fields; use null only for explicitly requested deletion. Newest explicit corrections replace earlier values. Saved musical context applies to downstream requests unless explicitly changed. "
