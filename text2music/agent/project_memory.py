@@ -95,7 +95,7 @@ class ProjectMemory:
         summary = str(data.get("conversation_summary", "")).strip() if include_summary else ""
         lines = [f"- [{item.get('category', 'fact')}] {item.get('fact', '')}" for item in facts]
         music = self.music_context()
-        return "\n".join((["Musical requirements (latest explicit values): " + json.dumps(music, ensure_ascii=False)] if music else []) + (["Project memory:", *lines] if lines else []) +
+        return "\n".join((["Active musical requirements (authoritative; omitted fields are cleared or unset): " + json.dumps(music, ensure_ascii=False)] if music or data.get("music_revision") else []) + (["Project memory:", *lines] if lines else []) +
                          (["Conversation summary: " + summary] if summary else []))
 
     def recall(self, text: str) -> dict[str, Any]:

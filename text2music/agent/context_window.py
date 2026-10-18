@@ -145,8 +145,9 @@ def pack_history(system: dict, history: list[dict], current: dict, tools: list[d
     # Hierarchical compaction: compress source-backed notes again when many
     # batches together still exceed the remaining budget. Do not truncate JSON
     # or the current request to make it fit.
+    target_budget = input_budget(context_size) - min(700, max(0, input_budget(context_size) - base))
     for target in (2, 1):
-        if estimate_tokens(packed) + estimate_tokens(tools) <= input_budget(context_size):
+        if estimate_tokens(packed) + estimate_tokens(tools) <= target_budget:
             break
         if not quotes:
             break

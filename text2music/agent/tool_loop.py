@@ -169,6 +169,7 @@ def run_tool_loop(message: str, *, context: str = "", selection: Path | None = N
         "For generate_draft encode no-drums as exclude_drums=true and solo acoustic piano as program=0. "
         "Report raw compliance separately from postprocessing. Do not infer key/cadences from pitch frequency or invent measurements. "
         "Before music execution, save any new explicit style/tempo/meter/key/mode/instrument/exclusion with update_music_context. "
+        "Active musical requirements are authoritative; never resurrect cleared fields from historical quotes. "
         "Omit unspecified fields; use null only for explicitly requested deletion. Newest explicit corrections replace earlier values. Saved musical context applies to downstream requests unless explicitly changed. "
         "Use recall_facts for stored preferences; remember only explicit durable user facts, update_fact for corrections, "
         "and forget_fact only on an explicit deletion request. Deletable is not a deletion instruction. "
