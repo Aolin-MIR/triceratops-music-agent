@@ -249,7 +249,8 @@ def worker(path: Path, request: Path, output: Path):
         atomic_json(progress, {'state': 'running', 'detail': safe[-1800:]})
     def run(command):
         proc = subprocess.Popen(command, stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
-                                text=True, encoding='utf-8', errors='replace')
+                                text=True, encoding='utf-8', errors='replace',
+                                creationflags=subprocess.CREATE_NO_WINDOW if os.name == 'nt' else 0)
         for line in proc.stdout:
             if line.strip(): report(line.strip())
         if proc.wait(): raise RuntimeError('Installation or verification failed. ' + read_config(progress)['detail'])

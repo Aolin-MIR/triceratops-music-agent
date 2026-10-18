@@ -81,3 +81,26 @@ def test_model_status_checks_concrete_files(monkeypatch, tmp_path: Path):
     monkeypatch.setattr(symbolic_models, "MIDI_GPT_MODEL", tmp_path / "gpt.safetensors")
     assert symbolic_models.model_status()["midi_llm"]["ready"] is False
     assert symbolic_models.model_status()["midi_gpt"]["ready"] is False
+
+def test_short_midi_context_padding_preserves_source_and_meter(monkeypatch):
+    import sys
+    from types import SimpleNamespace
+    from dataclasses import dataclass, field
+    @dataclass
+    class Bar:
+        notes: list = field(default_factory=list)
+        ts_numerator: int = 3
+        ts_denominator: int = 4
+        beat_length: int = 3
+    monkeypatch.setitem(sys.modules, "midigpt", SimpleNamespace(Bar=Bar))
+    source = SimpleNamespace(tracks=[SimpleNamespace(bars=[Bar(notes=[60])])])
+    padded = symbolic_models._pad_midi_gpt_context(source)
+    assert len(source.tracks[0].bars) == 1
+    assert source.tracks[0].bars[0].notes == [60]
+    assert len(padded.tracks[0].bars) == 4
+    assert padded.tracks[0].bars[0].notes == [60]
+    assert all(not bar.notes and bar.beat_length == 3 and bar.ts_numerator == 3
+               for bar in padded.tracks[0].bars[1:])
+    before = symbolic_models._pad_midi_gpt_context(source, before=True)
+    assert all(not bar.notes for bar in before.tracks[0].bars[:-1])
+    assert before.tracks[0].bars[-1].notes == [60]

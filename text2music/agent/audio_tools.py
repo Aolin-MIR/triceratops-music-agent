@@ -83,7 +83,8 @@ def separate_stems(path: Path, output_dir: Path) -> list[Path]:
     output_dir.mkdir(parents=True, exist_ok=True)
     subprocess.run(python_module_command("text2music.agent.demucs_runner", "-n", "hf://htdemucs",
                     "-d", os.environ.get("TRICERATOPS_STEM_DEVICE", os.environ.get("TRICERATOPS_DEVICE", "cpu")),
-                    "-o", str(output_dir), str(path)), check=True)
+                    "-o", str(output_dir), str(path)), check=True,
+                   creationflags=subprocess.CREATE_NO_WINDOW if os.name == "nt" else 0)
     files = sorted((output_dir / "htdemucs" / path.stem).glob("*.wav"))
     if not files:
         raise RuntimeError("Stem separation returned no audio files")

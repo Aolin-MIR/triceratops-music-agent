@@ -22,7 +22,8 @@ class TaskCancelled(RuntimeError):
 def stop_process_tree(process: subprocess.Popen) -> None:
     if os.name == "nt":
         subprocess.run(["taskkill", "/PID", str(process.pid), "/T", "/F"],
-                       stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, check=False)
+                       stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, check=False,
+                       creationflags=subprocess.CREATE_NO_WINDOW)
     else:
         try:
             os.killpg(process.pid, signal.SIGTERM)
@@ -48,7 +49,7 @@ def run_command(command: list[str], *, cancelled: Callable[[], bool],
     if cancelled():
         raise TaskCancelled("Task cancelled before model launch")
     with tempfile.TemporaryFile(mode="w+t", encoding="utf-8") as log:
-        options = ({"creationflags": subprocess.CREATE_NEW_PROCESS_GROUP} if os.name == "nt"
+        options = ({"creationflags": subprocess.CREATE_NO_WINDOW | subprocess.CREATE_NEW_PROCESS_GROUP} if os.name == "nt"
                    else {"start_new_session": True})
         process = subprocess.Popen(command, stdout=log, stderr=log, **options)
         started = time.monotonic()
@@ -104,7 +105,8 @@ def watch_parent(parent_pid: int) -> None:
         time.sleep(0.1)
     if os.name == "nt":
         subprocess.run(["taskkill", "/PID", str(os.getpid()), "/T", "/F"],
-                       stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, check=False)
+                       stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, check=False,
+                       creationflags=subprocess.CREATE_NO_WINDOW)
         os._exit(1)
     # This worker was started in its own process group by run_command().
     os.killpg(os.getpgrp(), signal.SIGTERM)

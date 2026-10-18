@@ -83,6 +83,7 @@ def generate_midi_llm(prompt: str, output_dir: Path, *, max_tokens: int = 768,
         command, cwd=MIDI_LLM_ROOT, capture_output=True, text=True, encoding="utf-8",
         env={**os.environ, "PYTHONUTF8": "1"},
         timeout=int(os.environ.get("MIDI_LLM_TIMEOUT_SECONDS", "900")),
+        creationflags=subprocess.CREATE_NO_WINDOW if os.name == "nt" else 0,
     )
     if completed.returncode != 0:
         detail = (completed.stderr or completed.stdout)[-4000:]
@@ -120,6 +121,26 @@ def _engine_device(engine) -> str:
     return "unavailable"
 
 
+
+def _pad_midi_gpt_context(score, minimum_bars: int = 4, *, before: bool = False):
+    """Pad model input only; callers export just the requested source/tail bars."""
+    from midigpt import Bar
+    if not score.tracks or not any(track.bars for track in score.tracks):
+        raise ValueError("MIDI-GPT requires a MIDI clip with bars")
+    padded = copy.deepcopy(score)
+    reference = max(score.tracks, key=lambda track: len(track.bars)).bars[-1]
+    length = max(minimum_bars, max(len(track.bars) for track in score.tracks))
+    for track in padded.tracks:
+        meter = (track.bars[0] if before else track.bars[-1]) if track.bars else reference
+        padding = [Bar(ts_numerator=meter.ts_numerator, ts_denominator=meter.ts_denominator,
+                       beat_length=meter.beat_length) for _ in range(length - len(track.bars))]
+        if before:
+            track.bars[:0] = padding
+        else:
+            track.bars.extend(padding)
+    return padded
+
+
 def infill_midi_gpt(source: Path, destination: Path, *, track_ids: list[int],
                     bar_ids: list[int], seed: int = -1, temperature: float = 1.0) -> dict[str, Any]:
     """Use MIDI-GPT to fill requested bars while preserving the rest of a score."""
@@ -139,6 +160,8 @@ def infill_midi_gpt(source: Path, destination: Path, *, track_ids: list[int],
         raise ValueError(f"Track ids must be between 0 and {track_count - 1}")
     if min(selected_bars) < 0:
         raise ValueError("Bar ids must be zero-based non-negative integers")
+    if any(max(selected_bars) >= len(score.tracks[index].bars) for index in selected_tracks):
+        raise ValueError("Infill bar id is outside the source MIDI")
     prompts = [
         TrackPrompt(id=track, bars=selected_bars) if track in selected_tracks
         else TrackPrompt(id=track, bars=[], ignore=True)
@@ -150,7 +173,7 @@ def infill_midi_gpt(source: Path, destination: Path, *, track_ids: list[int],
     engine = InferenceEngine.from_checkpoint(str(MIDI_GPT_MODEL), device=os.environ.get("TRICERATOPS_MIDI_GPT_DEVICE", os.environ.get("TRICERATOPS_DEVICE", "cuda")))
     load_seconds = time.monotonic() - started
     device = _engine_device(engine)
-    generated = engine.session(score, GenerationRequest(tracks=prompts, config=config)).run()
+    generated = engine.session(_pad_midi_gpt_context(score), GenerationRequest(tracks=prompts, config=config)).run()
     from text2music.agent.midi_merge import merge_infill
     preservation = merge_infill(source, destination, score, generated, selected_tracks, selected_bars)
     if not destination.is_file() or destination.stat().st_size == 0:
@@ -183,8 +206,11 @@ def continue_midi_gpt(source: Path, destination: Path, *, bar_count: int = 4,
                                   ts_denominator=reference.ts_denominator,
                                   beat_length=reference.beat_length))
     target_bars = list(range(first_bar, first_bar + bar_count))
+    context_padding = max(0, 4 - (first_bar + bar_count))
+    score = _pad_midi_gpt_context(score, before=True)
+    model_bars = [bar + context_padding for bar in target_bars]
     request = GenerationRequest(
-        tracks=[TrackPrompt(id=index, bars=target_bars, autoregressive=True)
+        tracks=[TrackPrompt(id=index, bars=model_bars, autoregressive=True)
                 for index in range(len(score.tracks))],
         config=InferenceConfig(seed=seed, temperature=temperature, model_dim=4, mask_mode="attention"),
     )
@@ -195,7 +221,7 @@ def continue_midi_gpt(source: Path, destination: Path, *, bar_count: int = 4,
     generated = engine.session(score, request).run().resample(original.resolution)
     if len(generated.tracks) != len(original.tracks):
         raise RuntimeError("Continuation changed the number of source tracks")
-    if not any(bar.notes for track in generated.tracks for bar in track.bars[first_bar:]):
+    if not any(bar.notes for track in generated.tracks for bar in track.bars[first_bar + context_padding:]):
         raise RuntimeError("MIDI-GPT returned no notes in the continuation")
     # Keep the original MIDI event streams, including pitch bends, CCs and
     # tempo changes. The model's MIDI writer only exports notes/programs.
@@ -207,9 +233,9 @@ def continue_midi_gpt(source: Path, destination: Path, *, bar_count: int = 4,
     boundary_beats = sum(bar.beat_length for bar in reference_track.bars)
     boundary_tick = round(boundary_beats * source_midi.ticks_per_beat)
     for track in generated.tracks:
-        if len(track.bars) < first_bar + bar_count:
+        if len(track.bars) < first_bar + context_padding + bar_count:
             raise RuntimeError("MIDI-GPT returned fewer bars than requested")
-        track.bars = track.bars[first_bar:first_bar + bar_count]
+        track.bars = track.bars[first_bar + context_padding:first_bar + context_padding + bar_count]
     tail_beats = max(sum(bar.beat_length for bar in track.bars) for track in generated.tracks)
     end_tick = boundary_tick + round(tail_beats * source_midi.ticks_per_beat)
     destination.parent.mkdir(parents=True, exist_ok=True)
@@ -223,4 +249,5 @@ def continue_midi_gpt(source: Path, destination: Path, *, bar_count: int = 4,
             "raw_tail_midi": str(tail_path), "continuation_postprocess": audit,
             "runtime": {"actual_device": device, "load_seconds": round(load_seconds, 3)},
             "original_bars": first_bar, "added_bars": bar_count, "bars": target_bars,
+            "context_padding_bars": context_padding,
             "elapsed_seconds": round(time.monotonic()-started, 2)}
