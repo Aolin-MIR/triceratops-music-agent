@@ -6,9 +6,6 @@ build-backend = "setuptools.build_meta"
 name = "text2music"
 version = "0.9.0"
 description = "Triceratops Music Agent for REAPER"
-authors = [
-    {name = "Keshav Bhandari", email = "keshavbhandari@gmail.com"}
-]
 readme = "readme.md"
 
 # Dependencies
