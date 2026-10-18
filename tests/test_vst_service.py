@@ -238,3 +238,19 @@ def test_generation_dispatch_reaches_model_job_after_worker_cleanup(tmp_path, mo
     assert calls[0][1]['max_tokens'] == 96
     assert 'model-job-probe-reached' in state.last_error
     assert 'NameError' not in state.last_error
+
+
+def test_losing_backend_start_does_not_overwrite_active_task_status(tmp_path, monkeypatch):
+    import socket
+    with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as occupied:
+        occupied.bind(('127.0.0.1', 0));occupied.listen()
+        monkeypatch.setattr(vst_service, 'HOST', '127.0.0.1')
+        monkeypatch.setattr(vst_service, 'PORT', occupied.getsockname()[1])
+        monkeypatch.setattr(vst_service, 'RUNS_DIR', tmp_path)
+        monkeypatch.setattr(vst_service, 'STATUS', tmp_path/'status.txt')
+        before = 'STATE: working\nPROGRESS: 30\nDETAIL: generate_draft: running\n'
+        vst_service.STATUS.write_text(before)
+        import pytest
+        with pytest.raises(OSError):
+            vst_service.main()
+        assert vst_service.STATUS.read_text() == before
