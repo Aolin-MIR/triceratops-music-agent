@@ -28,7 +28,7 @@ SetupLogging=yes
 Name: "english"; MessagesFile: "compiler:Default.isl"
 [Files]
 Source: "{#PayloadRoot}\Triceratops.vst3\*"; DestDir: "{commoncf64}\VST3\Triceratops.vst3"; Flags: ignoreversion recursesubdirs createallsubdirs
-Source: "{#PayloadRoot}\backend\*"; DestDir: "{app}\backend"; Flags: ignoreversion recursesubdirs createallsubdirs
+Source: "{#PayloadRoot}\backend\*"; DestDir: "{app}\backend"; Flags: ignoreversion recursesubdirs createallsubdirs; Excludes: "__pycache__\*,*.pyc,*.pyo"
 Source: "{#PayloadRoot}\python\*"; DestDir: "{app}\python"; Flags: ignoreversion recursesubdirs createallsubdirs
 Source: "{#PayloadRoot}\docs\*"; DestDir: "{app}\docs"; Flags: ignoreversion recursesubdirs createallsubdirs
 Source: "{#PayloadRoot}\llama-cpp\*"; DestDir: "{app}\llama-cpp"; Flags: ignoreversion recursesubdirs createallsubdirs

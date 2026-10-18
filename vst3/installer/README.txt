@@ -37,9 +37,8 @@ BUILD (Windows)
 Do not copy developer qwen.env, runtime.json, recordings or generated histories
 into a payload. package_release.py uses an explicit module allowlist.
 
-macOS builds are provided by .github/workflows/macos-vst3.yml. The setup script
-requires Apple Silicon, macOS 14+ and native ARM64 Python 3.10/3.11, and installs
-a dedicated venv using CPU mode. Mac packages are unsigned / not notarized;
-full model and REAPER functionality on physical Mac hardware is not yet verified.
-See docs/SYSTEM_REQUIREMENTS.md in the repository for software constraints,
-resource budgets and the distinction between recommendations and tested limits.
+macOS builds are provided by .github/workflows/macos-vst3.yml. The online
+installer supports Apple Silicon on macOS 14+, prepares native Python and
+installs optional local-chat components when selected in the plug-in. Music
+models and dependencies are configured in Settings. See MACOS_README.txt and
+docs/SYSTEM_REQUIREMENTS.md for installation and hardware requirements.
