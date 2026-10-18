@@ -66,6 +66,40 @@ private:
     bool dragStarted = false;
 };
 
+// Read/write accessibility value for selecting an existing model option.
+// JUCE's default ComboBox value interface is read-only, which prevents
+// assistive clients from selecting an option without a pointer popup.
+class ChatModelSelector final : public juce::ComboBox
+{
+public:
+    std::unique_ptr<juce::AccessibilityHandler> createAccessibilityHandler() override
+    {
+        class Value final : public juce::AccessibilityTextValueInterface
+        {
+        public:
+            explicit Value(ChatModelSelector& owner) : box(owner) {}
+            bool isReadOnly() const override { return false; }
+            juce::String getCurrentValueAsString() const override { return box.getText(); }
+            void setValueAsString(const juce::String& text) override
+            {
+                if (!box.isEnabled()) return;
+                for (int i = 0; i < box.getNumItems(); ++i)
+                    if (box.getItemText(i) == text)
+                    {
+                        box.setSelectedId(box.getItemId(i), juce::sendNotificationSync);
+                        return;
+                    }
+            }
+        private:
+            ChatModelSelector& box;
+        };
+        return std::make_unique<juce::AccessibilityHandler>(*this, juce::AccessibilityRole::comboBox,
+            juce::AccessibilityActions().addAction(juce::AccessibilityActionType::press, [this] { showPopup(); })
+                .addAction(juce::AccessibilityActionType::showMenu, [this] { showPopup(); }),
+            juce::AccessibilityHandler::Interfaces{std::make_unique<Value>(*this)});
+    }
+};
+
 struct ChatTurn
 {
     juce::String role; // "user" or "assistant"
@@ -134,7 +168,7 @@ private:
 
     // Chat stream & sidebar controls
     juce::TextEditor chatDisplay, prompt, arrangement, history;
-    juce::ComboBox chatBackendSelector;
+    ChatModelSelector chatBackendSelector;
     juce::Label chatBackendStatus;
     bool chatBackendReady = true, deferredChatVerify = false, chatSwitchPending = false;
     juce::String selectedChatBackend, queuedChatBackend;

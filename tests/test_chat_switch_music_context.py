@@ -40,3 +40,5 @@ def test_music_requirements_survive_provider_switch_and_update(tmp_path):
     second.update_music_context({'tempo': None}, 'Forget the saved tempo')
     assert 'tempo' not in first.music_context()
     assert first.music_context()['key'] == 'D'
+    assert first.recall('')['music_context'] == first.music_context()
+    assert first.recall('')['music_revision'] == 3
