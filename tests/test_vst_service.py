@@ -216,3 +216,25 @@ def test_discard_endpoint_removes_only_its_private_pending_import(service_api, t
     assert not Path(one["script_path"]).exists()
     assert Path(two["script_path"]).exists()
     assert post("/discard_import_reaper", {"request_id": "../other"})[0] == 400
+
+
+def test_generation_dispatch_reaches_model_job_after_worker_cleanup(tmp_path, monkeypatch):
+    """Dispatch regression only; does not fabricate a generated MIDI result."""
+    from text2music.agent import model_job, symbolic_models, tool_loop
+    for name in ('RUNS_DIR', 'STATUS', 'HISTORY', 'MEMORY', 'CONVERSATION', 'CONVERSATION_ARCHIVE'):
+        monkeypatch.setattr(vst_service, name, tmp_path if name == 'RUNS_DIR' else tmp_path/name.lower())
+    monkeypatch.setattr(symbolic_models, 'model_status', lambda: {})
+    calls = []
+    def probe_model(tool, arguments, **kwargs):
+        calls.append((tool, arguments))
+        raise RuntimeError('model-job-probe-reached')
+    def probe_loop(message, *, execute, **kwargs):
+        return execute('generate_draft', {'request': 'Sparse piano, no drums', 'max_tokens': 96})
+    monkeypatch.setattr(model_job, 'run_model_job', probe_model)
+    monkeypatch.setattr(tool_loop, 'run_tool_loop', probe_loop)
+    state = vst_service.TriceratopsState()
+    state.run_chat({'message': 'Generate piano', 'host': {}})
+    assert len(calls) == 1 and calls[0][0] == 'generate_draft'
+    assert calls[0][1]['max_tokens'] == 96
+    assert 'model-job-probe-reached' in state.last_error
+    assert 'NameError' not in state.last_error
