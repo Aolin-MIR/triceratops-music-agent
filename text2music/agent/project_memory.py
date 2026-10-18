@@ -68,7 +68,7 @@ class ProjectMemory:
     def update_music_context(self, updates: dict[str, Any], source: str) -> dict[str, Any]:
         # Validate using the same public tool schema before touching storage.
         from text2music.agent.direct_actions import validate_arguments
-        validate_arguments("update_music_context", {"updates": updates})
+        validate_arguments("update_music_context", {"updates": updates, "next_action": "finish"})
         if not source.strip():
             raise ValueError("Musical context needs its original user request")
         data = self.load()

@@ -893,9 +893,22 @@ class Handler(BaseHTTPRequestHandler):
             self._json(500, {"error": redact_error(f"{type(exc).__name__}: {exc}")})
 
 
+
+class LocalHTTPServer(ThreadingHTTPServer):
+    # Windows SO_REUSEADDR can let two backends bind the same port and deliver
+    # requests to different state objects. Keep the service port exclusive.
+    allow_reuse_address = os.name != "nt"
+
+    def server_bind(self):
+        if os.name == "nt":
+            import socket
+            self.socket.setsockopt(socket.SOL_SOCKET, socket.SO_EXCLUSIVEADDRUSE, 1)
+        super().server_bind()
+
+
 def main() -> None:
     RUNS_DIR.mkdir(parents=True, exist_ok=True)
-    server = ThreadingHTTPServer((HOST, PORT), Handler)
+    server = LocalHTTPServer((HOST, PORT), Handler)
     # A competing launcher must acquire the port before publishing status.
     # Otherwise its failed bind can overwrite the active server's music task.
     _write_status("ready", "0", "Service ready")

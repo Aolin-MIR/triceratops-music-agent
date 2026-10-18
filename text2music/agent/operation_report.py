@@ -110,6 +110,8 @@ def operation_report(action: str, trace: list[dict], *, language: str = "zh") ->
     elif action in {"accept", "reject", "undo"}:
         reply = {"accept": "已保留这个版本，并记录偏好。", "reject": "已记录不喜欢此版本的反馈。",
                  "undo": "已在插件中恢复上一个 MIDI 版本。"}[action]
+    elif action == "update_music_context":
+        reply = "已保存音乐要求：" + json.dumps(data.get("music_context", {}), ensure_ascii=False)
     elif action == "remember_fact":
         reply = "已保存项目记忆：" + str(data.get("remembered", ""))
     elif action == "update_fact":
@@ -208,6 +210,8 @@ def _english_report(action: str, trace: list[dict]) -> tuple[str, str]:
     elif action in {"accept", "reject", "undo"}:
         reply = {"accept": "Version kept; preference saved.", "reject": "Version rejected; feedback saved.",
                  "undo": "The previous MIDI version is restored in the plug-in."}[action]
+    elif action == "update_music_context":
+        reply = "Musical requirements saved: " + json.dumps(data.get("music_context", {}), ensure_ascii=False)
     elif action == "remember_fact":
         reply = "Project memory saved: " + str(data.get("remembered", ""))
     elif action == "update_fact":

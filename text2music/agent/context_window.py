@@ -22,7 +22,7 @@ def estimate_tokens(value) -> int:
 
 def input_budget(context_size: int) -> int:
     # Reserve output and template overhead, including pinned model defaults.
-    return context_size - 2048 - 512
+    return context_size - 1024 - 512
 
 
 def ensure_budget(messages: list[dict], tools: list[dict], context_size: int) -> int:
@@ -45,8 +45,9 @@ _QUOTE_TOOL = {'type': 'function', 'function': {
 
 
 def _select_quotes(sources: dict[int, str], client, model: str, context_size: int, cancelled,
-                   *, max_quotes: int = 4) -> list[dict]:
-    prompt = (f'Compress OLD conversation into at most {max_quotes} brief source-backed quotes, each under 120 characters. Retain musical goals, '
+                   *, max_quotes: int | None = None) -> list[dict]:
+    count_instruction = f'at most {max_quotes} brief source-backed quotes' if max_quotes else 'brief source-backed quotes preserving every explicit constraint'
+    prompt = (f'Compress OLD conversation into {count_instruction}. Retain musical goals, '
               'negative constraints, instruments, unresolved questions and user corrections. Prefer the latest correction '
               'when instructions conflict. Copy each quote exactly from the indexed USER text; keep complete negations. '
               'Never infer completed actions or include assistant claims. Call compact_history with turn, quote and kind. '
