@@ -238,3 +238,16 @@ def test_new_real_midi_updates_file_availability_for_later_agent_steps(tmp_path)
     assert result.trace[0]['result']['midi'] == str(generated)
     assert generated.is_file()
     assert len(client.requests) == 1  # Successful mutation reports real output without a second model round-trip.
+
+
+def test_tool_diagnostics_do_not_recursively_overflow_chat_context():
+    client = Client([Answer(tool="update_music_context", arguments={"updates": {"tempo": 100}}),
+                     Answer(tool="respond", arguments={"message": "Tempo saved at 100 BPM."})])
+    original = {"music_context": {"tempo": 100}, "revision": 2,
+                "context_usage": {"source_transcripts": "old diagnostics " * 10000}}
+    result = run_tool_loop("Save tempo 100; do not generate", client=client,
+                           execute=lambda name, args: original)
+    assert result.trace[0]["result"]["context_usage"] == original["context_usage"]
+    model_result = json.loads(client.requests[1]["messages"][-1]["content"])
+    assert model_result == {"music_context": {"tempo": 100}, "revision": 2}
+    assert result.reply == "Tempo saved at 100 BPM."

@@ -166,6 +166,7 @@ def run_tool_loop(message: str, *, context: str = "", selection: Path | None = N
         "For generate_draft encode no-drums as exclude_drums=true and solo acoustic piano as program=0. "
         "Report raw compliance separately from postprocessing. Do not infer key/cadences from pitch frequency or invent measurements. "
         "Before music execution, save any new explicit style/tempo/meter/key/mode/instrument/exclusion with update_music_context. "
+        "Active musical requirements are authoritative; never resurrect cleared fields from historical quotes. "
         "Omit unspecified fields; use null only for explicitly requested deletion. Newest explicit corrections replace earlier values. Saved musical context applies to downstream requests unless explicitly changed. "
         "Use recall_facts for stored preferences; remember only explicit durable user facts, update_fact for corrections, "
         "and forget_fact only on an explicit deletion request. Deletable is not a deletion instruction. "
@@ -259,6 +260,10 @@ def run_tool_loop(message: str, *, context: str = "", selection: Path | None = N
                 # A successful lookup for a question must progress to its
                 # answer, rather than repeatedly searching until the limit.
                 finish_knowledge_answer = True
+            # Diagnostics and source transcripts remain in the saved trace,
+            # not recursively duplicated into the next model request.
+            model_result = ({k: v for k, v in result.items() if k not in {"context_usage", "trace", "event"}}
+                            if isinstance(result, dict) else result)
             messages.append({"role": "tool", "tool_call_id": call.id,
-                             "content": json.dumps(result, ensure_ascii=False, default=str)})
+                             "content": json.dumps(model_result, ensure_ascii=False, default=str)})
     raise RuntimeError("Agent reached its tool-step limit; execution trace contains the completed actions")
