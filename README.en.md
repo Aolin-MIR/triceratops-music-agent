@@ -97,4 +97,4 @@ Music models and tools used by this project:
 Chat uses a user-configured cloud model or a compatibility-checked local Qwen3.5 model. Windows local inference runs through llama.cpp Vulkan on the GPU; chat weights are not bundled. Unintegrated candidate models are not listed as used components.
 
 
-This repository originated from [Text2Score](https://github.com/keshavbhandari/text2score). Thanks also to [Anticipation](https://github.com/jthickstun/anticipation), [JUCE](https://github.com/juce-framework/JUCE) and [librosa](https://github.com/librosa/librosa). See [NOTICE](NOTICE) for full attribution.
+Thanks to [Anticipation](https://github.com/jthickstun/anticipation), [JUCE](https://github.com/juce-framework/JUCE) and [librosa](https://github.com/librosa/librosa). See [NOTICE](NOTICE) for third-party licenses.
