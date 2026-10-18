@@ -21,6 +21,7 @@ The Mac installer downloads native ARM64 Python and the local-chat runtime when 
 
 ## ✨ 1.0.1b
 
+- **Mac update:** REAPER VST3 and both Logic AUs support workspaces, per-message model selection and musical memory. Start host transport to play generated MIDI.
 - **Project workspaces:** chat, memory, results and version history belong to a workspace. REAPER reads the saved project path; other hosts expose a workspace control inside the plug-in.
 - **Read selected REAPER MIDI:** load the selected item directly for analysis, editing, continuation and infill.
 - **Choose API / local GPU per message:** verification progress, draft retention on failure and explicit retry; memory is shared within the same workspace.
