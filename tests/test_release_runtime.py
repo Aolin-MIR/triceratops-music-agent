@@ -17,7 +17,7 @@ def test_runtime_configuration_is_relocatable_and_keeps_selected_device(tmp_path
     runtime.configure(config)
     assert os.environ["TRICERATOPS_DEVICE"] == "cpu"
     assert os.environ["MIDI_GPT_MODEL"] == str(tmp_path / "models/midi-gpt/yellow_medium-final.safetensors")
-    assert os.environ["TEXT2SCORE_RUNS_DIR"] == str(tmp_path / "runs")
+    assert os.environ["TRICERATOPS_RUNS_DIR"] == str(tmp_path / "runs")
 
 
 def test_runtime_rejects_missing_configuration(tmp_path):

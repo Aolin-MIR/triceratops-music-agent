@@ -20,7 +20,7 @@ from text2music.agent.errors import redact_error
 HOST = "127.0.0.1"
 PORT = int(os.environ.get("TRICERATOPS_PORT", "49327"))
 RUNS_DIR = Path(os.environ.get(
-    "TEXT2SCORE_RUNS_DIR",
+    "TRICERATOPS_RUNS_DIR",
     str(Path(__file__).resolve().parents[1] / "artifacts" / "agent_runs"),
 ))
 STATUS = RUNS_DIR / "reaper-status.txt"
@@ -581,7 +581,7 @@ class TriceratopsState:
                     backend = "midi_llm" if requested_backend == "auto" else requested_backend
                     request = request_text + "\n\nVST3 host context:\n" + context
                     if backend == "midi_llm":
-                        release_text2score_worker(RUNS_DIR)
+                        release_notation_worker(RUNS_DIR)
                         entry = run_model_job("generate_draft", dict(
                             prompt=request_text, output_dir=RUNS_DIR / "midi_llm" / uuid.uuid4().hex,
                             max_tokens=int(arguments.get("max_tokens", 768)),
@@ -591,14 +591,8 @@ class TriceratopsState:
                                          "time": time.strftime("%Y-%m-%d %H:%M:%S")}
                         with HISTORY.open("a", encoding="utf-8") as handle:
                             handle.write(json.dumps(history_entry, ensure_ascii=False) + "\n")
-                    elif backend == "text2score":
-                        if os.environ.get("TRICERATOPS_ENABLE_LEGACY") != "1":
-                            raise ValueError("Text2Score is a developer-only backend; Triceratops uses MIDI-LLM")
-                        from text2music.agent.workflow import run_agent
-                        self.start_worker()
-                        entry = run_agent(request)
                     else:
-                        raise ValueError(f"Unknown generation backend: {backend}")
+                        raise ValueError("Unsupported generation backend; select MIDI-LLM")
                     result.update(entry)
                     if entry.get("midi"):
                         result["midi_windows"] = _windows_path(Path(entry["midi"]))

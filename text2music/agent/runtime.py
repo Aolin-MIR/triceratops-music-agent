@@ -50,7 +50,7 @@ def configure(path: Path) -> dict:
     model_home = Path(config["model_home"])
     os.environ.update({
         "PYTHONUTF8": "1", "TRICERATOPS_CONFIG": str(path.resolve()),
-        "TEXT2SCORE_PYTHON": config["python"], "TEXT2SCORE_RUNS_DIR": config["runs_dir"],
+        "TRICERATOPS_MUSIC_PYTHON": config["python"], "TRICERATOPS_RUNS_DIR": config["runs_dir"],
         "MIDI_LLM_ROOT": str(model_home / "MIDI-LLM-code"),
         "MIDI_LLM_MODEL": str(model_home / "midi-llm"),
         "MIDI_GPT_MODEL": str(model_home / "midi-gpt" / "yellow_medium-final.safetensors"),

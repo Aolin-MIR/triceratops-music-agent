@@ -1,1 +1,1 @@
-"""Local, tool-oriented agent interface for Text2Score."""
+"""Local, tool-oriented agent interface for Triceratops."""

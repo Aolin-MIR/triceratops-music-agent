@@ -88,3 +88,4 @@ def test_release_windows_payload_does_not_require_or_include_ollama(tmp_path):
 
     assert (output / "llama-cpp" / "llama-server.exe").is_file()
     assert not (output / "ollama").exists()
+    assert not (output / "backend" / "text2music" / "agent" / "service.py").exists()

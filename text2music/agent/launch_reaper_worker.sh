@@ -21,7 +21,7 @@ if pgrep -f '[w]arm_worker.py' >/dev/null 2>&1; then exit 0; fi
 # Publish a fresh state before Torch boot
 printf 'STATE: loading\nDETAIL: Loading local GPU PyTorch model service\n' > "$queue/worker-state.txt"
 export TMP=/tmp TEMP=/tmp TMPDIR=/tmp
-export TEXT2SCORE_RUNS_DIR="/mnt/e/text2score/text2music/artifacts/agent_runs"
+export TRICERATOPS_RUNS_DIR="/mnt/e/text2score/text2music/artifacts/agent_runs"
 export TEXT2SCORE_WORKER_QUEUE="$queue"
 export CPATH="$headers:$HOME/.cache/text2score/python-dev/usr/include${CPATH:+:$CPATH}"
 export PYTHONPATH="$inference_dir:$runtime_root/text2music/inference:$runtime_root:$native_site:$legacy_site${PYTHONPATH:+:$PYTHONPATH}"
