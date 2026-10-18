@@ -145,6 +145,10 @@ private:
     void sendMessage(bool directAction = false);
     void pollStatus();
     void handleStatus(const juce::var&);
+    void startChatVerification();
+    void failChatSwitch(const juce::String&);
+    void chooseWorkspace();
+    void loadReaperSelection();
     void chooseMidi();
     void chooseAudio();
     void clearMidi();
@@ -171,7 +175,9 @@ private:
     ChatModelSelector chatBackendSelector;
     juce::Label chatBackendStatus;
     bool chatBackendReady = true, deferredChatVerify = false, chatSwitchPending = false;
-    juce::String selectedChatBackend, queuedChatBackend;
+    juce::String selectedChatBackend, queuedChatBackend, activeWorkspace;
+    AnimatedButton workspaceBtn { "Workspace" }, selectionBtn { "Selected MIDI" }, retryChatBtn { "Retry" };
+    juce::int64 chatVerifyStartedMs = 0;
     juce::Label statusLabel, progressLabel, connectionBanner, midiLabel, audioLabel;
     juce::ProgressBar progressBar;
     ScoreStaveComponent scoreStave;

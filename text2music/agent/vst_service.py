@@ -16,6 +16,7 @@ from typing import Any
 from text2music.agent.knowledge import KnowledgeBase
 from text2music.agent.project_memory import ProjectMemory, project_key
 from text2music.agent.errors import redact_error
+from text2music.agent.workspaces import scoped, workspace_scope, storage_path
 
 HOST = "127.0.0.1"
 PORT = int(os.environ.get("TRICERATOPS_PORT", "49327"))
@@ -32,6 +33,10 @@ CONVERSATION_ARCHIVE = RUNS_DIR / "vst-conversation-archive.jsonl"
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
 # Derived from this file so source and runtime copies always agree.
 AGENT_DIR = Path(__file__).resolve().parent
+
+
+def _workspace_path(name: str) -> Path:
+    return storage_path(name, globals()[name])
 
 
 def _find_reaper_executable() -> str:
@@ -53,7 +58,7 @@ def _find_reaper_executable() -> str:
 def _import_request_dir(request_id: str) -> Path:
     if not re.fullmatch(r"[0-9a-f]{32}", request_id):
         raise ValueError("Invalid import request identifier")
-    return RUNS_DIR / "reaper_imports" / request_id
+    return _workspace_path("RUNS_DIR") / "reaper_imports" / request_id
 
 
 def _write_reaper_command(command: str, files: str) -> str:
@@ -68,7 +73,7 @@ def _write_reaper_command(command: str, files: str) -> str:
     return request_id
 
 
-def _prepare_reaper_import(command: str, files: str) -> dict[str, Any]:
+def _prepare_reaper_import(command: str, files: str, expected_project: str = "") -> dict[str, Any]:
     template = AGENT_DIR / "reaper" / "Triceratops - Import from Agent.lua"
     if not template.is_file():
         raise RuntimeError("REAPER import script is missing")
@@ -78,7 +83,8 @@ def _prepare_reaper_import(command: str, files: str) -> dict[str, Any]:
     script.write_text(template.read_text(encoding="utf-8").replace(
         "local ROOT = nil -- injected by vst_service",
         "local ROOT = " + json.dumps(_windows_path(directory), ensure_ascii=False)
-    ), encoding="utf-8")
+    ).replace("local EXPECTED_PROJECT = nil -- injected by vst_service",
+              "local EXPECTED_PROJECT = " + json.dumps(expected_project, ensure_ascii=False)), encoding="utf-8")
     return {"request_id": request_id, "script_path": _windows_path(script)}
 
 
@@ -127,7 +133,7 @@ def _trigger_reaper_import(command: str, files: str) -> dict[str, Any]:
         reaper_exe = _find_reaper_executable()
         if not reaper_exe:
             raise RuntimeError("REAPER executable not found")
-        _reaper_import_argv(reaper_exe, RUNS_DIR / "Triceratops - Import.lua")  # Validate route before publishing.
+        _reaper_import_argv(reaper_exe, _workspace_path("RUNS_DIR") / "Triceratops - Import.lua")  # Validate route before publishing.
         prepared = _prepare_reaper_import(command, files)
         subprocess.Popen(_reaper_import_argv(reaper_exe, Path(prepared["script_path"])),
                          start_new_session=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
@@ -144,15 +150,15 @@ def _trigger_reaper_import(command: str, files: str) -> dict[str, Any]:
 
 def _archive_and_clear_conversation() -> None:
     """Archive existing conversation turns and clear active VST conversation."""
-    if CONVERSATION.exists():
+    if _workspace_path("CONVERSATION").exists():
         try:
-            content = CONVERSATION.read_text(encoding="utf-8", errors="replace").strip()
+            content = _workspace_path("CONVERSATION").read_text(encoding="utf-8", errors="replace").strip()
             if content:
-                with CONVERSATION_ARCHIVE.open("a", encoding="utf-8") as archive:
+                with _workspace_path("CONVERSATION_ARCHIVE").open("a", encoding="utf-8") as archive:
                     archive.write(content + "\n")
-            with CONVERSATION_ARCHIVE.open("a", encoding="utf-8") as archive:
+            with _workspace_path("CONVERSATION_ARCHIVE").open("a", encoding="utf-8") as archive:
                 archive.write(json.dumps({"event": "conversation_cleared"}) + "\n")
-            CONVERSATION.write_text("", encoding="utf-8")
+            _workspace_path("CONVERSATION").write_text("", encoding="utf-8")
         except OSError:
             pass
 
@@ -181,8 +187,8 @@ def _write_status(state: str, progress: str, detail: str) -> None:
     """Persist the running/terminal state so the plug-in never sees a stale
     'planning' status after a request has finished or failed."""
     try:
-        STATUS.parent.mkdir(parents=True, exist_ok=True)
-        STATUS.write_text(
+        _workspace_path("STATUS").parent.mkdir(parents=True, exist_ok=True)
+        _workspace_path("STATUS").write_text(
             f"STATE: {state}\nPROGRESS: {progress}\nDETAIL: {detail}\n",
             encoding="utf-8",
         )
@@ -193,7 +199,7 @@ def _write_status(state: str, progress: str, detail: str) -> None:
 def _read_status() -> dict[str, str]:
     result: dict[str, str] = {}
     try:
-        for line in STATUS.read_text(encoding="utf-8", errors="replace").splitlines():
+        for line in _workspace_path("STATUS").read_text(encoding="utf-8", errors="replace").splitlines():
             key, separator, value = line.partition(": ")
             if separator:
                 result[key.lower()] = value
@@ -203,10 +209,10 @@ def _read_status() -> dict[str, str]:
 
 
 def _history(limit: int | None = 20) -> list[dict[str, Any]]:
-    if not HISTORY.exists():
+    if not _workspace_path("HISTORY").exists():
         return []
     result = []
-    lines = HISTORY.read_text(encoding="utf-8", errors="replace").splitlines()
+    lines = _workspace_path("HISTORY").read_text(encoding="utf-8", errors="replace").splitlines()
     for line in lines if limit is None else lines[-limit:]:
         try:
             item = json.loads(line)
@@ -264,7 +270,7 @@ def _host_context(host: dict[str, Any]) -> str:
 
 def _conversation_history(limit: int | None = None) -> list[dict[str, str]]:
     lines = []
-    for path in (CONVERSATION_ARCHIVE, CONVERSATION):
+    for path in (_workspace_path("CONVERSATION_ARCHIVE"), _workspace_path("CONVERSATION")):
         if path.exists():
             lines.extend(path.read_text(encoding="utf-8").splitlines())
     if limit is not None:
@@ -286,20 +292,38 @@ def _conversation_history(limit: int | None = None) -> list[dict[str, str]]:
 
 def _compact_conversation(keep: int = 40) -> None:
     """Bound the active transcript while preserving the full archive."""
-    if not CONVERSATION.exists():
+    if not _workspace_path("CONVERSATION").exists():
         return
-    lines = CONVERSATION.read_text(encoding="utf-8", errors="replace").splitlines()
+    lines = _workspace_path("CONVERSATION").read_text(encoding="utf-8", errors="replace").splitlines()
     if len(lines) <= 200:
         return
-    with CONVERSATION_ARCHIVE.open("a", encoding="utf-8") as archive:
+    with _workspace_path("CONVERSATION_ARCHIVE").open("a", encoding="utf-8") as archive:
         archive.write("\n".join(lines[:-keep]) + "\n")
-    temporary = CONVERSATION.with_suffix(".tmp")
+    temporary = _workspace_path("CONVERSATION").with_suffix(".tmp")
     temporary.write_text("\n".join(lines[-keep:]) + "\n", encoding="utf-8")
-    temporary.replace(CONVERSATION)
+    temporary.replace(_workspace_path("CONVERSATION"))
+
+
+
+def _persist_execution(event):
+    from text2music.agent.context_window import estimate_tokens
+    from text2music.agent.tool_results import ToolResultStore
+    result = {key:value for key,value in event.get("result", {}).items()
+              if key not in {"context_usage","trace","event"}}
+    if estimate_tokens(result) > 512:
+        result = ToolResultStore(_workspace_path("RUNS_DIR") / "tool-results").save(result)
+    return {"tool":event["tool"],"state":event["state"],
+            "arguments":event.get("arguments",{}),"result":result}
 
 
 class TriceratopsState:
-    def __init__(self) -> None:
+    def __init__(self, *, storage_root=None, workspace_id="", parent=None) -> None:
+        self.storage_root = storage_root
+        self.workspace_id = workspace_id
+        self.parent = parent
+        self.workspaces = {}
+        self.session_workspaces = {}
+        self.task_owner = None
         self.sessions: dict[str, float] = {}
         self.lock = threading.RLock()
         self.busy = False
@@ -316,11 +340,41 @@ class TriceratopsState:
         else:
             self.configuration = None
 
+    def for_request(self, payload):
+        if self.workspace_id:
+            return self
+        session = str(payload.get("session", "")).strip()
+        if not session or len(session) > 80:
+            raise ValueError("An editor session and explicit workspace are required")
+        host = payload.get("host") if isinstance(payload.get("host"), dict) else {}
+        with self.lock:
+            key = project_key(host) if host else self.session_workspaces.get(session)
+            if not key:
+                raise ValueError("Project identity is missing; choose a workspace inside the plug-in")
+            if key not in self.workspaces:
+                state = TriceratopsState(storage_root=RUNS_DIR / "workspaces" / key,
+                                        workspace_id=key, parent=self)
+                state.configuration = self.configuration
+                state.server = self.server
+                self.workspaces[key] = state
+            self.session_workspaces[session] = key
+            return self.workspaces[key]
+
+    def run_accepted_chat(self, payload):
+        try:
+            self.run_chat(payload)
+        finally:
+            root = self.parent or self
+            with root.lock:
+                if root.task_owner is self:
+                    root.task_owner = None
+
+    @scoped
     def snapshot(self) -> dict[str, Any]:
         with self.lock:
             data = {
-                "service": "ready", "version": "1.0.1a", "app_version": "1.0.1a", "api_version": 2,
-                "backend_entry": str(Path(__file__).resolve()), "busy": self.busy, "sessions": len(self.sessions),
+                "service": "ready", "version": "1.0.1b", "app_version": "1.0.1b", "api_version": 3,
+                "backend_entry": str(Path(__file__).resolve()), "workspace_id": self.workspace_id, "busy": self.busy, "sessions": len(self.sessions),
                 "reply": self.last_reply, "error": self.last_error,
                 "result": self.last_result, "history": _history(),
                 "chat_switches": dict(self.chat_switches),
@@ -347,19 +401,18 @@ class TriceratopsState:
                     self.sessions.pop(session, None)
 
 
+    @scoped
     def append_turn(self, role: str, content: str, tool: str = "", executions=None) -> None:
         entry = {"time": time.strftime("%Y-%m-%d %H:%M:%S"), "role": role, "content": content}
         if tool:
             entry["tool"] = tool
         if executions:
-            entry["executions"] = [{"tool": e["tool"], "state": e["state"],
-                "arguments": e.get("arguments", {}),
-                "result": {k: v for k, v in e.get("result", {}).items()
-                           if k not in {"context_usage", "trace", "event"}}}
-                for e in executions if e.get("state") in {"completed", "failed"}]
-        with CONVERSATION.open("a", encoding="utf-8") as handle:
+            entry["executions"] = [_persist_execution(e) for e in executions
+                                   if e.get("state") in {"completed", "failed"}]
+        with _workspace_path("CONVERSATION").open("a", encoding="utf-8") as handle:
             handle.write(json.dumps(entry, ensure_ascii=False) + "\n")
 
+    @scoped
     def run_chat(self, payload: dict[str, Any]) -> None:
         message = str(payload.get("message", "")).strip()
         language = str(payload.get("language", "zh"))
@@ -388,8 +441,8 @@ class TriceratopsState:
             self.last_reply = ""
             self.last_result = {}
             try:
-                STATUS.parent.mkdir(parents=True, exist_ok=True)
-                STATUS.write_text("STATE: planning\nPROGRESS: 15\nDETAIL: Observing project context and planning the score\n", encoding="utf-8")
+                _workspace_path("STATUS").parent.mkdir(parents=True, exist_ok=True)
+                _workspace_path("STATUS").write_text("STATE: planning\nPROGRESS: 15\nDETAIL: Observing project context and planning the score\n", encoding="utf-8")
             except OSError:
                 pass
         conversation = _conversation_history()
@@ -412,16 +465,18 @@ class TriceratopsState:
             from text2music.agent.capabilities import record_feedback, load_memory, memory_context
             from text2music.agent.midi_tools import transform_midi_file
             from text2music.agent.tool_loop import run_tool_loop, FACTUAL_REPORT_TOOLS
-            from text2music.agent.model_job import run_model_job
+            from text2music.agent.model_job import run_model_job as _run_model_job
+            def run_model_job(action, parameters, **options):
+                return _run_model_job(action, parameters, run_root=_workspace_path("RUNS_DIR"), **options)
             from text2music.agent.symbolic_models import model_status
 
-            project_memory = ProjectMemory(RUNS_DIR, project_key(host))
+            project_memory = ProjectMemory(_workspace_path("RUNS_DIR"), self.workspace_id or project_key(host))
             knowledge = KnowledgeBase(
-                RUNS_DIR / "knowledge-index.json",
+                _workspace_path("RUNS_DIR") / "knowledge-index.json",
                 [PROJECT_ROOT / "readme.md", PROJECT_ROOT / "vst3" / "README.md",
-                 PROJECT_ROOT / "knowledge", RUNS_DIR / "project_notes"],
+                 PROJECT_ROOT / "knowledge", _workspace_path("RUNS_DIR") / "project_notes"],
             )
-            context += "\n" + memory_context(load_memory(MEMORY))
+            context += "\n" + memory_context(load_memory(_workspace_path("MEMORY")))
             context += "\n" + project_memory.context(include_summary=False)
             result: dict[str, Any] = {}
             def execute(tool, arguments):
@@ -444,7 +499,7 @@ class TriceratopsState:
                         (Path(run) / "cancel").write_text("cancelled from VST3\n", encoding="utf-8")
                     reply = "Cancellation requested."
                 elif tool in {"accept", "reject"}:
-                    record_feedback(MEMORY, HISTORY, tool)
+                    record_feedback(_workspace_path("MEMORY"), _workspace_path("HISTORY"), tool)
                     reply = "Preference saved." if tool == "accept" else "Version rejected and preference saved."
                 elif tool == "undo":
                     previous = _previous_midi_version(midi)
@@ -456,7 +511,7 @@ class TriceratopsState:
                 elif tool == "transform_midi":
                     if not midi or not midi.exists():
                         raise ValueError("Drop or capture a MIDI clip before asking for an edit")
-                    output = RUNS_DIR / "vst_midi" / f"revision-{uuid.uuid4().hex}.mid"
+                    output = _workspace_path("RUNS_DIR") / "vst_midi" / f"revision-{uuid.uuid4().hex}.mid"
                     output.parent.mkdir(parents=True, exist_ok=True)
                     operations = dict(arguments.get("operations") or {})
                     if "protect_melody_track" in operations:
@@ -469,7 +524,7 @@ class TriceratopsState:
                 elif tool == "continue_midi":
                     if not midi or not midi.is_file():
                         raise ValueError("Load or capture MIDI before asking for a continuation")
-                    output = RUNS_DIR / "vst_midi" / f"continuation-{uuid.uuid4().hex}.mid"
+                    output = _workspace_path("RUNS_DIR") / "vst_midi" / f"continuation-{uuid.uuid4().hex}.mid"
                     result.update(run_model_job("continue_midi", dict(source=midi, destination=output,
                         bar_count=arguments.get("bar_count", 4)), cancelled=self.cancel_event.is_set))
                     result["midi_windows"] = _windows_path(output)
@@ -477,7 +532,7 @@ class TriceratopsState:
                 elif tool == "infill_midi":
                     if not midi or not midi.exists():
                         raise ValueError("Drop or capture a MIDI clip before asking for generative infill")
-                    output = RUNS_DIR / "vst_midi" / f"infill-{uuid.uuid4().hex}.mid"
+                    output = _workspace_path("RUNS_DIR") / "vst_midi" / f"infill-{uuid.uuid4().hex}.mid"
                     generated = run_model_job("infill_midi", dict(
                         source=midi, destination=output,
                         track_ids=arguments.get("track_ids") or [],
@@ -492,7 +547,7 @@ class TriceratopsState:
                     if not audio or not audio.exists():
                         raise ValueError("Drop an audio file or capture plug-in input first")
                     paths = run_model_job("separate_stems", dict(path=audio,
-                        output_dir=RUNS_DIR / "vst_stems" / uuid.uuid4().hex),
+                        output_dir=_workspace_path("RUNS_DIR") / "vst_stems" / uuid.uuid4().hex),
                         cancelled=self.cancel_event.is_set)["files"]
                     result["files"] = [_windows_path(Path(path)) for path in paths]
                     reply = f"Separated {len(paths)} stems."
@@ -500,7 +555,7 @@ class TriceratopsState:
                     if not audio or not audio.exists():
                         raise ValueError("Drop an audio file or capture plug-in input first")
                     paths = run_model_job("audio_to_midi", dict(path=audio,
-                        output_dir=RUNS_DIR / "vst_audio_midi" / uuid.uuid4().hex),
+                        output_dir=_workspace_path("RUNS_DIR") / "vst_audio_midi" / uuid.uuid4().hex),
                         cancelled=self.cancel_event.is_set)["files"]
                     result["midi"] = str(paths[0])
                     result["midi_windows"] = _windows_path(Path(paths[0]))
@@ -513,13 +568,13 @@ class TriceratopsState:
                     backend = "midi_llm" if requested_backend == "auto" else requested_backend
                     if backend == "midi_llm":
                         entry = run_model_job("generate_draft", dict(
-                            prompt=request_text, output_dir=RUNS_DIR / "midi_llm" / uuid.uuid4().hex,
+                            prompt=request_text, output_dir=_workspace_path("RUNS_DIR") / "midi_llm" / uuid.uuid4().hex,
                             max_tokens=int(arguments.get("max_tokens", 768)),
                             constraints=arguments.get("constraints"),
                         ), cancelled=self.cancel_event.is_set)
                         history_entry = {**entry, "request": request_text,
                                          "time": time.strftime("%Y-%m-%d %H:%M:%S")}
-                        with HISTORY.open("a", encoding="utf-8") as handle:
+                        with _workspace_path("HISTORY").open("a", encoding="utf-8") as handle:
                             handle.write(json.dumps(history_entry, ensure_ascii=False) + "\n")
                     else:
                         raise ValueError("Unsupported generation backend; select MIDI-LLM")
@@ -562,7 +617,7 @@ class TriceratopsState:
                     midi = Path(result["midi"])
                     if tool in {"transform_midi", "infill_midi", "continue_midi", "audio_to_midi"}:
                         entry = {**result, "request": request_text, "time": time.strftime("%Y-%m-%d %H:%M:%S")}
-                        with HISTORY.open("a", encoding="utf-8") as handle:
+                        with _workspace_path("HISTORY").open("a", encoding="utf-8") as handle:
                             handle.write(json.dumps(entry, ensure_ascii=False) + "\n")
                 return {**result, "reply": reply}
 
@@ -580,12 +635,14 @@ class TriceratopsState:
                                              selection=midi, context=context, execute=execute,
                                              on_event=on_event, cancelled=self.cancel_event.is_set)
             else:
-                decision = run_tool_loop(message, context=context,
+                from text2music.agent.tool_results import ToolResultStore
+                decision = run_tool_loop(message, result_store=ToolResultStore(_workspace_path("RUNS_DIR") / "tool-results"), context=context,
                                          selection=midi if midi and midi.exists() else None,
                                          conversation=conversation, execute=execute, on_event=on_event,
                                          cancelled=self.cancel_event.is_set,
                                          on_context=lambda report: result.update(context_usage=report),
                                          chat_backend=str(payload.get("chat_backend", "")))
+            result["request_session"] = str(payload.get("session", ""))
             result["music_context"] = project_memory.music_context()
             result["trace"] = decision.trace
             reply = decision.reply
@@ -640,7 +697,7 @@ APP = TriceratopsState()
 
 
 class Handler(BaseHTTPRequestHandler):
-    server_version = "Triceratops/1.0.1a"
+    server_version = "Triceratops/1.0.1b"
 
     def log_message(self, format: str, *args: Any) -> None:
         return
@@ -666,22 +723,45 @@ class Handler(BaseHTTPRequestHandler):
         return value
 
     def do_GET(self) -> None:
-        if self.path in {"/health", "/status"}:
-            self._json(200, APP.snapshot())
-        elif self.path == "/settings":
-            self._json(200, APP.configuration.snapshot() if APP.configuration else {"error": "Runtime configuration path is missing"})
-        elif self.path == "/history":
-            self._json(200, {"history": _history()})
-        else:
-            self._json(404, {"error": "not found"})
+        from urllib.parse import urlsplit, parse_qs
+        url = urlsplit(self.path)
+        if url.path == "/health":
+            self._json(200, {"service":"ready", "version":"1.0.1b", "app_version":"1.0.1b", "api_version":3,
+                             "busy":APP.task_owner is not None, "pid":os.getpid()})
+            return
+        if url.path == "/settings":
+            self._json(200, APP.configuration.snapshot() if APP.configuration else {"error":"Runtime configuration path is missing"})
+            return
+        try:
+            query = parse_qs(url.query)
+            app = APP.for_request({"session":query.get("session", [""])[0]})
+        except ValueError as exc:
+            self._json(400, {"error":str(exc)})
+            return
+        with workspace_scope(app.storage_root):
+            if url.path == "/status":
+                self._json(200, app.snapshot())
+            elif url.path == "/history":
+                self._json(200, {"history":_history()})
+            else:
+                self._json(404, {"error":"not found"})
 
     def do_POST(self) -> None:
+        scope = None
         try:
             try:
                 payload = self._payload()
             except (ValueError, UnicodeError) as exc:
                 self._json(400, {"error": f"Invalid request: {exc}"})
                 return
+            try:
+                app = APP.for_request(payload)
+            except ValueError as exc:
+                self._json(400, {"error": str(exc)})
+                return
+            scope = workspace_scope(app.storage_root)
+            scope.__enter__()
+            root = app.parent or app
             if self.path in {"/discard_import_reaper", "/import_reaper_receipt"}:
                 try:
                     _import_request_dir(str(payload.get("request_id", "")))
@@ -695,13 +775,14 @@ class Handler(BaseHTTPRequestHandler):
                 if not session or len(session) > 80 or backend not in {"", "remote", "local"}:
                     self._json(400, {"error": "Invalid chat switch request"})
                     return
-                with APP.lock:
-                    if APP.busy or any(v.get("state") == "verifying" for v in APP.chat_switches.values()):
+                with root.lock, app.lock:
+                    if app.busy or root.task_owner is not None or any(v.get("state") == "verifying" for v in app.chat_switches.values()):
                         self._json(409, {"error": "Wait for the current task or model verification"})
                         return
-                    if len(APP.chat_switches) >= 32 and session not in APP.chat_switches:
-                        APP.chat_switches.pop(next(iter(APP.chat_switches)))
-                    APP.chat_switches[session] = {"state": "verifying", "selection": backend}
+                    if len(app.chat_switches) >= 32 and session not in app.chat_switches:
+                        app.chat_switches.pop(next(iter(app.chat_switches)))
+                    root.task_owner = app
+                    app.chat_switches[session] = {"state": "verifying", "selection": backend}
                 def verify():
                     from text2music.agent.errors import redact_error
                     try:
@@ -711,83 +792,91 @@ class Handler(BaseHTTPRequestHandler):
                         switch = {"state": "ready", "selection": backend, "report": report}
                     except Exception as exc:
                         switch = {"state": "failed", "selection": backend, "error": redact_error(str(exc))}
-                    with APP.lock:
-                        APP.chat_switches[session] = switch
+                    with root.lock, app.lock:
+                        app.chat_switches[session] = switch
+                        if root.task_owner is app:
+                            root.task_owner = None
                 threading.Thread(target=verify, daemon=True).start()
                 self._json(202, {"accepted": True})
             elif self.path == "/settings/cancel":
-                if not APP.configuration:
+                if not app.configuration:
                     self._json(503, {"error": "Runtime configuration path is missing"})
                     return
-                self._json(200, APP.configuration.cancel())
+                self._json(200, app.configuration.cancel())
             elif self.path == "/settings/task":
-                if not APP.configuration:
+                if not app.configuration:
                     self._json(503, {"error": "Runtime configuration path is missing"})
                     return
                 def done(job):
-                    with APP.lock:
+                    with root.lock, app.lock:
                         if job["state"] == "complete":
                             from text2music.agent.runtime import configure
-                            configure(APP.configuration.path)
-                        APP.busy = False
-                        APP.last_result = {}
-                        APP.last_error = ""
-                        APP.last_reply = ""
-                    _write_status("ready", "0", "Settings: " + job.get("detail", ""))
+                            configure(app.configuration.path)
+                        app.busy = False
+                        if root.task_owner is app:
+                            root.task_owner = None
+                        app.last_result = {}
+                        app.last_error = ""
+                        app.last_reply = ""
+                    with workspace_scope(app.storage_root):
+                        _write_status("ready", "0", "Settings: " + job.get("detail", ""))
                     from text2music.agent.configuration import read_config
-                    applied = read_config(APP.configuration.path).get("configuration_job") == job.get("id")
-                    if applied and APP.server:
+                    applied = read_config(app.configuration.path).get("configuration_job") == job.get("id")
+                    if applied and app.server:
                         def restart():
                             # Release Python's imported device contexts, while the independent
                             # local chat server/model stays resident. The editor reconnects itself.
                             time.sleep(2)
-                            APP.server.shutdown()
+                            app.server.shutdown()
                         threading.Thread(target=restart, daemon=True).start()
-                with APP.lock:
-                    if APP.busy or any(v.get("state") == "verifying" for v in APP.chat_switches.values()):
+                with root.lock, app.lock:
+                    if app.busy or root.task_owner is not None or any(v.get("state") == "verifying" for v in app.chat_switches.values()):
                         self._json(409, {"error": "Wait for the active task or chat verification before configuring"})
                         return
                     try:
-                        APP.busy = True
-                        result = APP.configuration.start(payload, done)
+                        root.task_owner = app
+                        app.busy = True
+                        result = app.configuration.start(payload, done)
                     except (ValueError, RuntimeError) as exc:
-                        APP.busy = False
+                        app.busy = False
+                        root.task_owner = None
                         self._json(409 if isinstance(exc, RuntimeError) else 400, {"error": str(exc)})
                         return
                     except Exception:
-                        APP.busy = False
+                        app.busy = False
+                        root.task_owner = None
                         raise
                 self._json(202, result)
             elif self.path == "/session/open":
                 session = str(payload.get("session") or uuid.uuid4())
-                with APP.lock:
-                    APP.sessions[session] = time.monotonic()
+                with root.lock, app.lock:
+                    app.sessions[session] = time.monotonic()
                 # A second editor must observe the existing task and result.
                 # Only service startup resets stale status from a prior run.
-                self._json(200, {"session": session, **APP.snapshot()})
+                self._json(200, {"session": session, **app.snapshot(), "conversation":_conversation_history()})
             elif self.path == "/session/ping":
                 session = str(payload.get("session", ""))
-                with APP.lock:
-                    if session in APP.sessions:
-                        APP.sessions[session] = time.monotonic()
-                self._json(200, APP.snapshot())
+                with root.lock, app.lock:
+                    if session in app.sessions:
+                        app.sessions[session] = time.monotonic()
+                self._json(200, app.snapshot())
             elif self.path == "/session/close":
-                with APP.lock:
-                    APP.sessions.pop(str(payload.get("session", "")), None)
+                with root.lock, app.lock:
+                    app.sessions.pop(str(payload.get("session", "")), None)
 
-                self._json(200, APP.snapshot())
+                self._json(200, app.snapshot())
             elif self.path == "/chat/clear":
-                with APP.lock:
-                    if APP.busy:
-                        self._json(409, {**APP.snapshot(), "error": "Stop the active task before clearing chat"})
+                with root.lock, app.lock:
+                    if app.busy:
+                        self._json(409, {**app.snapshot(), "error": "Stop the active task before clearing chat"})
                         return
                     _archive_and_clear_conversation()
-                    APP.last_reply = "Ready."
-                    APP.last_error = ""
-                    APP.last_result = {}
-                self._json(200, {"cleared": True, **APP.snapshot()})
+                    app.last_reply = "Ready."
+                    app.last_error = ""
+                    app.last_result = {}
+                self._json(200, {"cleared": True, **app.snapshot()})
             elif self.path == "/cancel":
-                with APP.lock:
+                with root.lock, app.lock:
                     current = _read_status()
                     run = current.get("run", "")
                     if run:
@@ -796,21 +885,21 @@ class Handler(BaseHTTPRequestHandler):
                         except OSError:
                             pass
                     try:
-                        (RUNS_DIR / "cancel").write_text("cancelled from VST3\n", encoding="utf-8")
+                        (_workspace_path("RUNS_DIR") / "cancel").write_text("cancelled from VST3\n", encoding="utf-8")
                     except OSError:
                         pass
-                    APP.cancel_event.set()
-                    APP.last_reply = "Cancellation requested; waiting for the active tool to stop."
-                _write_status("cancelling" if APP.busy else "ready", "0", APP.last_reply)
-                self._json(200, {"cancelled": True, **APP.snapshot()})
+                    app.cancel_event.set()
+                    app.last_reply = "Cancellation requested; waiting for the active tool to stop."
+                _write_status("cancelling" if app.busy else "ready", "0", app.last_reply)
+                self._json(200, {"cancelled": True, **app.snapshot()})
             elif self.path == "/discard_import_reaper":
-                self._json(200, {**APP.snapshot(), **_discard_reaper_import(str(payload.get("request_id", "")))})
+                self._json(200, {**app.snapshot(), **_discard_reaper_import(str(payload.get("request_id", "")))})
             elif self.path == "/import_reaper_receipt":
                 receipt = _read_import_receipt(str(payload.get("request_id", "")))
                 if receipt is None:
-                    self._json(409, {**APP.snapshot(), "error": "REAPER did not confirm this import request"})
+                    self._json(409, {**app.snapshot(), "error": "REAPER did not confirm this import request"})
                 else:
-                    response = {**APP.snapshot(), **receipt}
+                    response = {**app.snapshot(), **receipt}
                     if receipt["ok"]:
                         project = Path(receipt["project_path"]).name or "untitled project"
                         response["reply"] = f"Imported {receipt['imported']} item(s) into {project}."
@@ -822,18 +911,18 @@ class Handler(BaseHTTPRequestHandler):
                     self._json(400, {"error": "files must be an array of non-empty media paths"})
                     return
                 if not file_path and not stem_files:
-                    with APP.lock:
-                        file_path = str(APP.last_result.get("midi_windows", "")).strip()
-                        stem_files = APP.last_result.get("files") or []
+                    with root.lock, app.lock:
+                        file_path = str(app.last_result.get("midi_windows", "")).strip()
+                        stem_files = app.last_result.get("files") or []
                 if file_path or stem_files:
                     win_path = _windows_path(Path(file_path)) if file_path else "|".join(stem_files)
                     command = "import_midi_file" if file_path else "import_audio_stems"
                     if self.path == "/prepare_import_reaper":
-                        prepared = _prepare_reaper_import(command, win_path)
-                        self._json(200, {**APP.snapshot(), **prepared})
+                        prepared = _prepare_reaper_import(command, win_path, str(payload.get("host", {}).get("project_path", "")))
+                        self._json(200, {**app.snapshot(), **prepared})
                         return
                     trigger = _trigger_reaper_import(command, win_path)
-                    response = {**APP.snapshot(), "ok": trigger["triggered"], "file": win_path,
+                    response = {**app.snapshot(), "ok": trigger["triggered"], "file": win_path,
                                 "bridge": trigger}
                     if trigger["triggered"] and "imported" in trigger:
                         project = Path(trigger.get("project_path", "")).name or "untitled project"
@@ -842,12 +931,12 @@ class Handler(BaseHTTPRequestHandler):
                         response["error"] = trigger["detail"]
                     self._json(200 if trigger["triggered"] else 503, response)
                 else:
-                    self._json(400, {**APP.snapshot(), "error": "No MIDI file path available to import"})
+                    self._json(400, {**app.snapshot(), "error": "No MIDI file path available to import"})
             elif self.path == "/chat":
                 if payload.get("chat_backend", "") not in {"", "remote", "local"}:
                     self._json(400, {"error": "Invalid per-message chat backend"})
                     return
-                if APP.configuration and APP.configuration.snapshot()["setup_required"]:
+                if app.configuration and app.configuration.snapshot()["setup_required"]:
                     self._json(409, {"error": "Complete model setup inside Settings before using music tools"})
                     return
                 from text2music.agent.direct_actions import DIRECT_ACTIONS
@@ -873,24 +962,29 @@ class Handler(BaseHTTPRequestHandler):
                 except (ValueError, TypeError) as exc:
                     self._json(400, {"error": f"Invalid host context: {exc}"})
                     return
-                with APP.lock:
-                    if APP.busy or any(v.get("state") == "verifying" for v in APP.chat_switches.values()):
+                with root.lock, app.lock:
+                    if app.busy or root.task_owner is not None or any(v.get("state") == "verifying" for v in app.chat_switches.values()):
                         rejected = True
                     else:
-                        APP.cancel_event.clear()
-                        APP.busy = True
-                        APP.last_error = ""
-                        APP.last_reply = "Understanding your request..."
+                        root.task_owner = app
+                        app.cancel_event.clear()
+                        app.busy = True
+                        app.last_error = ""
+                        app.last_reply = "Understanding your request..."
                         rejected = False
                 if rejected:
-                    self._json(409, {**APP.snapshot(), "error": "agent is busy"})
+                    self._json(409, {**app.snapshot(), "error": "agent is busy"})
                     return
-                threading.Thread(target=APP.run_chat, args=(payload,), daemon=True).start()
-                self._json(202, {"accepted": True, **APP.snapshot()})
+                threading.Thread(target=app.run_accepted_chat, args=(payload,), daemon=True).start()
+                self._json(202, {"accepted": True, **app.snapshot()})
             else:
                 self._json(404, {"error": "not found"})
         except Exception as exc:
             self._json(500, {"error": redact_error(f"{type(exc).__name__}: {exc}")})
+
+        finally:
+            if scope is not None:
+                scope.__exit__(None, None, None)
 
 
 
@@ -907,20 +1001,20 @@ class LocalHTTPServer(ThreadingHTTPServer):
 
 
 def main() -> None:
-    RUNS_DIR.mkdir(parents=True, exist_ok=True)
+    _workspace_path("RUNS_DIR").mkdir(parents=True, exist_ok=True)
     server = LocalHTTPServer((HOST, PORT), Handler)
     # A competing launcher must acquire the port before publishing status.
     # Otherwise its failed bind can overwrite the active server's music task.
     _write_status("ready", "0", "Service ready")
     APP.server = server
     threading.Thread(target=APP.session_watchdog, daemon=True).start()
-    STATE.write_text(json.dumps({"pid": os.getpid(), "host": HOST, "port": PORT}), encoding="utf-8")
+    _workspace_path("STATE").write_text(json.dumps({"pid": os.getpid(), "host": HOST, "port": PORT}), encoding="utf-8")
     
     try:
         server.serve_forever(poll_interval=0.2)
     finally:
         server.server_close()
-        STATE.unlink(missing_ok=True)
+        _workspace_path("STATE").unlink(missing_ok=True)
 
 
 if __name__ == "__main__":

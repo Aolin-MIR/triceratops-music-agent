@@ -1,6 +1,7 @@
 #pragma once
 
 #include <JuceHeader.h>
+#include <map>
 
 class BackendClient
 {
@@ -10,6 +11,7 @@ public:
     BackendClient();
     ~BackendClient();
 
+    void setHostContext(const juce::var&);
     void ensureService();
     juce::var openSession();
     juce::var closeSession();
@@ -34,6 +36,9 @@ private:
     juce::var request(const juce::String& path, const juce::String& method,
                       const juce::var& body = {});
 
+    juce::CriticalSection contextLock;
+    juce::var hostContext;
+    std::map<juce::String, juce::var> importContexts;
     juce::String sessionId;
     std::unique_ptr<juce::ChildProcess> serviceProcess;
 };

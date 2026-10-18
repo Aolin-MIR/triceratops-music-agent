@@ -1,8 +1,9 @@
 -- @description Triceratops: Import generated media from agent
--- @version 0.9
+-- @version 1.0.1b
 -- One-shot consumer for one request-private command folder.
 -- Run inside the owning REAPER instance; receipt includes this request and project.
 local ROOT = nil -- injected by vst_service
+local EXPECTED_PROJECT = nil -- injected by vst_service
 assert(ROOT, "Run this importer through Triceratops, which supplies the configured data folder")
 local cmd_path = ROOT .. "/reaper-command.txt"
 
@@ -26,6 +27,14 @@ if files == "" then return end
 local imported = 0
 reaper.Undo_BeginBlock()
 local ok, failure = xpcall(function()
+local _, current_path = reaper.EnumProjects(-1, "")
+local function normalized(path)
+  path = (path or ""):gsub("\\", "/")
+  return reaper.GetOS():match("Win") and path:lower() or path
+end
+if EXPECTED_PROJECT and EXPECTED_PROJECT ~= "" and normalized(current_path) ~= normalized(EXPECTED_PROJECT) then
+  error("The REAPER project changed before import; no media was inserted")
+end
 for file in files:gmatch("[^|]+") do
   local source = reaper.PCM_Source_CreateFromFile(file)
   if not source then error("Cannot load generated media: " .. file) end

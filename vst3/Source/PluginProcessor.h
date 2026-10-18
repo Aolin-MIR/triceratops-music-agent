@@ -26,6 +26,7 @@ public:
     bool canRunReaperScript() const;
     juce::String reaperImportDiagnostics() const;
     bool runReaperScript(const juce::String& path);
+    bool saveSelectedReaperMidi(const juce::File&, juce::String& error) const;
     double getTailLengthSeconds() const override { return 0.0; }
     int getNumPrograms() override { return 1; }
     int getCurrentProgram() override { return 0; }
@@ -39,6 +40,8 @@ public:
     void setStateInformation(const void*, int) override;
 
     juce::var hostSnapshot() const;
+    juce::String getWorkspaceId() const;
+    void setWorkspaceId(const juce::String&);
     bool loadMidiClip(const juce::File&);
     void clearMidiClip();
     bool saveCapturedMidi(const juce::File&);
@@ -54,6 +57,7 @@ public:
 private:
     void setIHostApplication(Steinberg::FUnknown*) override;
     void* currentReaperProject() const;
+    void* reaperApi(const char*) const;
     using RegisterScript = int (*)(bool, int, const char*, bool);
     using RunCommand = void (*)(int, int);
     using EnumProjects = void* (*)(int, char*, int);
@@ -80,6 +84,8 @@ private:
     std::atomic<double> currentSampleRate { 44100.0 };
     std::atomic<int> numerator { 4 }, denominator { 4 };
     std::atomic<bool> playing { false }, looping { false };
+    mutable juce::CriticalSection workspaceLock;
+    juce::String workspaceId { juce::Uuid().toString() };
     BackendClient backendClient;
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(TriceratopsAudioProcessor)

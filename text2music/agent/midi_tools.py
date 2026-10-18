@@ -80,8 +80,8 @@ def analyze_selection(path: Path) -> dict[str, Any]:
         "end_time": data.get("end_time", 0),
         "tracks": data.get("tracks", []),
         "roles": roles,
-        "chord_events": chord_events[:32],
-        "drum_pitch_counts": dict(drum_pattern.most_common(16)),
+        "chord_events": chord_events,
+        "drum_pitch_counts": dict(drum_pattern),
     }
 
 

@@ -1,6 +1,6 @@
 TRICERATOPS 1.0 - REAPER ONLY
 
-Windows users: download Triceratops-1.0.1a-Windows-x64-Setup.exe from
+Windows users: download Triceratops-1.0.1b-Windows-x64-Setup.exe from
 https://github.com/Aolin-MIR/triceratops-music-agent/releases/latest
 
 The EXE installs the canonical VST3, a Python seed and the Vulkan llama.cpp
@@ -32,7 +32,7 @@ BUILD (Windows)
 5. Download Microsoft's signed VC++ x64 redistributable to
    vst3/package/tools/vc_redist.x64.exe. Verify its Authenticode signature.
 6. Compile vst3/installer/Triceratops.iss with Inno Setup 6.7.3 or newer.
-   Output: vst3/package/release/Triceratops-1.0.1a-Windows-x64-Setup.exe
+   Output: vst3/package/release/Triceratops-1.0.1b-Windows-x64-Setup.exe
 
 Do not copy developer qwen.env, runtime.json, recordings or generated histories
 into a payload. package_release.py uses an explicit module allowlist.

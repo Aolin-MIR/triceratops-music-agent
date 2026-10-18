@@ -21,6 +21,12 @@ BackendClient::BackendClient()
 
 BackendClient::~BackendClient() = default;
 
+void BackendClient::setHostContext(const juce::var& value)
+{
+    const juce::ScopedLock lock(contextLock);
+    hostContext = value;
+}
+
 void BackendClient::ensureService()
 {
     auto health = request("/health", "GET");
@@ -55,9 +61,10 @@ juce::var BackendClient::openSession()
     ensureService();
     auto payload = new juce::DynamicObject();
     payload->setProperty("session", sessionId);
+    const juce::var requestPayload(payload);
     for (int attempt = 0; attempt < 3; ++attempt)
     {
-        auto result = request("/session/open", "POST", juce::var(payload));
+        auto result = request("/session/open", "POST", requestPayload);
         if (!result.isVoid())
             return result;
         juce::Thread::sleep(500);
@@ -89,7 +96,7 @@ juce::var BackendClient::cancelConfiguration() { return request("/settings/cance
 
 juce::var BackendClient::history()
 {
-    return request("/history", "GET");
+    return request("/history?session=" + sessionId, "GET");
 }
 
 juce::var BackendClient::clearChat()
@@ -113,14 +120,43 @@ juce::var BackendClient::importReaperTrack(const juce::String& filePath, const j
     payload->setProperty("file", filePath);
     if (files.isArray())
         payload->setProperty("files", files);
-    return request(inHost ? "/prepare_import_reaper" : "/import_reaper", "POST", juce::var(payload));
+    {
+        const juce::ScopedLock lock(contextLock);
+        payload->setProperty("host", hostContext.clone());
+    }
+    const juce::var requestPayload(payload);
+    auto result = request(inHost ? "/prepare_import_reaper" : "/import_reaper", "POST", requestPayload);
+    if (auto* object = result.getDynamicObject(); object != nullptr && object->hasProperty("request_id"))
+    {
+        const juce::ScopedLock lock(contextLock);
+        importContexts[object->getProperty("request_id").toString()] = payload->getProperty("host");
+    }
+    return result;
 }
 
 juce::var BackendClient::reaperImportReceipt(const juce::String& requestId, bool discard)
 {
     auto payload = new juce::DynamicObject();
     payload->setProperty("request_id", requestId);
-    return request(discard ? "/discard_import_reaper" : "/import_reaper_receipt", "POST", juce::var(payload));
+    {
+        const juce::ScopedLock lock(contextLock);
+        const auto context = importContexts.find(requestId);
+        if (context == importContexts.end())
+        {
+            delete payload;
+            auto error = new juce::DynamicObject();
+            error->setProperty("error", "The import request has no originating workspace.");
+            return juce::var(error);
+        }
+        payload->setProperty("host", context->second);
+    }
+    auto result = request(discard ? "/discard_import_reaper" : "/import_reaper_receipt", "POST", juce::var(payload));
+    if (!result.isVoid())
+    {
+        const juce::ScopedLock lock(contextLock);
+        importContexts.erase(requestId);
+    }
+    return result;
 }
 
 juce::var BackendClient::chat(const juce::String& message, const juce::var& host,
@@ -152,9 +188,33 @@ juce::var BackendClient::request(const juce::String& path, const juce::String& m
 {
     try
     {
+        if (path != "/health")
+        {
+            const auto health = request("/health", "GET");
+            auto* service = health.getDynamicObject();
+            if (service == nullptr)
+                return {};
+            if (static_cast<int>(service->getProperty("api_version")) != 3)
+            {
+                auto error = new juce::DynamicObject();
+                error->setProperty("error", "The previous backend is still running. Close REAPER and run the updated installer to restart it safely.");
+                return juce::var(error);
+            }
+        }
         juce::URL url(juce::String(baseUrl) + path);
         if (method == "POST")
-            url = url.withPOSTData(juce::JSON::toString(body, false));
+        {
+            auto payload = body.clone();
+            if (auto* object = payload.getDynamicObject())
+            {
+                const juce::ScopedLock lock(contextLock);
+                if (!object->hasProperty("host"))
+                    object->setProperty("host", hostContext);
+                if (!object->hasProperty("session"))
+                    object->setProperty("session", sessionId);
+            }
+            url = url.withPOSTData(juce::JSON::toString(payload, false));
+        }
 
         const auto options = juce::URL::InputStreamOptions(juce::URL::ParameterHandling::inAddress)
                                  .withHttpRequestCmd(method)

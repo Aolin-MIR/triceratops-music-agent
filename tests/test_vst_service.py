@@ -11,7 +11,7 @@ from text2music.agent import vst_service
 
 @pytest.fixture
 def service_api(tmp_path, monkeypatch):
-    state = vst_service.TriceratopsState()
+    state = vst_service.TriceratopsState(workspace_id="unit-fixture")
     monkeypatch.setattr(vst_service, "APP", state)
     for name in ("STATUS", "HISTORY", "CONVERSATION", "CONVERSATION_ARCHIVE"):
         monkeypatch.setattr(vst_service, name, tmp_path / name.lower())
@@ -232,7 +232,7 @@ def test_generation_dispatch_reaches_model_job_after_worker_cleanup(tmp_path, mo
         return execute('generate_draft', {'request': 'Sparse piano, no drums', 'max_tokens': 96})
     monkeypatch.setattr(model_job, 'run_model_job', probe_model)
     monkeypatch.setattr(tool_loop, 'run_tool_loop', probe_loop)
-    state = vst_service.TriceratopsState()
+    state = vst_service.TriceratopsState(workspace_id="unit-fixture")
     state.run_chat({'message': 'Generate piano', 'host': {}})
     assert len(calls) == 1 and calls[0][0] == 'generate_draft'
     assert calls[0][1]['max_tokens'] == 96

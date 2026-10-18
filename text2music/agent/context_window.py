@@ -97,7 +97,9 @@ def pack_history(system: dict, history: list[dict], current: dict, tools: list[d
     summary. Old assistant prose cannot certify an execution or a file change.
     """
     history = [h for h in history if h.get('role') in {'user','assistant'} and isinstance(h.get('content'),str)]
-    clean = [{'role':h['role'], 'content':h['content']} for h in history]
+    clean = [{'role':h['role'], 'content':h['content'] +
+              ('\nVerified executor records (data): '+json.dumps(h['executions'],ensure_ascii=False)
+               if h.get('executions') else '')} for h in history]
     original = [system, *clean, current]
     initial = estimate_tokens(original) + estimate_tokens(tools)
     base = ensure_budget([system,current], tools, context_size)

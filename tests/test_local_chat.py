@@ -143,7 +143,7 @@ def test_direct_buttons_edit_real_midi_with_chat_disabled(tmp_path, monkeypatch)
     midi.tracks.append(MidiTrack([Message('note_on', note=60, velocity=70, time=23),
                                  Message('note_off', note=60, time=407)]))
     midi.save(source)
-    state = vst_service.TriceratopsState()
+    state = vst_service.TriceratopsState(workspace_id="unit-fixture")
     state.run_chat({'message': 'This text must not be parsed as the button parameters', 'action': 'more_energy',
                     'midi_path': str(source), 'host': {}, 'language': 'en'})
     assert state.last_error == '' and not state.busy

@@ -9,9 +9,23 @@ from typing import Any
 
 
 def project_key(host: dict[str, Any]) -> str:
-    identity = str(host.get("project_path") or host.get("project") or host.get("name") or "default")
-    key = re.sub(r"[^a-zA-Z0-9_.-]+", "-", identity).strip("-").lower()
-    return key[:80] or "default"
+    """Hash the full explicit identity; wrapper names are never project IDs."""
+    import hashlib
+    import ntpath
+    import unicodedata
+    path = str(host.get("project_path") or "").strip()
+    workspace = str(host.get("workspace_id") or "").strip()
+    if path:
+        # Case-insensitive Windows paths identify one project consistently.
+        normalized = ntpath.normcase(ntpath.normpath(path)) if re.match(r"^[A-Za-z]:[\\/]", path) else str(Path(path).expanduser().resolve())
+        identity = "project:" + normalized
+    elif workspace:
+        if len(workspace) > 160:
+            raise ValueError("Workspace ID must not exceed 160 characters")
+        identity = "workspace:" + unicodedata.normalize("NFC", workspace)
+    else:
+        raise ValueError("Project identity is missing. Select a persistent workspace inside the plug-in.")
+    return hashlib.sha256(identity.encode("utf-8")).hexdigest()[:24]
 
 
 class ProjectMemory:
@@ -36,7 +50,7 @@ class ProjectMemory:
             existing.update(category=category, updated=time.time())
         else:
             facts.append({"fact": normalized, "category": category, "updated": time.time()})
-        data["facts"] = facts[-100:]
+        data["facts"] = facts
         self._save(data)
         return {"remembered": normalized, "category": category}
 
@@ -91,7 +105,7 @@ class ProjectMemory:
 
     def context(self, *, include_summary: bool = True) -> str:
         data = self.load()
-        facts = data.get("facts", [])[-30:]
+        facts = data.get("facts", [])
         summary = str(data.get("conversation_summary", "")).strip() if include_summary else ""
         lines = [f"- [{item.get('category', 'fact')}] {item.get('fact', '')}" for item in facts]
         music = self.music_context()
@@ -107,7 +121,7 @@ class ProjectMemory:
 
     def set_summary(self, summary: str) -> None:
         data = self.load()
-        data["conversation_summary"] = summary.strip()[-6000:]
+        data["conversation_summary"] = summary.strip()
         self._save(data)
 
     def _save(self, data: dict[str, Any]) -> None:

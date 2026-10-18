@@ -273,17 +273,21 @@ TriceratopsAudioProcessorEditor::TriceratopsAudioProcessorEditor(TriceratopsAudi
     chatBackendSelector.setSelectedId(1, juce::dontSendNotification);
     chatBackendSelector.setTitle(juce::String::fromUTF8("Chat model / 聊天模型"));
     addAndMakeVisible(chatBackendSelector);
+    addAndMakeVisible(workspaceBtn);
+    workspaceBtn.onClick = [this] { chooseWorkspace(); };
+    addChildComponent(selectionBtn);
+    selectionBtn.setVisible(ownerProcessor.supportsReaperImport());
+    selectionBtn.onClick = [this] { loadReaperSelection(); };
+    addChildComponent(retryChatBtn);
+    retryChatBtn.setVisible(false);
+    retryChatBtn.onClick = [this] { startChatVerification(); };
     addAndMakeVisible(chatBackendStatus);
     chatBackendStatus.setText(juce::String::fromUTF8("Default / 默认"), juce::dontSendNotification);
     chatBackendStatus.setColour(juce::Label::textColourId, textSub);
     chatBackendSelector.onChange = [this] {
         selectedChatBackend = chatBackendSelector.getSelectedId() == 2 ? "remote"
             : chatBackendSelector.getSelectedId() == 3 ? "local" : "";
-        chatBackendReady = false;
-        deferredChatVerify = true;
-        chatSwitchPending = true;
-        send.setEnabled(false);
-        chatBackendStatus.setText(chinese ? juce::String::fromUTF8("切换中：准备并验证…") : "Switching: preparing & verifying...", juce::dontSendNotification);
+        startChatVerification();
     };
     chatDisplay.setReadOnly(true);
     prompt.setTextToShowWhenEmpty(ui("Say anything: sad piano, continue this, more energy, analyze it..."), textSub.withAlpha(0.6f));
@@ -563,6 +567,10 @@ void TriceratopsAudioProcessorEditor::resized()
 
     auto modelRow = inputDock.removeFromTop(28);
     chatBackendSelector.setBounds(modelRow.removeFromLeft(160).reduced(2, 0));
+    workspaceBtn.setBounds(modelRow.removeFromRight(100).reduced(2, 0));
+    if (selectionBtn.isVisible())
+        selectionBtn.setBounds(modelRow.removeFromRight(110).reduced(2, 0));
+    retryChatBtn.setBounds(modelRow.removeFromRight(60).reduced(2, 0));
     chatBackendStatus.setBounds(modelRow.reduced(4, 0));
     auto row4 = inputDock.reduced(0, 2);
     auto sendArea = row4.removeFromRight(140);
@@ -573,6 +581,45 @@ void TriceratopsAudioProcessorEditor::resized()
 
 void TriceratopsAudioProcessorEditor::timerCallback()
 {
+    if (chatSwitchPending && chatVerifyStartedMs != 0
+        && juce::Time::currentTimeMillis() - chatVerifyStartedMs > 240000)
+        failChatSwitch(ui("Verification timed out. Check Settings and retry."));
+
+    const auto host = ownerProcessor.hostSnapshot();
+    ownerProcessor.backend().setHostContext(host);
+    const auto workspace = host.getProperty("project_path", "").toString().isNotEmpty()
+        ? "project:" + host.getProperty("project_path", "").toString()
+        : "workspace:" + host.getProperty("workspace_id", "").toString();
+    workspaceBtn.setTooltip(workspace);
+    workspaceBtn.setEnabled(!busyGenerating && requestKind != RequestKind::import_reaper && requestKind != RequestKind::import_receipt);
+    selectionBtn.setEnabled(!busyGenerating && !chatSwitchPending);
+    if (workspace != activeWorkspace && requestKind == RequestKind::none)
+    {
+        if (activeWorkspace.isNotEmpty())
+        {
+            midiPath.clear();
+            audioPath.clear();
+            ownerProcessor.clearMidiClip();
+            midiLabel.setText(ui("MIDI: ") + "-", juce::dontSendNotification);
+            audioLabel.setText(ui("AUDIO: ") + "-", juce::dontSendNotification);
+        }
+        const auto wasOpen = activeWorkspace.isNotEmpty();
+        activeWorkspace = workspace;
+        arrangement.clear();
+        history.clear();
+        if (wasOpen)
+            chatTurns.clear();
+        currentThinkingSteps.clear();
+        latestResultMidi.clear();
+        latestStemResult.clear();
+        latestStemFiles.clear();
+        queuedMessage.clear();
+        deferredAutoImport = false;
+        updateChatDisplay();
+        sessionOpened = false;
+        sessionStartupRequested = false;
+    }
+
     repaint();
     const auto midiCaptureText = ui(ownerProcessor.isCapturingMidi() ? "Save MIDI" : "Rec MIDI");
     const auto audioCaptureText = ui(ownerProcessor.isCapturingAudio() ? "Save audio" : "Rec audio");
@@ -616,10 +663,7 @@ void TriceratopsAudioProcessorEditor::timerCallback()
         {
             if (!static_cast<bool>(response.getProperty("accepted", false)))
             {
-                chatSwitchPending = false;
-                const auto error = response.getProperty("error", "Backend connection failed").toString();
-                chatBackendStatus.setText((chinese ? juce::String::fromUTF8("切换失败：") : "Switch failed: ") + error, juce::dontSendNotification);
-                chatBackendStatus.setTooltip(error);
+                failChatSwitch(response.getProperty("error", "Backend connection failed").toString());
             }
             requestKind = RequestKind::none;
             return;
@@ -799,6 +843,9 @@ void TriceratopsAudioProcessorEditor::handleStatus(const juce::var& value)
         auto switches = value.getProperty("chat_switches", {});
         auto state = switches.getProperty(ownerProcessor.backend().getSessionId(), {});
         const auto status = state.getProperty("state", "").toString();
+        if (status.isEmpty() && chatVerifyStartedMs != 0
+            && juce::Time::currentTimeMillis() - chatVerifyStartedMs > 10000)
+            failChatSwitch(ui("Verification interrupted. Check Settings and retry."));
         if ((status == "ready" || status == "failed") && state.getProperty("selection", "").toString() == selectedChatBackend)
         {
             chatSwitchPending = false;
@@ -808,6 +855,7 @@ void TriceratopsAudioProcessorEditor::handleStatus(const juce::var& value)
                 : ((chinese ? juce::String::fromUTF8("切换失败，请检查设置：") : "Switch failed; check Settings: ") + state.getProperty("error", "").toString());
             chatBackendStatus.setText(detail, juce::dontSendNotification);
             chatBackendStatus.setTooltip(detail);
+            retryChatBtn.setVisible(!chatBackendReady);
         }
     }
 
@@ -829,6 +877,16 @@ void TriceratopsAudioProcessorEditor::handleStatus(const juce::var& value)
         send.setEnabled(chatBackendReady);
         prompt.setEnabled(true);
         return;
+    }
+
+    if (auto* transcript = object->getProperty("conversation").getArray();
+        transcript != nullptr && !transcript->isEmpty() && !busyGenerating)
+    {
+        chatTurns.clear();
+        for (const auto& turn : *transcript)
+            chatTurns.push_back({ turn.getProperty("role", "assistant").toString(),
+                turn.getProperty("content", "").toString(), "", "", {} });
+        updateChatDisplay();
     }
 
     if (static_cast<bool>(object->getProperty("setup_required")) && !setupPrompted)
@@ -872,7 +930,7 @@ void TriceratopsAudioProcessorEditor::handleStatus(const juce::var& value)
             if (state == "planning" || state == "analyzing_audio")
                 stepText = ui("[Observe & Plan] ") + detail;
             else if (state == "loading_model" || state == "sampling")
-                stepText = ui("[GPU Model Sampling] ") + detail;
+                stepText = ui("[Model Sampling] ") + detail;
             else if (state == "converting" || state == "verifying" || state == "correcting")
                 stepText = ui("[Constraint Verification] ") + detail;
             else
@@ -956,7 +1014,8 @@ void TriceratopsAudioProcessorEditor::handleStatus(const juce::var& value)
                     latestStemResult = stemKey;
                     latestStemFiles = *files;
                     latestResultMidi.clear();
-                    if (ownerProcessor.supportsReaperImport() && autoImportToReaper && requestKind != RequestKind::open)
+                    if (ownerProcessor.supportsReaperImport() && autoImportToReaper && requestKind != RequestKind::open
+                        && result->getProperty("request_session").toString() == ownerProcessor.backend().getSessionId())
                         deferredAutoImport = true;
                 }
             }
@@ -976,7 +1035,8 @@ void TriceratopsAudioProcessorEditor::handleStatus(const juce::var& value)
                 // Load and paint score stave visualizer
                 scoreStave.loadMidiFile(juce::File(midi));
 
-                if (ownerProcessor.supportsReaperImport() && autoImportToReaper && requestKind != RequestKind::open)
+                if (ownerProcessor.supportsReaperImport() && autoImportToReaper && requestKind != RequestKind::open
+                        && result->getProperty("request_session").toString() == ownerProcessor.backend().getSessionId())
                 {
                     // Defer to the timer so the REAPER import request runs on a
                     // background future instead of blocking the message thread.
@@ -1175,7 +1235,6 @@ void TriceratopsAudioProcessorEditor::importToReaper()
         return;
     }
 
-   #if JUCE_MAC
     if (!ownerProcessor.canRunReaperScript())
     {
         chatTurns.push_back({ "assistant", ui("REAPER host API is unavailable; no other instance was launched.")
@@ -1184,7 +1243,6 @@ void TriceratopsAudioProcessorEditor::importToReaper()
         updateChatDisplay();
         return;
     }
-   #endif
     const auto inHost = ownerProcessor.canRunReaperScript();
     pending = std::async(std::launch::async, [this, fileToImport, filesToImport, inHost] {
         return ownerProcessor.backend().importReaperTrack(fileToImport, filesToImport, inHost);
@@ -1204,6 +1262,75 @@ void TriceratopsAudioProcessorEditor::importToReaper()
         {}
     });
     updateChatDisplay();
+}
+
+void TriceratopsAudioProcessorEditor::startChatVerification()
+{
+    chatBackendReady = false;
+    deferredChatVerify = true;
+    chatSwitchPending = true;
+    chatVerifyStartedMs = juce::Time::currentTimeMillis();
+    retryChatBtn.setVisible(false);
+    send.setEnabled(false);
+    chatBackendStatus.setText(chinese ? juce::String::fromUTF8("切换中：准备并验证…") : "Switching: preparing & verifying...", juce::dontSendNotification);
+}
+
+void TriceratopsAudioProcessorEditor::failChatSwitch(const juce::String& error)
+{
+    chatSwitchPending = false;
+    deferredChatVerify = false;
+    chatBackendReady = false;
+    retryChatBtn.setVisible(true);
+    send.setEnabled(false);
+    chatBackendStatus.setText(ui("Switch failed: ") + error, juce::dontSendNotification);
+    chatBackendStatus.setTooltip(error);
+}
+
+void TriceratopsAudioProcessorEditor::loadReaperSelection()
+{
+    const auto file = nextCaptureFile(".mid");
+    juce::String error;
+    if (!ownerProcessor.saveSelectedReaperMidi(file, error) || !ownerProcessor.loadMidiClip(file))
+    {
+        chatTurns.push_back({ "assistant", ui("Operation failed:\n") + ui(error),
+            juce::Time::getCurrentTime().formatted("%H:%M:%S"), "", {} });
+        updateChatDisplay();
+        return;
+    }
+    midiPath = file.getFullPathName();
+    latestResultMidi.clear();
+    midiLabel.setText(ui("MIDI: ") + file.getFileName(), juce::dontSendNotification);
+    scoreStave.loadMidiFile(file);
+    chatTurns.push_back({ "assistant", ui("Loaded the selected REAPER MIDI item.") + "\n" + file.getFullPathName(),
+        juce::Time::getCurrentTime().formatted("%H:%M:%S"), midiPath, {} });
+    updateChatDisplay();
+}
+
+void TriceratopsAudioProcessorEditor::chooseWorkspace()
+{
+    const auto host = ownerProcessor.hostSnapshot();
+    const auto path = host.getProperty("project_path", "").toString();
+    if (path.isNotEmpty())
+    {
+        juce::AlertWindow::showMessageBoxAsync(juce::MessageBoxIconType::InfoIcon,
+            ui("Workspace"), ui("This REAPER project has its own chat, memory and results.") + "\n" + path);
+        return;
+    }
+    auto* dialog = new juce::AlertWindow(ui("Workspace"),
+        ui("This workspace ID is saved with the plug-in. Use a separate ID for each project; share the ID only within the same project."),
+        juce::MessageBoxIconType::NoIcon);
+    dialog->addTextEditor("workspace", ownerProcessor.getWorkspaceId(), ui("Workspace ID"));
+    dialog->addButton(ui("Use workspace"), 1);
+    dialog->addButton(ui("New workspace"), 2);
+    dialog->addButton(ui("Cancel"), 0);
+    juce::Component::SafePointer<TriceratopsAudioProcessorEditor> safe(this);
+    dialog->enterModalState(true, juce::ModalCallbackFunction::create([safe, dialog](int result) {
+        if (safe != nullptr && result != 0)
+        {
+            const auto id = result == 2 ? juce::Uuid().toString() : dialog->getTextEditorContents("workspace").trim();
+            safe->ownerProcessor.setWorkspaceId(id);
+        }
+    }), true);
 }
 
 void TriceratopsAudioProcessorEditor::chooseMidi()
@@ -1416,7 +1543,7 @@ void TriceratopsAudioProcessorEditor::applyLanguage()
     for (auto* button : { &send, &cancel, &clearChatBtn, &autoImportBtn, &importReaperBtn,
         &sidebarToggleBtn, &helpBtn, &newMusic, &editMidi, &analyze, &continueFour, &moreEnergy,
         &tightenTiming, &undoBtn, &keepBtn, &rejectBtn, &stems, &audioMidi, &loadMidi,
-        &loadAudio, &playMidi, static_cast<AnimatedButton*>(&dragMidi), &capture, &captureAudio })
+        &loadAudio, &playMidi, static_cast<AnimatedButton*>(&dragMidi), &capture, &captureAudio, &workspaceBtn, &selectionBtn, &retryChatBtn })
     {
         button->setChinese(chinese);
         button->setButtonText(ui(button->getButtonText()));

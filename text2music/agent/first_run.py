@@ -28,7 +28,7 @@ def stop_previous_backend(data: Path) -> None:
         return
     if state.get('busy'):
         raise RuntimeError('A music/configuration task is still running. Stop it in the plug-in before updating.')
-    pid = int(json.loads(state_path.read_text())['pid'])
+    pid = int(state.get('pid') or json.loads(state_path.read_text())['pid'])
     if os.name == 'nt':
         result = subprocess.run(['powershell.exe', '-NoProfile', '-Command',
             f'(Get-CimInstance Win32_Process -Filter "ProcessId = {pid}").CommandLine'],

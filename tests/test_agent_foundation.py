@@ -24,7 +24,7 @@ def test_knowledge_rebuild_search_and_source_citation(tmp_path: Path):
 
 
 def test_project_memory_is_scoped_deduplicated_and_forgettable(tmp_path: Path):
-    assert project_key({"project_path": "E:\\Music\\Demo.rpp"}) == "e-music-demo.rpp"
+    assert project_key({"project_path": "E:/Music/Demo.rpp"}) == project_key({"project_path": "e:/music/demo.rpp"})
     memory = ProjectMemory(tmp_path, "demo")
     memory.remember("Keep the melody", "constraint")
     memory.remember("Keep the melody", "constraint")

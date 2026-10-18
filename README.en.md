@@ -19,18 +19,14 @@ Describe style, mood, instruments and structure in Chinese or English without JS
 
 The Mac installer downloads native ARM64 Python and the local-chat runtime when needed. Intel / Rosetta model backends are unsupported. Audio devices are selected in the host.
 
-## ✨ From 1.0 to 1.0.1a
+## ✨ 1.0.1b
 
-- **Windows 1.0.1a update**: fixes text-to-MIDI generation and connection status. The smaller installer downloads local chat on demand inside the plug-in and keeps existing models and settings.
-- **Logic Pro support:** separate MIDI and Audio AUs, MIDI capture/output and audio recording.
-- **Choose chat per message:** switch API / local GPU beside the input, with verification progress and results. History and memory are shared; no automatic provider substitution.
-- **Long conversations and musical context:** budget-aware history compaction retains original records, grounded user requirements and actual tool results. Save and update style, tempo, meter and key/mode.
-- **Improved intent handling:** creation, edits, analysis and conversation use the appropriate route; results reflect actual tools.
-- **Direct actions:** continue four bars, increase energy, tighten rhythm, separate stems and transcribe without a chat round trip.
-- **Hardware-aware deployment:** inspect memory and devices, configure each function separately, verify before applying.
-- **Complete note overview:** fit both timeline and pitch range.
-- **Workflow fixes:** isolated import requests, duplicate-click protection, version rollback, service reconnection and cancellation.
-
+- **Project workspaces:** chat, memory, results and version history belong to a workspace. REAPER reads the saved project path; other hosts expose a workspace control inside the plug-in.
+- **Read selected REAPER MIDI:** load the selected item directly for analysis, editing, continuation and infill.
+- **Choose API / local GPU per message:** verification progress, draft retention on failure and explicit retry; memory is shared within the same workspace.
+- **Persistent musical context:** save, update or remove style, tempo, meter, key/mode, instruments and exclusions for downstream tasks.
+- **Long conversations and complete analysis:** original records remain available; large tool results can be retrieved as needed.
+- **Workflow fixes:** import receipts, duplicate-click protection, cancellation and reconnection. Lean installers download models on demand inside the plug-in.
 
 <details>
 <summary>View plug-in screenshots</summary>
@@ -45,7 +41,7 @@ The Mac installer downloads native ARM64 Python and the local-chat runtime when 
 
 Text-to-MIDI composition; continuation and infill; quantization, velocity and transposition; four audio stems; monophonic transcription; audio analysis; MIDI/audio recording; feedback and local knowledge retrieval. REAPER supports manual/automatic import; Logic supports file import, MIDI output and recording.
 
-Generated music and transcription may contain errors. Successful file generation does not certify musical quality. Full project isolation for conversation and memory remains unverified; explicitly load the material to edit. Automated acceptance of Logic cross-window drag remains incomplete; file import and recording are available.
+Saved REAPER projects use their project path to separate records. Unsaved projects and Logic use the workspace ID stored in the plug-in; view, share or change it with the Workspace button.
 
 ## ⚙️ Install and configure
 

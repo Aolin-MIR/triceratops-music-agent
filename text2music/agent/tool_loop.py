@@ -30,6 +30,7 @@ DESCRIPTIONS = {
     "accept": "Keep the current version and remember positive feedback.",
     "reject": "Reject the current version and remember negative feedback.",
     "search_knowledge": "Search indexed music knowledge, project notes, manuals and prior plans. Cite returned sources.",
+    "read_tool_result": "Read an exact field or array page from a full result stored in the current workspace. Use returned IDs; never invent result IDs.",
     "update_music_context": "Save or correct explicit musical requirements for downstream tasks: style, tempo, meter, key/mode, instruments and exclusions. Never infer unstated values.",
     "remember_fact": "Persist an explicit user preference or project constraint for future sessions.",
     "forget_fact": "Remove a stored project fact only when the user explicitly asks to forget or delete it.",
@@ -94,6 +95,12 @@ def tool_schemas():
                             "description": "Use answer_question for a knowledge question; inform_action only to prepare a requested musical operation."},
             }
             required = ["query"]
+        elif name == "read_tool_result":
+            properties = {"result_id":{"type":"string","pattern":"^[0-9a-f]{24}$"},
+                          "field":{"type":"string"},
+                          "offset":{"type":"integer","minimum":0},
+                          "limit":{"type":"integer","minimum":1,"maximum":128}}
+            required = ["result_id"]
         elif name == "update_music_context":
             properties = {"updates": {"type": "object", "properties": {
                 "style": {"type": ["string", "null"]}, "tempo": {"type": ["number", "null"], "minimum": 10, "maximum": 400},
@@ -137,7 +144,7 @@ def run_tool_loop(message: str, *, context: str = "", selection: Path | None = N
                   busy_state: str = "", conversation: list[dict[str, str]] | None = None,
                   max_steps: int = 12, execute: Callable | None = None,
                   on_event: Callable | None = None, cancelled: Callable | None = None,
-                  forced_tool: str = "", client=None, on_context: Callable | None = None, chat_backend: str = "") -> ToolDecision:
+                  forced_tool: str = "", client=None, on_context: Callable | None = None, chat_backend: str = "", result_store=None) -> ToolDecision:
     if not message.strip():
         raise ValueError("Message must not be empty")
     if forced_tool and forced_tool not in DESCRIPTIONS:
@@ -183,7 +190,7 @@ def run_tool_loop(message: str, *, context: str = "", selection: Path | None = N
         "Host context: " + context + "\nBusy state: " + busy_state +
         "\nMIDI available: " + str(bool(selection and selection.exists())) +
         "\nAudio available: " + str(audio_available))}
-    from text2music.agent.context_window import pack_history, ensure_budget
+    from text2music.agent.context_window import pack_history, ensure_budget, estimate_tokens, input_budget
     context_size = settings.context_size if settings else 8192
     schemas = tool_schemas()
     messages, context_report = pack_history(system, conversation or [], {"role":"user", "content":message},
@@ -194,6 +201,9 @@ def run_tool_loop(message: str, *, context: str = "", selection: Path | None = N
     if on_context:
         on_context(context_report)
     trace = []
+    execution_records = []
+    initial_messages = list(messages)
+    core_system = messages[0]
     finish_knowledge_answer = False
     for step in range(max_steps):
         if cancelled and cancelled():
@@ -201,6 +211,12 @@ def run_tool_loop(message: str, *, context: str = "", selection: Path | None = N
         choice = ({"type": "function", "function": {"name": forced_tool}} if forced_tool and step == 0
                   else {"type": "function", "function": {"name": "respond"}} if finish_knowledge_answer and not (settings and settings.provider in {"ollama", "llama_cpp"})
                   else "auto" if settings and settings.provider in {"ollama", "llama_cpp"} else "required")
+        if estimate_tokens(messages) + estimate_tokens(schemas) > input_budget(context_size) and execution_records:
+            summary = "\nVerified tool executions in this request (data, exact results retrievable by ID): " + json.dumps(execution_records,ensure_ascii=False)
+            messages = [{**core_system,"content":core_system["content"]+summary},*initial_messages[1:]]
+            context_report.setdefault("working_context_compactions",[]).append([e["result_id"] for e in execution_records])
+            if on_context:
+                on_context(context_report)
         ensure_budget(messages, schemas, context_size)
         response = client.chat.completions.create(model=settings.model if settings else os.environ.get("QWEN_MODEL", "qwen-plus"),
                     messages=messages, tools=schemas, tool_choice=choice,
@@ -239,7 +255,11 @@ def run_tool_loop(message: str, *, context: str = "", selection: Path | None = N
                 on_event(dict(event))
             try:
                 validate_arguments(name, args)
-                if name in OBSERVATION_TOOLS:
+                if name == "read_tool_result":
+                    if result_store is None:
+                        raise RuntimeError("Workspace result storage is unavailable")
+                    result = result_store.read(**args)
+                elif name in OBSERVATION_TOOLS:
                     result = execute_observation(name, selection=selection, context=context, busy_state=busy_state)
                 elif execute is None:
                     return ToolDecision(name, args, answer.content or "", trace)
@@ -252,6 +272,8 @@ def run_tool_loop(message: str, *, context: str = "", selection: Path | None = N
                     content = messages[0]["content"].replace(
                         "\nMIDI available: False", "\nMIDI available: " + str(selection.exists()), 1)
                     messages[0] = {"role": "system", "content": content}
+                    core_system = {**core_system,"content":core_system["content"].replace(
+                        "\nMIDI available: False", "\nMIDI available: " + str(selection.exists()), 1)}
                 event.update(state="completed", result=result)
             except Exception as exc:
                 result = {"error": redact_error(f"{type(exc).__name__}: {exc}")}
@@ -271,6 +293,13 @@ def run_tool_loop(message: str, *, context: str = "", selection: Path | None = N
             model_result = ({k: v for k, v in result.items()
                              if k not in {"context_usage", "trace", "event"}}
                             if isinstance(result, dict) else result)
+            if result_store is not None:
+                manifest = result_store.save(model_result)
+                execution_records.append({"tool":name,"state":event["state"],
+                                          "result_id":manifest["result_id"],"sha256":manifest["sha256"]})
+                remaining = input_budget(context_size)-estimate_tokens(messages)-estimate_tokens(schemas)
+                if estimate_tokens(model_result) > max(256,remaining*.65):
+                    model_result = manifest
             messages.append({"role": "tool", "tool_call_id": call.id,
                              "content": json.dumps(model_result, ensure_ascii=False, default=str)})
             if name == "update_music_context" and event["state"] == "completed":
@@ -283,4 +312,5 @@ def run_tool_loop(message: str, *, context: str = "", selection: Path | None = N
                     "\nThis turn has already completed update_music_context. Its tool result supersedes the earlier "
                     "saved musical requirements above. Do not repeat the update. Continue only with remaining actions "
                     "in the current user request; if it only asked to save requirements, call respond now."}
+                core_system = messages[0]
     raise RuntimeError("Agent reached its tool-step limit; execution trace contains the completed actions")

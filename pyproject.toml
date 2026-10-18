@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "text2music"
-version = "1.0.1.post1"  # Python packaging equivalent of public hotfix 1.0.1a.
+version = "1.0.1.post2"  # Python packaging equivalent of public hotfix 1.0.1b.
 description = "Triceratops Music Agent"
 readme = "readme.md"
 requires-python = ">=3.10,<3.12"

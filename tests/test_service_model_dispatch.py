@@ -26,7 +26,7 @@ def isolated_service(tmp_path, monkeypatch):
     monkeypatch.setattr(vst_service, "RUNS_DIR", tmp_path)
     for name in ("STATUS", "HISTORY", "MEMORY", "CONVERSATION", "CONVERSATION_ARCHIVE"):
         monkeypatch.setattr(vst_service, name, tmp_path / name.lower())
-    return vst_service.TriceratopsState()
+    return vst_service.TriceratopsState(workspace_id="unit-fixture")
 
 
 @pytest.mark.parametrize("tool,extra", [

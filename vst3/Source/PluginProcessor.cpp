@@ -1,7 +1,7 @@
 #include "PluginProcessor.h"
 #include "PluginEditor.h"
 
-#if JUCE_MAC && JucePlugin_Build_VST3
+#if JucePlugin_Build_VST3
 #include <pluginterfaces/base/funknown.h>
 namespace triceratops_reaper
 {
@@ -13,7 +13,7 @@ namespace triceratops_reaper
 
 juce::VST3ClientExtensions* TriceratopsAudioProcessor::getVST3ClientExtensions()
 {
-   #if JUCE_MAC
+   #if JucePlugin_Build_VST3
     return this;
    #else
     return nullptr;
@@ -22,7 +22,7 @@ juce::VST3ClientExtensions* TriceratopsAudioProcessor::getVST3ClientExtensions()
 
 void TriceratopsAudioProcessor::setIHostApplication(Steinberg::FUnknown* host)
 {
-   #if JUCE_MAC && JucePlugin_Build_VST3
+   #if JucePlugin_Build_VST3
     ++reaperHostCallbacks;
     if (host == nullptr)
         return;
@@ -46,7 +46,7 @@ void TriceratopsAudioProcessor::setIHostApplication(Steinberg::FUnknown* host)
 
 void* TriceratopsAudioProcessor::currentReaperProject() const
 {
-   #if JUCE_MAC && JucePlugin_Build_VST3
+   #if JucePlugin_Build_VST3
     const juce::ScopedLock lock(reaperHostLock);
     // REAPER assigns the parent after VST3 initialization. Resolve it when
     // needed on the UI thread, rather than caching a null during startup.
@@ -54,6 +54,183 @@ void* TriceratopsAudioProcessor::currentReaperProject() const
         return static_cast<triceratops_reaper::IReaperHostApplication*>(reaperHostInterface)->getReaperParent(3);
    #endif
     return nullptr;
+}
+
+void* TriceratopsAudioProcessor::reaperApi(const char* name) const
+{
+   #if JucePlugin_Build_VST3
+    const juce::ScopedLock lock(reaperHostLock);
+    if (reaperHostInterface != nullptr)
+        return static_cast<triceratops_reaper::IReaperHostApplication*>(reaperHostInterface)->getReaperApi(name);
+   #else
+    juce::ignoreUnused(name);
+   #endif
+    return nullptr;
+}
+
+bool TriceratopsAudioProcessor::saveSelectedReaperMidi(const juce::File& output, juce::String& error) const
+{
+    if (!juce::MessageManager::getInstance()->isThisTheMessageThread())
+        return false;
+    const auto project = currentReaperProject();
+    const auto enumerate = enumReaperProjects.load();
+    if (project == nullptr || enumerate == nullptr || enumerate(-1, nullptr, 0) != project)
+    {
+        error = "Activate this REAPER project before reading its selection.";
+        return false;
+    }
+    const auto count = reinterpret_cast<int (*)(void*)>(reaperApi("CountSelectedMediaItems"));
+    const auto selected = reinterpret_cast<void* (*)(void*, int)>(reaperApi("GetSelectedMediaItem"));
+    const auto activeTake = reinterpret_cast<void* (*)(void*)>(reaperApi("GetActiveTake"));
+    const auto isMidi = reinterpret_cast<bool (*)(void*)>(reaperApi("TakeIsMIDI"));
+    const auto getAll = reinterpret_cast<bool (*)(void*, char*, int*)>(reaperApi("MIDI_GetAllEvts"));
+    const auto ppqToQn = reinterpret_cast<double (*)(void*, double)>(reaperApi("MIDI_GetProjQNFromPPQPos"));
+    const auto timeToQn = reinterpret_cast<double (*)(void*, double)>(reaperApi("TimeMap2_timeToQN"));
+    const auto itemValue = reinterpret_cast<double (*)(void*, const char*)>(reaperApi("GetMediaItemInfo_Value"));
+    const auto takeValue = reinterpret_cast<double (*)(void*, const char*)>(reaperApi("GetMediaItemTakeInfo_Value"));
+    const auto getSource = reinterpret_cast<void* (*)(void*)>(reaperApi("GetMediaItemTake_Source"));
+    const auto sourceLength = reinterpret_cast<double (*)(void*, bool*)>(reaperApi("GetMediaSourceLength"));
+    const auto itemString = reinterpret_cast<bool (*)(void*, const char*, char*, bool)>(reaperApi("GetSetMediaItemInfo_String"));
+    if (!count || !selected || !activeTake || !isMidi || !getAll || !ppqToQn || !timeToQn || !itemValue || !takeValue || !getSource || !sourceLength || !itemString)
+    {
+        error = "REAPER selection APIs are unavailable.";
+        return false;
+    }
+    if (count(project) != 1)
+    {
+        error = "Select exactly one MIDI item in this REAPER project.";
+        return false;
+    }
+    const auto item = selected(project, 0);
+    const auto take = activeTake(item);
+    if (take == nullptr || !isMidi(take))
+    {
+        error = "The selected item's active take is not MIDI.";
+        return false;
+    }
+    const auto startSeconds = itemValue(item, "D_POSITION");
+    const auto lengthSeconds = itemValue(item, "D_LENGTH");
+    const auto startQn = timeToQn(project, startSeconds);
+    const auto endQn = timeToQn(project, startSeconds + lengthSeconds);
+    const bool looped = itemValue(item, "B_LOOPSRC") != 0.0;
+    bool sourceIsQn = false;
+    const auto length = sourceLength(getSource(take), &sourceIsQn);
+    const auto rate = takeValue(take, "D_PLAYRATE");
+    const auto period = sourceIsQn && rate > 0.0 ? length / rate : 0.0;
+    if (endQn <= startQn || (looped && period <= 0.0))
+    {
+        error = "The selected MIDI item has an invalid length or loop source.";
+        return false;
+    }
+    int bytes = 1024 * 1024;
+    std::vector<char> raw(static_cast<size_t>(bytes));
+    bool read = getAll(take, raw.data(), &bytes);
+    if (!read && bytes > static_cast<int>(raw.size()) && bytes <= 64 * 1024 * 1024)
+    {
+        raw.resize(static_cast<size_t>(bytes));
+        read = getAll(take, raw.data(), &bytes);
+    }
+    if (!read || bytes < 0 || bytes > static_cast<int>(raw.size()))
+    {
+        error = "Could not read the complete selected MIDI item.";
+        return false;
+    }
+    juce::MidiMessageSequence expanded;
+    juce::int64 ppq = 0;
+    int position = 0;
+    while (position + 9 <= bytes)
+    {
+        const auto offset = static_cast<juce::int32>(juce::ByteOrder::littleEndianInt(raw.data() + position));
+        const auto flags = static_cast<unsigned char>(raw[static_cast<size_t>(position + 4)]);
+        const auto size = juce::ByteOrder::littleEndianInt(raw.data() + position + 5);
+        position += 9;
+        if (size > static_cast<juce::uint32>(bytes - position))
+        {
+            error = "The selected MIDI event buffer is incomplete.";
+            return false;
+        }
+        ppq += offset;
+        if (size > 0 && !(flags & 2))
+        {
+            const auto qn = ppqToQn(take, static_cast<double>(ppq));
+            const int first = looped ? static_cast<int>(std::floor((startQn - qn) / period)) - 1 : 0;
+            const int last = looped ? static_cast<int>(std::ceil((endQn - qn) / period)) + 1 : 0;
+            if (last - first > 100000)
+            {
+                error = "The selected MIDI loop is too large to export safely.";
+                return false;
+            }
+            for (int cycle = first; cycle <= last; ++cycle)
+            {
+                juce::MidiMessage message(raw.data() + position, static_cast<int>(size),
+                    (qn + cycle * period - startQn) * 960.0);
+                expanded.addEvent(message);
+            }
+        }
+        position += static_cast<int>(size);
+    }
+    if (position != bytes)
+    {
+        error = "The selected MIDI event buffer has trailing incomplete data.";
+        return false;
+    }
+    expanded.updateMatchedPairs();
+    juce::MidiMessageSequence clip;
+    clip.addEvent(juce::MidiMessage::tempoMetaEvent(static_cast<int>(60000000.0 / currentTempo.load())));
+    clip.addEvent(juce::MidiMessage::timeSignatureMetaEvent(numerator.load(), denominator.load()));
+    const auto endTick = (endQn - startQn) * 960.0;
+    int notes = 0;
+    for (int index = 0; index < expanded.getNumEvents(); ++index)
+    {
+        const auto* event = expanded.getEventPointer(index);
+        const auto& message = event->message;
+        if (message.isNoteOn())
+        {
+            const auto* off = event->noteOffObject;
+            if (off == nullptr || off->message.getTimeStamp() <= 0 || message.getTimeStamp() >= endTick)
+                continue;
+            auto onMessage = message;
+            auto offMessage = off->message;
+            onMessage.setTimeStamp(juce::jmax(0.0, message.getTimeStamp()));
+            offMessage.setTimeStamp(juce::jmin(endTick, offMessage.getTimeStamp()));
+            clip.addEvent(onMessage);
+            clip.addEvent(offMessage);
+            ++notes;
+        }
+        else if (!message.isNoteOff() && !message.isEndOfTrackMetaEvent() && message.getTimeStamp() >= 0 && message.getTimeStamp() <= endTick)
+            clip.addEvent(message);
+    }
+    if (notes == 0)
+    {
+        error = "The selected MIDI item has no audible notes in its visible range.";
+        return false;
+    }
+    auto endMarker = juce::MidiMessage::endOfTrack();
+    endMarker.setTimeStamp(endTick);
+    clip.addEvent(endMarker);
+    juce::MidiFile file;
+    file.setTicksPerQuarterNote(960);
+    file.addTrack(clip);
+    output.getParentDirectory().createDirectory();
+    juce::FileOutputStream stream(output);
+    if (!stream.openedOk() || !file.writeTo(stream))
+    {
+        error = "Could not write the selected MIDI file.";
+        return false;
+    }
+    stream.flush();
+    char guid[256] {};
+    itemString(item, "GUID", guid, false);
+    auto audit = new juce::DynamicObject();
+    audit->setProperty("host", hostSnapshot());
+    audit->setProperty("item_guid", juce::String::fromUTF8(guid));
+    audit->setProperty("item_position_seconds", startSeconds);
+    audit->setProperty("item_length_seconds", lengthSeconds);
+    audit->setProperty("looped", looped);
+    audit->setProperty("exported_notes", notes);
+    audit->setProperty("midi", output.getFullPathName());
+    output.withFileExtension(".source.json").replaceWithText(juce::JSON::toString(juce::var(audit)));
+    return true;
 }
 
 juce::String TriceratopsAudioProcessor::reaperImportDiagnostics() const
@@ -98,7 +275,7 @@ TriceratopsAudioProcessor::TriceratopsAudioProcessor()
 
 TriceratopsAudioProcessor::~TriceratopsAudioProcessor()
 {
-   #if JUCE_MAC && JucePlugin_Build_VST3
+   #if JucePlugin_Build_VST3
     const juce::ScopedLock lock(reaperHostLock);
     if (reaperHostInterface != nullptr)
         static_cast<triceratops_reaper::IReaperHostApplication*>(reaperHostInterface)->release();
@@ -203,11 +380,51 @@ juce::AudioProcessorEditor* TriceratopsAudioProcessor::createEditor()
     return new TriceratopsAudioProcessorEditor(*this);
 }
 
+juce::String TriceratopsAudioProcessor::getWorkspaceId() const
+{
+    const juce::ScopedLock lock(workspaceLock);
+    return workspaceId;
+}
+
+void TriceratopsAudioProcessor::setWorkspaceId(const juce::String& value)
+{
+    if (value.trim().isEmpty() || value.length() > 160)
+        return;
+    const juce::ScopedLock lock(workspaceLock);
+    workspaceId = value.trim();
+}
+
 juce::var TriceratopsAudioProcessor::hostSnapshot() const
 {
     auto result = new juce::DynamicObject();
     result->setProperty("name", getWrapperTypeDescription(wrapperType));
     result->setProperty("host_application", juce::PluginHostType().getHostDescription());
+    result->setProperty("workspace_id", getWorkspaceId());
+    result->setProperty("workspace_source", "persistent plug-in workspace");
+    if (juce::MessageManager::getInstance()->isThisTheMessageThread())
+    {
+        const auto enumerate = enumReaperProjects.load();
+        const auto parent = currentReaperProject();
+        if (enumerate != nullptr && parent != nullptr)
+        {
+            for (int index = 0; ; ++index)
+            {
+                char path[8192] {};
+                const auto project = enumerate(index, path, sizeof(path));
+                if (project == nullptr)
+                    break;
+                if (project == parent)
+                {
+                    if (path[0] != 0)
+                    {
+                        result->setProperty("project_path", juce::String::fromUTF8(path));
+                        result->setProperty("workspace_source", "REAPER project path");
+                    }
+                    break;
+                }
+            }
+        }
+    }
     result->setProperty("tempo", currentTempo.load());
     result->setProperty("ppq", currentPpq.load());
     result->setProperty("playing", playing.load());
@@ -335,6 +552,7 @@ void TriceratopsAudioProcessor::getStateInformation(juce::MemoryBlock& destinati
 {
     auto state = new juce::DynamicObject();
     state->setProperty("midi", getLoadedMidiPath());
+    state->setProperty("workspace_id", getWorkspaceId());
     const auto json = juce::JSON::toString(juce::var(state));
     destination.append(json.toRawUTF8(), static_cast<size_t>(json.getNumBytesAsUTF8()));
 }
@@ -345,6 +563,9 @@ void TriceratopsAudioProcessor::setStateInformation(const void* data, int size)
     const auto state = juce::JSON::parse(json);
     if (auto* object = state.getDynamicObject())
     {
+        const auto savedWorkspace = object->getProperty("workspace_id").toString();
+        if (savedWorkspace.isNotEmpty())
+            setWorkspaceId(savedWorkspace);
         const juce::File midi(object->getProperty("midi").toString());
         if (midi.existsAsFile())
             loadMidiClip(midi);

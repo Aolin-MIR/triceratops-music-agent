@@ -45,13 +45,13 @@ def stop_process_tree(process: subprocess.Popen) -> None:
 
 
 def run_command(command: list[str], *, cancelled: Callable[[], bool],
-                timeout: float = 900) -> None:
+                timeout: float = 900, env: dict | None = None) -> None:
     if cancelled():
         raise TaskCancelled("Task cancelled before model launch")
     with tempfile.TemporaryFile(mode="w+t", encoding="utf-8") as log:
         options = ({"creationflags": subprocess.CREATE_NO_WINDOW | subprocess.CREATE_NEW_PROCESS_GROUP} if os.name == "nt"
                    else {"start_new_session": True})
-        process = subprocess.Popen(command, stdout=log, stderr=log, **options)
+        process = subprocess.Popen(command, stdout=log, stderr=log, env=env, **options)
         started = time.monotonic()
         try:
             while process.poll() is None:
@@ -70,7 +70,7 @@ def run_command(command: list[str], *, cancelled: Callable[[], bool],
             raise
 
 
-def run_model_job(action: str, parameters: dict, *, cancelled: Callable[[], bool]) -> dict:
+def run_model_job(action: str, parameters: dict, *, cancelled: Callable[[], bool], run_root: Path | None = None) -> dict:
     with tempfile.TemporaryDirectory(prefix="triceratops-model-") as temporary:
         root = Path(temporary)
         request, result = root / "request.json", root / "result.json"
@@ -78,7 +78,8 @@ def run_model_job(action: str, parameters: dict, *, cancelled: Callable[[], bool
         run_command(python_module_command("text2music.agent.model_job",
                      "--request", str(request), "--result", str(result),
                      "--parent-pid", str(os.getpid())),
-                    cancelled=cancelled, timeout=float(os.environ.get("TRICERATOPS_MODEL_TIMEOUT", "900")))
+                    cancelled=cancelled, timeout=float(os.environ.get("TRICERATOPS_MODEL_TIMEOUT", "900")),
+                    env={**os.environ, "TRICERATOPS_RUNS_DIR": str(run_root)} if run_root is not None else None)
         if not result.is_file():
             raise RuntimeError("Local model exited without a result")
         payload = json.loads(result.read_text(encoding="utf-8"))

@@ -1,4 +1,4 @@
-#define AppVersion "1.0.1a"
+#define AppVersion "1.0.1b"
 #ifndef PayloadRoot
   #define PayloadRoot "..\package\payload"
 #endif
@@ -6,8 +6,8 @@
 AppId={{517B810E-4D4E-4C37-93AB-4D7C405E4779}
 AppName=Triceratops Music Agent for REAPER
 AppVersion={#AppVersion}
-VersionInfoVersion=1.0.1.1
-VersionInfoProductVersion=1.0.1.1
+VersionInfoVersion=1.0.1.2
+VersionInfoProductVersion=1.0.1.2
 VersionInfoProductTextVersion={#AppVersion}
 AppPublisher=Aolin-MIR
 AppPublisherURL=https://github.com/Aolin-MIR/triceratops-music-agent
@@ -15,7 +15,7 @@ AppSupportURL=https://github.com/Aolin-MIR/triceratops-music-agent/issues
 DefaultDirName={autopf}\Triceratops
 DefaultGroupName=Triceratops
 OutputDir=..\package\release
-OutputBaseFilename=Triceratops-1.0.1a-Windows-x64-Setup
+OutputBaseFilename=Triceratops-1.0.1b-Windows-x64-Setup
 ArchitecturesAllowed=x64compatible
 ArchitecturesInstallIn64BitMode=x64compatible
 PrivilegesRequired=admin
@@ -25,7 +25,7 @@ Compression=lzma2
 SolidCompression=yes
 CloseApplications=yes
 RestartApplications=no
-UninstallDisplayName=Triceratops Music Agent 1.0.1a
+UninstallDisplayName=Triceratops Music Agent 1.0.1b
 SetupLogging=yes
 [Languages]
 Name: "english"; MessagesFile: "compiler:Default.isl"

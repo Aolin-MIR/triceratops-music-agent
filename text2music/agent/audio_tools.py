@@ -71,7 +71,7 @@ def analyze_audio(path: Path, *, max_seconds: float = 900) -> dict[str, Any]:
     result = {
         "path": str(path), "duration_seconds": round(duration, 2), "tempo_bpm": round(tempo_value, 2),
         "key": key, "beat_count": int(len(beat_frames)), "onset_count": int(len(onset_times)),
-        "onset_times": np.round(onset_times[:128], 3).tolist(), "section_boundaries_seconds": section_times,
+        "onset_times": np.round(onset_times, 3).tolist(), "section_boundaries_seconds": section_times,
         "rms_mean": round(float(rms.mean()), 5), "rms_peak": round(float(rms.max()), 5),
     }
     return result

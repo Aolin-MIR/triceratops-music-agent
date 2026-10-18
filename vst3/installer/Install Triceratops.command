@@ -1,7 +1,7 @@
 #!/bin/bash
 set -u
 root="$(cd -- "$(dirname -- "$0")" && pwd)"
-echo 'Triceratops 1.0.1a · Mac online installer / 联网安装'
+echo 'Triceratops 1.0.1b · Mac online installer / 联网安装'
 echo 'Save and quit REAPER / Logic Pro before updating. 请先保存并退出宿主。'
 export TRICERATOPS_DOWNLOAD_SOURCE="${TRICERATOPS_DOWNLOAD_SOURCE:-auto}"
 echo 'Automatic download selection; verified alternate sources are retried on failure.'
