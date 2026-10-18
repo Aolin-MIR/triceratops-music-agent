@@ -13,9 +13,8 @@ from text2music.agent import vst_service
 def service_api(tmp_path, monkeypatch):
     state = vst_service.TriceratopsState()
     monkeypatch.setattr(vst_service, "APP", state)
-    for name in ("STATUS", "HISTORY", "CONVERSATION", "CONVERSATION_ARCHIVE", "WORKER_STATE"):
+    for name in ("STATUS", "HISTORY", "CONVERSATION", "CONVERSATION_ARCHIVE"):
         monkeypatch.setattr(vst_service, name, tmp_path / name.lower())
-    monkeypatch.setattr(state, "start_worker", lambda: None)
     server = ThreadingHTTPServer(("127.0.0.1", 0), vst_service.Handler)
     thread = threading.Thread(target=server.serve_forever, daemon=True)
     thread.start()
@@ -127,7 +126,8 @@ def test_import_preserves_agent_reply_and_reports_bridge_failure(service_api, mo
 
 def test_opening_editor_does_not_load_an_unrequested_model(service_api, monkeypatch):
     state, post = service_api
-    monkeypatch.setattr(state, "start_worker", lambda: pytest.fail("unrequested GPU model load"))
+    from text2music.agent import model_job
+    monkeypatch.setattr(model_job, "run_model_job", lambda *a, **k: pytest.fail("unrequested model load"))
     assert post("/session/open", {"session": "audio-editor"})[0] == 200
 
 

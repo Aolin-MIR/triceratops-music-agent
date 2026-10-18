@@ -1,45 +1,24 @@
 [build-system]
-requires = ["setuptools", "wheel"]
+requires = ["setuptools>=69", "wheel"]
 build-backend = "setuptools.build_meta"
 
 [project]
 name = "text2music"
-version = "0.9.0"
-description = "Triceratops Music Agent for REAPER"
+version = "1.0.2"
+description = "Triceratops Music Agent"
 readme = "readme.md"
+requires-python = ">=3.10,<3.12"
+dynamic = ["dependencies"]
 
-# Dependencies
-dependencies = [
-    "transformers",
-    "accelerate",
-    "wandb",
-    "abctoolkit==0.0.6",
-    "openai",
-    "samplings==0.1.7",
-    "pyparsing==3.2.1",
-    "gradio",
-    "partitura==1.6.0",
-    "mido",
-    "music21",
-    "jellyfish",
-    "unidecode",
-    "rapidfuzz",
-    "pyaml"
-]
+[tool.setuptools.dynamic]
+dependencies = {file = ["vst3/installer/requirements-runtime.txt"]}
 
 [tool.setuptools.packages.find]
 where = ["."]
-include = ["text2music", "text2music.*"]
+include = ["text2music", "text2music.agent", "text2music.agent.*"]
+
+[tool.setuptools.package-data]
+"text2music.agent" = ["reaper/*.lua"]
 
 [project.optional-dependencies]
-audio = [
-    "numpy>=1.26,<2",
-    "librosa==0.11.0",
-    "soundfile>=0.13",
-    "demucs==4.1.0",
-    "basic-pitch[onnx]==0.4.0",
-    "onnxruntime==1.23.2"
-]
-
-[tool.setuptools.exclude-package-data]
-"text2music" = ["artifacts/*"]
+dev = ["pytest>=8,<10", "ruff>=0.15,<1"]

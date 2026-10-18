@@ -29,24 +29,9 @@ MEMORY = RUNS_DIR / "agent-memory.json"
 STATE = RUNS_DIR / "vst-service-state.json"
 CONVERSATION = RUNS_DIR / "vst-conversation.jsonl"
 CONVERSATION_ARCHIVE = RUNS_DIR / "vst-conversation-archive.jsonl"
-WORKER_STATE = RUNS_DIR / "worker_queue" / "worker-state.txt"
-SHUTDOWN = RUNS_DIR / "worker_queue" / "shutdown"
-ACTION_ID_FILE = RUNS_DIR / "triceratops-action-id.txt"
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
 # Derived from this file so source and runtime copies always agree.
 AGENT_DIR = Path(__file__).resolve().parent
-WORKER_SCRIPT = AGENT_DIR / "launch_reaper_worker.sh"
-
-
-def _worker_alive() -> bool:
-    if os.name == "nt":
-        return False
-    try:
-        res = subprocess.run(["pgrep", "-f", "[w]arm_worker.py"],
-                             capture_output=True, text=True, timeout=5)
-        return res.returncode == 0 and res.stdout.strip() != ""
-    except Exception:
-        return False
 
 
 def _find_reaper_executable() -> str:
@@ -170,7 +155,6 @@ def _archive_and_clear_conversation() -> None:
             pass
 
 
-
 def _windows_to_wsl(path: str) -> Path:
     if os.name == "nt":
         return Path(path)
@@ -211,13 +195,6 @@ def _read_status() -> dict[str, str]:
             key, separator, value = line.partition(": ")
             if separator:
                 result[key.lower()] = value
-    except OSError:
-        pass
-    try:
-        for line in WORKER_STATE.read_text(encoding="utf-8", errors="replace").splitlines():
-            key, separator, value = line.partition(": ")
-            if separator:
-                result["worker_" + key.lower()] = value
     except OSError:
         pass
     return result
@@ -314,11 +291,9 @@ def _compact_conversation(keep: int = 40) -> None:
 class TriceratopsState:
     def __init__(self) -> None:
         self.sessions: dict[str, float] = {}
-        self.ever_opened = False
         self.lock = threading.RLock()
         self.busy = False
         self.cancel_event = threading.Event()
-        self.last_activity = time.monotonic()
         self.last_reply = "Ready."
         self.last_error = ""
         self.last_result: dict[str, Any] = {}
@@ -333,7 +308,7 @@ class TriceratopsState:
     def snapshot(self) -> dict[str, Any]:
         with self.lock:
             data = {
-                "service": "ready", "version": "1.0.1", "app_version": "1.0.1", "api_version": 2,
+                "service": "ready", "version": "1.0.2", "app_version": "1.0.2", "api_version": 2,
                 "backend_entry": str(Path(__file__).resolve()), "busy": self.busy, "sessions": len(self.sessions),
                 "reply": self.last_reply, "error": self.last_error,
                 "result": self.last_result, "history": _history(),
@@ -346,73 +321,11 @@ class TriceratopsState:
         data.update(_read_status())
         return data
 
-    def start_worker(self) -> None:
-        """Idempotently ensure the GPU worker process is alive."""
-        if _worker_alive():
-            return
-
-        try:
-            SHUTDOWN.unlink(missing_ok=True)
-            WORKER_STATE.parent.mkdir(parents=True, exist_ok=True)
-            WORKER_STATE.write_text("STATE: loading\nPROGRESS: 10\nDETAIL: Starting local GPU music service\n", encoding="utf-8")
-        except OSError:
-            pass
-
-        script = WORKER_SCRIPT if WORKER_SCRIPT.exists() else None
-        if script is None:
-            try:
-                WORKER_STATE.write_text(
-                    "STATE: error\nPROGRESS: 0\nDETAIL: launch_reaper_worker.sh not found next to vst_service.py\n",
-                    encoding="utf-8")
-            except OSError:
-                pass
-            return
-        try:
-            log_file = (RUNS_DIR / "worker_output.log").open("a", encoding="utf-8")
-            subprocess.Popen(["bash", str(script)], start_new_session=True,
-                             stdout=log_file, stderr=log_file)
-        except Exception as exc:
-            try:
-                WORKER_STATE.write_text(
-                    f"STATE: error\nPROGRESS: 0\nDETAIL: Failed to launch worker: {exc}\n",
-                    encoding="utf-8")
-            except OSError:
-                pass
-
-    def open_session(self, payload: dict[str, Any]) -> dict[str, Any]:
-        session = str(payload.get("session", ""))
-        with self.lock:
-            if session:
-                self.sessions[session] = time.monotonic()
-                self.last_activity = time.monotonic()
-            self.ever_opened = True
-        return self.snapshot()
-
-    def stop_when_unused(self) -> None:
-        idle_seconds = max(5, int(os.environ.get("TRICERATOPS_GPU_IDLE_SECONDS", "900")))
-        deadline = time.monotonic() + idle_seconds
-        while time.monotonic() < deadline:
-            time.sleep(min(10.0, max(0.1, deadline - time.monotonic())))
-            with self.lock:
-                if self.sessions or self.busy:
-                    return
-        with self.lock:
-            if self.sessions or self.busy:
-                return
-            if time.monotonic() - self.last_activity < idle_seconds:
-                return
-            SHUTDOWN.parent.mkdir(parents=True, exist_ok=True)
-            SHUTDOWN.write_text("idle timeout\n", encoding="utf-8")
-            # Publish while holding the same lock as the idle checks. A new
-            # chat must not finish before an older idle writer overwrites it.
-            # This flag does not verify device type or model-worker exit.
-            _write_status("ready", "0", "Service ready")
 
     def session_watchdog(self) -> None:
         while self.server is not None:
             time.sleep(10.0)
             now = time.monotonic()
-            became_empty = False
             with self.lock:
                 if self.busy:
                     continue
@@ -420,7 +333,6 @@ class TriceratopsState:
                          if now - seen > 120.0]
                 for session in stale:
                     self.sessions.pop(session, None)
-                became_empty = bool(stale) and not self.sessions
 
 
     def append_turn(self, role: str, content: str, tool: str = "") -> None:
@@ -452,7 +364,6 @@ class TriceratopsState:
             context += f"\nAudio: {audio}"
         with self.lock:
             self.busy = True
-            self.last_activity = time.monotonic()
             self.last_error = ""
             self.last_reply = ""
             self.last_result = {}
@@ -478,20 +389,16 @@ class TriceratopsState:
         # after the HTTP server is already listening.
         # Each generation adapter starts only the model needed for that request.
         try:
-            from text2music.agent.audio_tools import audio_to_midi, separate_stems
             from text2music.agent.capabilities import record_feedback, load_memory, memory_context
             from text2music.agent.midi_tools import transform_midi_file
-            from text2music.agent.symbolic_models import (
-                generate_midi_llm, infill_midi_gpt, continue_midi_gpt, model_status,
-            )
             from text2music.agent.tool_loop import run_tool_loop, FACTUAL_REPORT_TOOLS
             from text2music.agent.model_job import run_model_job
+            from text2music.agent.symbolic_models import model_status
 
             project_memory = ProjectMemory(RUNS_DIR, project_key(host))
             knowledge = KnowledgeBase(
                 RUNS_DIR / "knowledge-index.json",
                 [PROJECT_ROOT / "readme.md", PROJECT_ROOT / "vst3" / "README.md",
-                 PROJECT_ROOT / "text2music" / "artifacts" / "example_plans",
                  PROJECT_ROOT / "knowledge", RUNS_DIR / "project_notes"],
             )
             context += "\n" + memory_context(load_memory(MEMORY))
@@ -577,11 +484,8 @@ class TriceratopsState:
                     reply = "Audio-to-MIDI conversion is ready."
                 elif tool == "generate_draft":
                     requested_backend = str(arguments.get("backend", "auto"))
-                    installed = model_status()
                     backend = "midi_llm" if requested_backend == "auto" else requested_backend
-                    request = request_text + "\n\nVST3 host context:\n" + context
                     if backend == "midi_llm":
-                        release_notation_worker(RUNS_DIR)
                         entry = run_model_job("generate_draft", dict(
                             prompt=request_text, output_dir=RUNS_DIR / "midi_llm" / uuid.uuid4().hex,
                             max_tokens=int(arguments.get("max_tokens", 768)),
@@ -697,7 +601,7 @@ APP = TriceratopsState()
 
 
 class Handler(BaseHTTPRequestHandler):
-    server_version = "Triceratops/1.0.1"
+    server_version = "Triceratops/1.0.2"
 
     def log_message(self, format: str, *args: Any) -> None:
         return
@@ -763,14 +667,13 @@ class Handler(BaseHTTPRequestHandler):
                         APP.last_result = {}
                         APP.last_error = ""
                         APP.last_reply = ""
-                        APP.last_activity = time.monotonic()
                     _write_status("ready", "0", "Settings: " + job.get("detail", ""))
                     from text2music.agent.configuration import read_config
                     applied = read_config(APP.configuration.path).get("configuration_job") == job.get("id")
                     if applied and APP.server:
                         def restart():
                             # Release Python's imported device contexts, while the independent
-                            # Ollama server/model stays resident. The editor reconnects itself.
+                            # local chat server/model stays resident. The editor reconnects itself.
                             time.sleep(2)
                             APP.server.shutdown()
                         threading.Thread(target=restart, daemon=True).start()
@@ -793,8 +696,6 @@ class Handler(BaseHTTPRequestHandler):
                 session = str(payload.get("session") or uuid.uuid4())
                 with APP.lock:
                     APP.sessions[session] = time.monotonic()
-                    APP.ever_opened = True
-                    APP.last_activity = time.monotonic()
                 # A second editor must observe the existing task and result.
                 # Only service startup resets stale status from a prior run.
                 self._json(200, {"session": session, **APP.snapshot()})
@@ -803,13 +704,10 @@ class Handler(BaseHTTPRequestHandler):
                 with APP.lock:
                     if session in APP.sessions:
                         APP.sessions[session] = time.monotonic()
-                        APP.last_activity = time.monotonic()
                 self._json(200, APP.snapshot())
             elif self.path == "/session/close":
                 with APP.lock:
                     APP.sessions.pop(str(payload.get("session", "")), None)
-                    APP.last_activity = time.monotonic()
-                    empty = not APP.sessions
 
                 self._json(200, APP.snapshot())
             elif self.path == "/chat/clear":

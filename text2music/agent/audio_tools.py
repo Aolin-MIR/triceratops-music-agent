@@ -7,10 +7,11 @@ import json
 import os
 import re
 import subprocess
-import sys
 import time
 from pathlib import Path
 from typing import Any
+
+from text2music.agent.process_entry import python_module_command
 
 import numpy as np
 
@@ -80,9 +81,9 @@ def separate_stems(path: Path, output_dir: Path) -> list[Path]:
     if importlib.util.find_spec("demucs") is None:
         raise RuntimeError("Demucs is not installed")
     output_dir.mkdir(parents=True, exist_ok=True)
-    subprocess.run([sys.executable, "-X", "utf8", "-m", "text2music.agent.demucs_runner", "-n", "hf://htdemucs",
+    subprocess.run(python_module_command("text2music.agent.demucs_runner", "-n", "hf://htdemucs",
                     "-d", os.environ.get("TRICERATOPS_STEM_DEVICE", os.environ.get("TRICERATOPS_DEVICE", "cpu")),
-                    "-o", str(output_dir), str(path)], check=True)
+                    "-o", str(output_dir), str(path)), check=True)
     files = sorted((output_dir / "htdemucs" / path.stem).glob("*.wav"))
     if not files:
         raise RuntimeError("Stem separation returned no audio files")

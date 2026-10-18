@@ -126,7 +126,7 @@ def install(home: Path, endpoint: str = "auto", report=print) -> None:
                         shutil.copyfileobj(source, output)
         verify(home)
         verify_demucs()
-        manifest = {"version": "1.0.1", "sources": route, "actual_sources": actual_sources, "weights": WEIGHTS,
+        manifest = {"version": "1.0.2", "sources": route, "actual_sources": actual_sources, "weights": WEIGHTS,
                     "decoder_revision": CODE_REVISION, "demucs_revision": DEMUCS_REVISION, "demucs_sha256": DEMUCS_SHA256}
         (home / "installed-models.json").write_text(json.dumps(manifest, indent=2), encoding="utf-8")
     finally:

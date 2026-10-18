@@ -226,89 +226,10 @@ def test_windows_cli_dispatches_the_prepared_request_script_not_a_shared_script(
     assert not (tmp_path / "reaper-command.txt").exists()
 
 
-def test_idle_timeout_does_not_claim_gpu_or_verified_model_release(tmp_path, monkeypatch):
-    state = vst_service.TriceratopsState()
-    clock = {"now": 0.0}
-    monkeypatch.setattr(vst_service.time, "monotonic", lambda: clock["now"])
-    monkeypatch.setattr(vst_service.time, "sleep", lambda seconds: clock.update(now=clock["now"] + seconds))
-    monkeypatch.setenv("TRICERATOPS_GPU_IDLE_SECONDS", "5")
-    monkeypatch.setattr(vst_service, "SHUTDOWN", tmp_path / "worker" / "shutdown")
-    monkeypatch.setattr(vst_service, "STATUS", tmp_path / "status.txt")
-    state.last_activity = -10
-    state.stop_when_unused()
-    assert vst_service.SHUTDOWN.read_text() == "idle timeout\n"
-    status = vst_service._read_status()
-    assert status["state"] == "ready" and status["detail"] == "Service ready"
 
 
-def test_editor_reopening_during_idle_wait_prevents_shutdown_and_status_overwrite(tmp_path, monkeypatch):
-    state = vst_service.TriceratopsState()
-    clock = {"now": 0.0}
-    def reopen_during_wait(seconds):
-        clock["now"] += seconds
-        state.sessions["reopened-real-editor-unit-fixture"] = clock["now"]
-    monkeypatch.setattr(vst_service.time, "monotonic", lambda: clock["now"])
-    monkeypatch.setattr(vst_service.time, "sleep", reopen_during_wait)
-    monkeypatch.setenv("TRICERATOPS_GPU_IDLE_SECONDS", "5")
-    monkeypatch.setattr(vst_service, "SHUTDOWN", tmp_path / "worker" / "shutdown")
-    monkeypatch.setattr(vst_service, "STATUS", tmp_path / "status.txt")
-    vst_service._write_status("ready", "0", "existing editor status")
-    state.last_activity = -10
-    state.stop_when_unused()
-    assert not vst_service.SHUTDOWN.exists()
-    assert vst_service._read_status()["detail"] == "existing editor status"
 
 
-def test_idle_status_cannot_overwrite_a_new_chat_completion(tmp_path, monkeypatch):
-    import threading
-    state = vst_service.TriceratopsState()
-    clock = {"now": 0.0}
-    monkeypatch.setattr(vst_service.time, "monotonic", lambda: clock["now"])
-    monkeypatch.setattr(vst_service.time, "sleep", lambda seconds: clock.update(now=clock["now"] + seconds))
-    monkeypatch.setenv("TRICERATOPS_GPU_IDLE_SECONDS", "5")
-    for name, file in {"STATUS": "status.txt", "WORKER_STATE": "worker-state.txt",
-                       "SHUTDOWN": "worker/shutdown", "CONVERSATION": "conversation.jsonl",
-                       "CONVERSATION_ARCHIVE": "archive.jsonl"}.items():
-        monkeypatch.setattr(vst_service, name, tmp_path / file)
-    idle_write_entered = threading.Event()
-    allow_idle_write = threading.Event()
-    chat_started = threading.Event()
-    chat_finished = threading.Event()
-    write_status = vst_service._write_status
-
-    def pause_idle_publication(status, progress, detail):
-        if status == "ready" and detail == "Service ready":
-            idle_write_entered.set()
-            assert allow_idle_write.wait(5)
-        write_status(status, progress, detail)
-
-    def new_chat():
-        chat_started.set()
-        try:
-            # Real service status branch, no API/model fixture or fake tool output.
-            state.run_chat({"message": "当前状态"})
-        finally:
-            chat_finished.set()
-
-    monkeypatch.setattr(vst_service, "_write_status", pause_idle_publication)
-    state.last_activity = -10
-    idle = threading.Thread(target=state.stop_when_unused)
-    idle.start()
-    assert idle_write_entered.wait(5)
-    chat = threading.Thread(target=new_chat)
-    chat.start()
-    try:
-        assert chat_started.wait(5)
-        # Before the fix, the chat completes while the old idle writer is paused.
-        # With the fix it waits for the atomic idle transition, then completes.
-        chat_finished.wait(0.25)
-    finally:
-        allow_idle_write.set()
-        idle.join(5)
-        chat.join(5)
-    assert not idle.is_alive() and not chat.is_alive()
-    assert vst_service._read_status()["state"] == "completed"
-    assert state.last_result["tool"] == "status"
 
 def test_fixed_devices_are_configured_independently(tmp_path, monkeypatch):
     monkeypatch.setattr(os, "environ", dict(os.environ))
@@ -323,3 +244,32 @@ def test_fixed_devices_are_configured_independently(tmp_path, monkeypatch):
     assert os.environ["TRICERATOPS_MIDI_GPT_DEVICE"] == "cpu"
     assert os.environ["TRICERATOPS_STEM_DEVICE"] == "cpu"
     assert os.environ["QWEN_API_KEY"] == ""
+
+
+def test_packaged_backend_imports_in_isolated_python_without_source_tree(tmp_path, monkeypatch):
+    import importlib.util
+    import subprocess
+    import sys
+    monkeypatch.delenv("TRICERATOPS_CONFIG", raising=False)
+    script = Path(__file__).parents[1] / "vst3/installer/package_release.py"
+    spec = importlib.util.spec_from_file_location("isolated_package_release", script)
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    plugin = tmp_path / "plugin.vst3"
+    plugin.mkdir()
+    output = tmp_path / "relocated package"
+    module.package(plugin, output, "macos")
+    code = ("import sys,json,importlib;sys.path.insert(0,sys.argv[1]);"
+            "[importlib.import_module('text2music.agent.'+name[:-3]) for name in json.loads(sys.argv[2])]")
+    result = subprocess.run([sys.executable, "-I", "-c", code, str(output / "backend"),
+                             json.dumps(module.AGENT_MODULES)],
+                            cwd=tmp_path, capture_output=True, text=True, timeout=30)
+    assert result.returncode == 0, result.stderr
+
+
+def test_upgrade_removes_private_obsolete_runtime_but_preserves_user_data():
+    script = Path(__file__).parents[1] / "vst3/installer/Triceratops.iss"
+    section = script.read_text().split("[InstallDelete]", 1)[1].split("[Icons]", 1)[0]
+    assert '{app}\\ollama' in section
+    assert 'service.py' in section
+    assert not any(path in section.lower() for path in ("{userappdata}", "{localappdata}", "\\\\models", "\\\\runs"))

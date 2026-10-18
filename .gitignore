@@ -83,13 +83,10 @@ cython_debug/
 *.pth
 
 # Output folder
-text2music/data/train_new.jsonl
-text2music/data/validation_new.jsonl
 data/
 text2music/artifacts/agent_runs/
 text2music/artifacts/checkpoints/
 text2music/agent/reaper/*.zip
-text2music/artifacts/agent_runs/
 models/
 vst3/build-*/
 marketing/xiaohongshu/*.png

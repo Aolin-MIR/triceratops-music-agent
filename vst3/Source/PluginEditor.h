@@ -134,7 +134,7 @@ private:
 
     // Chat stream & sidebar controls
     juce::TextEditor chatDisplay, prompt, arrangement, history;
-    juce::Label statusLabel, progressLabel, warmupBanner, midiLabel, audioLabel;
+    juce::Label statusLabel, progressLabel, connectionBanner, midiLabel, audioLabel;
     juce::ProgressBar progressBar;
     ScoreStaveComponent scoreStave;
 
@@ -167,10 +167,9 @@ private:
     std::future<juce::var> pending;
     RequestKind requestKind = RequestKind::none;
     juce::int64 lastStatusPollMs = 0;
-    juce::int64 warmupStartMs = 0;
     juce::int64 visibleSinceMs = 0;
 
-    bool modelIsWarmingUp = true;
+    bool backendConnecting = true;
     bool chinese = juce::SystemStats::getUserLanguage().startsWithIgnoreCase("zh");
     bool sessionStartupRequested = false;
     bool sessionOpened = false;

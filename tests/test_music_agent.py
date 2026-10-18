@@ -1,4 +1,3 @@
-from text2music.agent.service import MusicBrief, _compile_qwen_plan, build_plan, validate_plan
 import json
 from pathlib import Path
 
@@ -7,45 +6,6 @@ from mido import Message, MetaMessage, MidiFile, MidiTrack
 from text2music.agent.capabilities import record_feedback, validate_midi
 from text2music.agent.midi_tools import analyze_selection, transform_midi_file, transform_selection
 from text2music.agent.tool_loop import run_tool_loop
-
-
-def test_rock_plan_has_required_text2score_fields():
-    plan = build_plan(MusicBrief(description="fast rock anthem"))
-    assert "Genre: rock" in plan
-    assert "Instruments: Electric Guitar, Electric Bass, Drumset" in plan
-    assert "Time Signature: 4/4" in plan
-    assert validate_plan(plan) == []
-
-
-def test_validator_rejects_incomplete_plan():
-    findings = validate_plan("Total Measures: 16\n")
-    assert any("Instruments" in finding for finding in findings)
-
-
-def test_qwen_prompt_does_not_need_a_key_for_local_planning():
-    plan = build_plan(MusicBrief(description="driving hard-rock riff", genre="rock", tempo=155))
-    assert "Tempo: 155 BPM" in plan
-
-
-def test_compiles_qwen_json_to_a_valid_plan():
-    sections = []
-    for measure in (1, 4, 8, 12, 16):
-        sections.append({"measure": measure, "instruments": ["Electric Guitar", "Electric Bass", "Drumset"],
-                         "pitch_min": 36, "pitch_max": 88, "density": "Moderate", "tempo": 145,
-                         "time_signature": "4/4", "key_signature": 1, "chords": [0, 4, 7],
-                         "direction": "riff section"})
-    plan = _compile_qwen_plan({"genre": "rock", "instruments": sections[0]["instruments"], "measures": sections},
-                              MusicBrief(description="rock", measures=16))
-    assert validate_plan(plan) == []
-
-
-def test_compiler_compacts_per_measure_qwen_output():
-    sections = [{"measure": measure, "instruments": ["Piano"], "pitch_min": 40, "pitch_max": 80,
-                 "density": "Moderate", "tempo": 120, "time_signature": "4/4", "key_signature": 0,
-                 "chords": [0, 4, 7], "direction": "section"} for measure in range(1, 17)]
-    plan = _compile_qwen_plan({"genre": "rock", "instruments": ["Piano"], "measures": sections},
-                              MusicBrief(description="test", measures=16))
-    assert plan.count("Measure:") == 10
 
 
 def test_selected_midi_analysis_and_in_place_transform(tmp_path: Path):

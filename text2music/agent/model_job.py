@@ -7,11 +7,12 @@ import os
 from pathlib import Path
 import signal
 import subprocess
-import sys
 import tempfile
 import threading
 import time
 from typing import Callable
+
+from text2music.agent.process_entry import python_module_command
 
 
 class TaskCancelled(RuntimeError):
@@ -73,9 +74,9 @@ def run_model_job(action: str, parameters: dict, *, cancelled: Callable[[], bool
         root = Path(temporary)
         request, result = root / "request.json", root / "result.json"
         request.write_text(json.dumps({"action": action, "parameters": parameters}, default=str), encoding="utf-8")
-        run_command([sys.executable, "-X", "utf8", "-m", "text2music.agent.model_job",
+        run_command(python_module_command("text2music.agent.model_job",
                      "--request", str(request), "--result", str(result),
-                     "--parent-pid", str(os.getpid())],
+                     "--parent-pid", str(os.getpid())),
                     cancelled=cancelled, timeout=float(os.environ.get("TRICERATOPS_MODEL_TIMEOUT", "900")))
         if not result.is_file():
             raise RuntimeError("Local model exited without a result")

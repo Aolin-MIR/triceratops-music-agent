@@ -5,7 +5,7 @@ import os
 
 def load_pinned_model(name="hf://htdemucs", repo=None):
     if name != "hf://htdemucs" or repo is not None:
-        raise ValueError("Triceratops 0.9 uses the pinned HTDemucs model")
+        raise ValueError("Triceratops uses the pinned HTDemucs model")
     import yaml
     from huggingface_hub import hf_hub_download
     from demucs.apply import BagOfModels

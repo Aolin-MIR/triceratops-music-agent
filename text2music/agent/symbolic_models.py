@@ -14,6 +14,9 @@ import time
 from pathlib import Path
 from typing import Any
 
+from text2music.agent.process_entry import python_module_command
+
+
 
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
 MIDI_LLM_ROOT = Path(os.environ.get("MIDI_LLM_ROOT", PROJECT_ROOT / "third_party" / "MIDI-LLM"))
@@ -54,22 +57,6 @@ def _require_model(name: str) -> None:
         raise RuntimeError(f"{name} is not installed completely at {status['model']}")
 
 
-def release_notation_worker(runs_dir: Path, timeout: float = 30.0) -> None:
-    """Release the warm notation worker before another CUDA model is loaded."""
-    if sys.platform in {"win32", "darwin"}:
-        return  # The legacy Linux worker is not part of either native release.
-    shutdown = runs_dir / "worker_queue" / "shutdown"
-    shutdown.parent.mkdir(parents=True, exist_ok=True)
-    shutdown.write_text("switching symbolic model\n", encoding="utf-8")
-    deadline = time.monotonic() + timeout
-    while time.monotonic() < deadline:
-        check = subprocess.run(
-            ["pgrep", "-f", "[w]arm_worker.py"], capture_output=True, text=True, timeout=5
-        )
-        if check.returncode != 0:
-            return
-        time.sleep(0.5)
-    raise RuntimeError("Notation GPU worker did not release before model switch")
 
 
 def generate_midi_llm(prompt: str, output_dir: Path, *, max_tokens: int = 768,
@@ -84,13 +71,13 @@ def generate_midi_llm(prompt: str, output_dir: Path, *, max_tokens: int = 768,
     output_dir = output_dir.resolve()
     output_dir.mkdir(parents=True, exist_ok=True)
     before = set(output_dir.rglob("*.mid"))
-    command = [
-        str(PYTHON), "-X", "utf8", "-m", "text2music.agent.midi_llm_runner",
+    command = python_module_command(
+        "text2music.agent.midi_llm_runner",
         "--model", str(MIDI_LLM_MODEL), "--prompt", prompt,
         "--output_root", str(output_dir), "--n_outputs", "1", "--no-synthesize",
         "--max_tokens", str(max(96, min(2046, int(max_tokens)))),
-        "--temperature", str(float(temperature)), "--top_p", str(float(top_p)),
-    ]
+        "--temperature", str(float(temperature)), "--top_p", str(float(top_p)), python=PYTHON,
+    )
     started = time.monotonic()
     completed = subprocess.run(
         command, cwd=MIDI_LLM_ROOT, capture_output=True, text=True, encoding="utf-8",

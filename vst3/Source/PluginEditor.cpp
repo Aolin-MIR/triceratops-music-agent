@@ -12,8 +12,8 @@ const juce::Colour accentPurple   { 0xffbb9af7 }; // Neon Purple
 const juce::Colour accentCyan     { 0xff7dcfff }; // Wave Cyan
 const juce::Colour accentGreen    { 0xff73daca }; // Emerald Green
 const juce::Colour accentRed      { 0xfff7768e }; // Velvet Coral Red
-const juce::Colour warmupBg       { 0xff2a2318 };
-const juce::Colour warmupText     { 0xffe0af68 };
+const juce::Colour connectionBg       { 0xff2a2318 };
+const juce::Colour connectionText     { 0xffe0af68 };
 }
 
 ScoreStaveComponent::ScoreStaveComponent()
@@ -275,7 +275,7 @@ TriceratopsAudioProcessorEditor::TriceratopsAudioProcessorEditor(TriceratopsAudi
     history.setText(ui("Version history in this project session will appear here."));
 
     // Setup Labels & Components
-    for (auto* label : { &statusLabel, &progressLabel, &warmupBanner, &midiLabel, &audioLabel })
+    for (auto* label : { &statusLabel, &progressLabel, &connectionBanner, &midiLabel, &audioLabel })
     {
         label->setColour(juce::Label::textColourId, textMain);
         label->setFont(juce::FontOptions(13.0f, juce::Font::bold));
@@ -285,11 +285,11 @@ TriceratopsAudioProcessorEditor::TriceratopsAudioProcessorEditor(TriceratopsAudi
     statusLabel.setColour(juce::Label::textColourId, accentBlue);
     progressLabel.setText(chinese ? juce::String::fromUTF8("本地音乐工具") : "Local music tools", juce::dontSendNotification);
 
-    warmupBanner.setText(chinese ? juce::String::fromUTF8("正在连接本地音乐助手...") : "Connecting to the local music agent...", juce::dontSendNotification);
-    warmupBanner.setColour(juce::Label::backgroundColourId, warmupBg);
-    warmupBanner.setColour(juce::Label::textColourId, warmupText);
-    warmupBanner.setColour(juce::Label::outlineColourId, warmupText.withAlpha(0.4f));
-    warmupBanner.setJustificationType(juce::Justification::centred);
+    connectionBanner.setText(chinese ? juce::String::fromUTF8("正在连接本地音乐助手...") : "Connecting to the local music agent...", juce::dontSendNotification);
+    connectionBanner.setColour(juce::Label::backgroundColourId, connectionBg);
+    connectionBanner.setColour(juce::Label::textColourId, connectionText);
+    connectionBanner.setColour(juce::Label::outlineColourId, connectionText.withAlpha(0.4f));
+    connectionBanner.setJustificationType(juce::Justification::centred);
 
     midiLabel.setText(ui("MIDI: None"), juce::dontSendNotification);
     audioLabel.setText(ui("AUDIO: None"), juce::dontSendNotification);
@@ -355,7 +355,7 @@ TriceratopsAudioProcessorEditor::TriceratopsAudioProcessorEditor(TriceratopsAudi
     capture.onClick   = [this] { toggleMidiCapture(); };
     captureAudio.onClick = [this] { toggleAudioCapture(); };
 
-    // Initial button state during warmup
+    // Wait for the backend connection before sending a request.
     send.setEnabled(false);
     // Keep the input accessible while connecting; only Send needs to wait.
     prompt.setEnabled(true);
@@ -371,7 +371,6 @@ TriceratopsAudioProcessorEditor::TriceratopsAudioProcessorEditor(TriceratopsAudi
     }
 
     // Initial welcoming chat message
-    warmupStartMs = juce::Time::currentTimeMillis();
     chatTurns.push_back({
         "assistant",
         ui("Welcome to Triceratops Music Agent!\nDescribe a musical goal in your own words. Try: create a wistful piano phrase; transpose this MIDI by two semitones; continue it for four bars; analyze this audio; split it into stems. Load MIDI or audio before file-based actions. Use Features for the full list. Requests outside music and REAPER will be identified clearly."),
@@ -438,7 +437,7 @@ void TriceratopsAudioProcessorEditor::paint(juce::Graphics& g)
     for (int i = 0; i < 6; ++i)
     {
         float fi = static_cast<float>(i);
-        float barH = (busyGenerating || modelIsWarmingUp)
+        float barH = (busyGenerating || backendConnecting)
             ? (5.0f + 9.0f * std::sin(eqPhase + fi * 0.9f) * std::sin(eqPhase * 0.5f + fi))
             : (4.0f + 2.0f * std::sin(fi * 1.2f));
         barH = juce::jlimit(3.0f, 16.0f, std::abs(barH));
@@ -465,10 +464,10 @@ void TriceratopsAudioProcessorEditor::resized()
     clearChatBtn.setBounds(header.removeFromRight(getWidth() < 900 ? 65 : 90).reduced(2, 0));
     languageBtn.setBounds(header.removeFromRight(70).reduced(2, 0));
 
-    if (modelIsWarmingUp)
-        warmupBanner.setBounds(area.removeFromTop(32).reduced(12, 2));
+    if (backendConnecting)
+        connectionBanner.setBounds(area.removeFromTop(32).reduced(12, 2));
     else
-        warmupBanner.setBounds(0, 0, 0, 0);
+        connectionBanner.setBounds(0, 0, 0, 0);
 
     auto fileTools = area.removeFromTop(30).reduced(12, 1);
     dragMidi.setBounds(fileTools.removeFromRight(120));
@@ -763,105 +762,24 @@ void TriceratopsAudioProcessorEditor::handleStatus(const juce::var& value)
         settingsPanel->open(chinese);
     }
     const auto state = object->getProperty("state").toString();
-    const auto worker = object->getProperty("worker_state").toString();
     const auto configJob = object->getProperty("configuration_job");
     const auto* configObject = configJob.getDynamicObject();
     const auto configState = configObject ? configObject->getProperty("state").toString() : juce::String();
     backendConfiguring = configState == "running" || configState == "cancelling";
     const auto busy = static_cast<bool>(object->getProperty("busy")) && !backendConfiguring;
-    const auto workerIsLoading = (worker == "loading");
-    const auto workerHasError   = (worker == "error");
-
-    if (warmupStartMs == 0 && workerIsLoading)
-        warmupStartMs = juce::Time::currentTimeMillis();
-
-    if (!busy && workerIsLoading)
+    if (backendConnecting)
     {
-        if (!modelIsWarmingUp)
-        {
-            modelIsWarmingUp = true;
-            warmupBanner.setVisible(true);
-            send.setEnabled(true);
-            prompt.setEnabled(true);
-            resized();
-        }
-        int elapsedSec = static_cast<int>((juce::Time::currentTimeMillis() - warmupStartMs) / 1000);
-        statusLabel.setText(ui("WARMING UP MODEL"), juce::dontSendNotification);
-        statusLabel.setColour(juce::Label::textColourId, warmupText);
-        warmupBanner.setText(ui("AI Model Warmup / Caching... Please wait (GPU Caching... ") + juce::String(elapsedSec) + ui("s elapsed)"), juce::dontSendNotification);
-    }
-    else if (workerHasError && modelIsWarmingUp)
-    {
-        modelIsWarmingUp = false;
-        warmupBanner.setVisible(false);
-        send.setSpinning(false);
-        send.setEnabled(true);
-        prompt.setEnabled(true);
-        statusLabel.setText(ui("WARMUP ERROR"), juce::dontSendNotification);
-        statusLabel.setColour(juce::Label::textColourId, accentRed);
-        resized();
-
-        juce::String errDetail = object->getProperty("worker_detail").toString();
-        if (errDetail.isEmpty())
-            errDetail = ui("Local GPU model service failed to initialize.");
-
-        chatTurns.push_back({
-            "assistant",
-            ui("MODEL WARMUP ERROR EXCEPTION DETAILS:\n----------------------------------------\n") + errDetail + "\n----------------------------------------",
-            juce::Time::getCurrentTime().formatted("%H:%M:%S"),
-            "",
-            {}
-        });
-        updateChatDisplay();
-    }
-    else if (modelIsWarmingUp && (worker == "ready" || (!workerIsLoading && !workerHasError)))
-    {
-        modelIsWarmingUp = false;
-        warmupBanner.setVisible(false);
-        send.setSpinning(false);
-        send.setEnabled(!busyGenerating);
-        prompt.setEnabled(true);
-        statusLabel.setText(ui("AGENT READY"), juce::dontSendNotification);
-        statusLabel.setColour(juce::Label::textColourId, accentGreen);
+        backendConnecting = false;
+        connectionBanner.setVisible(false);
         resized();
     }
-    else if (busy)
-    {
-        statusLabel.setText(ui("GENERATING..."), juce::dontSendNotification);
-        statusLabel.setColour(juce::Label::textColourId, accentBlue);
-    }
-    else if (!workerHasError)
-    {
-        statusLabel.setText(ui("AGENT READY"), juce::dontSendNotification);
-        statusLabel.setColour(juce::Label::textColourId, accentGreen);
-    }
+    statusLabel.setText(busy ? ui("GENERATING...") : ui("AGENT READY"), juce::dontSendNotification);
+    statusLabel.setColour(juce::Label::textColourId, busy ? accentBlue : accentGreen);
 
-    auto detail = object->getProperty("detail").toString();
-    const auto workerDetail = object->getProperty("worker_detail").toString();
-    const auto workerProg = object->getProperty("worker_progress").toString().getDoubleValue();
-
-    if (!busy && workerIsLoading)
-    {
-        int elapsedSec = static_cast<int>((juce::Time::currentTimeMillis() - warmupStartMs) / 1000);
-        juce::String msg = workerDetail.isNotEmpty() ? workerDetail : ui("Warming local GPU notation model...");
-        detail = msg + " (" + juce::String(elapsedSec) + ui("s elapsed)");
-    }
-    if (detail.isNotEmpty())
+    const auto detail = object->getProperty("detail").toString();
     progressLabel.setText(ui(detail), juce::dontSendNotification);
-
     const auto percent = object->getProperty("progress").toString().getDoubleValue();
-    if (!busy && workerIsLoading)
-    {
-        int elapsedSec = static_cast<int>((juce::Time::currentTimeMillis() - warmupStartMs) / 1000);
-        if (workerProg > 0.0)
-            progress = juce::jlimit(0.05, 0.95, workerProg / 100.0);
-        else
-            progress = juce::jlimit(0.05, 0.95, elapsedSec / 25.0);
-    }
-    else
-    {
-        progress = juce::jlimit(0.0, 1.0, percent / 100.0);
-    }
+    progress = juce::jlimit(0.0, 1.0, percent / 100.0);
 
     const auto response = object->getProperty("reply").toString();
     const auto error = object->getProperty("error").toString();
@@ -895,7 +813,7 @@ void TriceratopsAudioProcessorEditor::handleStatus(const juce::var& value)
         // UI must always leave the "thinking" state here.
         busyGenerating = false;
         send.setSpinning(false);
-        send.setEnabled(!modelIsWarmingUp);
+        send.setEnabled(!backendConnecting);
 
         juce::String finalReply = error.isEmpty() ? response : ui("Operation failed:\n") + error;
         const auto* finalResult = object->getProperty("result").getDynamicObject();
@@ -918,7 +836,7 @@ void TriceratopsAudioProcessorEditor::handleStatus(const juce::var& value)
     {
         busyGenerating = false;
         send.setSpinning(false);
-        send.setEnabled(!modelIsWarmingUp);
+        send.setEnabled(!backendConnecting);
         chatTurns.push_back({
             "assistant",
             ui("ERROR EXCEPTION DETAILS:\n----------------------------------------\n") + error + "\n----------------------------------------",
@@ -941,7 +859,7 @@ void TriceratopsAudioProcessorEditor::handleStatus(const juce::var& value)
     for (auto* button : { &newMusic, &editMidi, &analyze, &continueFour, &moreEnergy, &tightenTiming,
                           &undoBtn, &keepBtn, &rejectBtn, &stems, &audioMidi })
         button->setEnabled(!backendConfiguring && !busy);
-    if (!backendConfiguring && !busyGenerating && !modelIsWarmingUp) send.setEnabled(true);
+    if (!backendConfiguring && !busyGenerating && !backendConnecting) send.setEnabled(true);
 
     // Process Result Object & Update Score Visualizer
     if (auto* result = object->getProperty("result").getDynamicObject();
@@ -1441,7 +1359,7 @@ void TriceratopsAudioProcessorEditor::applyLanguage()
     playMidi.setTooltip(ownerProcessor.producesMidi() ? juce::String() : midiHelp);
     languageBtn.setTooltip(juce::String::fromUTF8("切换界面语言 / Switch interface language"));
     scoreStave.setChinese(chinese);
-    for (auto* label : { &statusLabel, &progressLabel, &warmupBanner, &midiLabel, &audioLabel })
+    for (auto* label : { &statusLabel, &progressLabel, &connectionBanner, &midiLabel, &audioLabel })
         label->setText(ui(label->getText()), juce::dontSendNotification);
     prompt.setTextToShowWhenEmpty(ui("Say anything: sad piano, continue this, more energy, analyze it..."), textSub.withAlpha(0.6f));
     arrangement.setText(ui(arrangement.getText()));

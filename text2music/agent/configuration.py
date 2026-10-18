@@ -8,7 +8,6 @@ import signal
 import subprocess
 import sys
 import threading
-import time
 import uuid
 from pathlib import Path
 
@@ -349,7 +348,7 @@ def worker(path: Path, request: Path, output: Path):
         check(candidate, check_chat=False)
         if revision(path) != data['revision']:
             raise RuntimeError('Configuration changed while this task ran; previous settings retained')
-        config.update(setup_complete=True, version='1.0.1', configuration_job=data['job_id'])
+        config.update(setup_complete=True, version='1.0.2', configuration_job=data['job_id'])
         atomic_json(path, config)
         atomic_json(output, {'state': 'complete', 'detail': 'Verified and applied. Devices stay fixed until the next configuration.',
                              'api_requirement': config['api_requirement']})

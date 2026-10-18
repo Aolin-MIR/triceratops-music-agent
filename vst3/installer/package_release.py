@@ -6,8 +6,8 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[2]
 AGENT_MODULES = (
-    "__init__.py", "model_policy.py", "model_job.py", "errors.py", "midi_merge.py", "midi_postprocess.py", "configuration.py", "first_run.py", "local_runtime.py", "model_sources.py", "hardware.py", "audio_tools.py", "capabilities.py", "knowledge.py", "midi_tools.py",
-    "operation_report.py", "direct_actions.py", "llm_backend.py", "project_memory.py", "router.py", "symbolic_models.py",
+    "__init__.py", "model_policy.py", "model_job.py", "process_entry.py", "errors.py", "midi_merge.py", "midi_postprocess.py", "configuration.py", "first_run.py", "local_runtime.py", "model_sources.py", "hardware.py", "audio_tools.py", "capabilities.py", "knowledge.py", "midi_tools.py",
+    "operation_report.py", "direct_actions.py", "llm_backend.py", "project_memory.py", "symbolic_models.py",
     "tool_loop.py", "vst_service.py", "runtime.py", "doctor.py", "download_models.py", "midi_llm_runner.py", "demucs_runner.py",
 )
 
