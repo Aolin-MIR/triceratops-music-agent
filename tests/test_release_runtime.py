@@ -257,3 +257,55 @@ def test_editor_reopening_during_idle_wait_prevents_shutdown_and_status_overwrit
     state.stop_when_unused()
     assert not vst_service.SHUTDOWN.exists()
     assert vst_service._read_status()["detail"] == "existing editor status"
+
+
+def test_idle_status_cannot_overwrite_a_new_chat_completion(tmp_path, monkeypatch):
+    import threading
+    state = vst_service.TriceratopsState()
+    clock = {"now": 0.0}
+    monkeypatch.setattr(vst_service.time, "monotonic", lambda: clock["now"])
+    monkeypatch.setattr(vst_service.time, "sleep", lambda seconds: clock.update(now=clock["now"] + seconds))
+    monkeypatch.setenv("TRICERATOPS_GPU_IDLE_SECONDS", "5")
+    for name, file in {"STATUS": "status.txt", "WORKER_STATE": "worker-state.txt",
+                       "SHUTDOWN": "worker/shutdown", "CONVERSATION": "conversation.jsonl",
+                       "CONVERSATION_ARCHIVE": "archive.jsonl"}.items():
+        monkeypatch.setattr(vst_service, name, tmp_path / file)
+    idle_write_entered = threading.Event()
+    allow_idle_write = threading.Event()
+    chat_started = threading.Event()
+    chat_finished = threading.Event()
+    write_status = vst_service._write_status
+
+    def pause_idle_publication(status, progress, detail):
+        if status == "ready" and detail == "Service ready":
+            idle_write_entered.set()
+            assert allow_idle_write.wait(5)
+        write_status(status, progress, detail)
+
+    def new_chat():
+        chat_started.set()
+        try:
+            # Real service status branch, no API/model fixture or fake tool output.
+            state.run_chat({"message": "当前状态"})
+        finally:
+            chat_finished.set()
+
+    monkeypatch.setattr(vst_service, "_write_status", pause_idle_publication)
+    state.last_activity = -10
+    idle = threading.Thread(target=state.stop_when_unused)
+    idle.start()
+    assert idle_write_entered.wait(5)
+    chat = threading.Thread(target=new_chat)
+    chat.start()
+    try:
+        assert chat_started.wait(5)
+        # Before the fix, the chat completes while the old idle writer is paused.
+        # With the fix it waits for the atomic idle transition, then completes.
+        chat_finished.wait(0.25)
+    finally:
+        allow_idle_write.set()
+        idle.join(5)
+        chat.join(5)
+    assert not idle.is_alive() and not chat.is_alive()
+    assert vst_service._read_status()["state"] == "completed"
+    assert state.last_result["tool"] == "status"
