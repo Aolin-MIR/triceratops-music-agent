@@ -17,7 +17,7 @@
 
 Describe style, mood, instruments and structure in Chinese or English without JSON or a fixed prompt format.
 
-Mac requires native ARM64 Python 3.10 / 3.11. Intel / Rosetta model backends are unsupported. Audio devices are selected in the host.
+The Mac installer downloads native ARM64 Python and the local-chat runtime when needed. Intel / Rosetta model backends are unsupported. Audio devices are selected in the host.
 
 ## ✨ From 1.0 to 1.0.1
 
@@ -47,7 +47,7 @@ Generated music and transcription may contain errors. Successful file generation
 
 ## ⚙️ Install and configure
 
-Choose an actual platform attachment from [Releases](https://github.com/Aolin-MIR/triceratops-music-agent/releases). On Mac, extract and run `bash setup-macos.sh`, then use Settings in the plug-in to detect, download, verify and apply. Windows uses its native installer without WSL.
+Choose an actual platform attachment from [Releases](https://github.com/Aolin-MIR/triceratops-music-agent/releases). On Mac, extract and double-click `Install Triceratops.command`. Download sources are selected automatically, with verified alternatives on failure. The installer downloads and verifies Python and the local-chat runtime; use plug-in Settings to download and verify dependencies and model weights. Large runtimes and weights stay outside the small installer ZIP. Public-file proxies must match the pinned official SHA-256. Music weights support Hugging Face and HF-Mirror; local chat weights use the official registry. Windows uses its native installer without WSL.
 
 | Function | Default weights | Recommended deployment |
 | --- | --- | --- |

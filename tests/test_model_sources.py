@@ -8,7 +8,7 @@ from text2music.agent.hardware import GIB, plan_devices
 def test_model_route_uses_public_country_only(country, endpoint):
     route = sources.model_sources('auto', {'country': country})
     assert route['hf_endpoint'] == endpoint
-    assert route['local_chat_models'] == 'official-ollama'
+    assert route['local_chat_models'] == 'official-model-registry'
     assert route['scope'] == 'model-downloads-only'
 
 

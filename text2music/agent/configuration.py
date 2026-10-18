@@ -290,8 +290,29 @@ def worker(path: Path, request: Path, output: Path):
             requirements = Path(__file__).with_name('requirements-runtime.txt')
             if not requirements.exists(): requirements = root / 'vst3' / 'installer' / 'requirements-runtime.txt'
             report('Installing dedicated Python dependencies')
-            run([sys.executable, '-m', 'pip', 'install', '-r', str(requirements), '--disable-pip-version-check'])
-            run([sys.executable, '-m', 'pip', 'install', '--no-deps', 'https://codeload.github.com/jthickstun/anticipation/tar.gz/af37397922665a0fb8d474d7988b0f3755a38d45'])
+            if measured['system'] == 'Darwin':
+                # Keep the Windows deployment unchanged. Transport selection
+                # affects package downloads only, never API requests.
+                china = route.get('music_models') == 'china-mirror'
+                indexes = (['https://mirrors.aliyun.com/pypi/simple/', 'https://pypi.org/simple']
+                           if china else ['https://pypi.org/simple', 'https://mirrors.aliyun.com/pypi/simple/'])
+                for index_number, index in enumerate(indexes):
+                    try:
+                        report('Installing dependencies from ' + index)
+                        run([sys.executable, '-m', 'pip', 'install', '-r', str(requirements),
+                             '--disable-pip-version-check', '--timeout', '20', '--retries', '2', '--index-url', index])
+                        break
+                    except RuntimeError:
+                        if index_number == len(indexes)-1: raise
+                        report('Dependency source failed; retrying the alternate package index')
+                from text2music.agent.macos_bootstrap import download
+                decoder = download('https://github.com/jthickstun/anticipation/archive/af37397922665a0fb8d474d7988b0f3755a38d45.tar.gz',
+                    'a002ec7c4e5aa695eef8bc569d49612b950b27bf801fdf0e3408046167d2e90f', 38847,
+                    Path(config['model_home']).parent/'downloads', 'china' if china else 'auto', report)
+                run([sys.executable, '-m', 'pip', 'install', '--no-deps', '--no-build-isolation', str(decoder)])
+            else:
+                run([sys.executable, '-m', 'pip', 'install', '-r', str(requirements), '--disable-pip-version-check'])
+                run([sys.executable, '-m', 'pip', 'install', '--no-deps', 'https://codeload.github.com/jthickstun/anticipation/tar.gz/af37397922665a0fb8d474d7988b0f3755a38d45'])
             report('Downloading pinned music models from '+route['hf_endpoint'])
             from text2music.agent.download_models import install
             install(Path(config['model_home']), route['hf_endpoint'], report=report)

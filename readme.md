@@ -17,7 +17,7 @@
 
 可用中文或英文描述风格、情绪、乐器和结构，无需 JSON 或固定提示词格式。
 
-Mac 需要原生 ARM64 Python 3.10 / 3.11；不支持 Intel / Rosetta 模型后端。声音输出跟随宿主选择的设备。
+Mac 安装器会按需联网配置原生 ARM64 Python 和本地聊天运行环境；不支持 Intel / Rosetta 模型后端。声音输出跟随宿主选择的设备。
 
 ## ✨ 1.0 → 1.0.1 的重要变化
 
@@ -53,7 +53,7 @@ Mac 需要原生 ARM64 Python 3.10 / 3.11；不支持 Intel / Rosetta 模型后�
 
 ## ⚙️ 安装与部署
 
-从 [Releases](https://github.com/Aolin-MIR/triceratops-music-agent/releases) 选择实际提供的对应系统附件。Mac 解压后运行 `bash setup-macos.sh`，再在插件的“设置”中检测、下载、验证并应用。Windows 使用对应安装程序，无需 WSL。
+从 [Releases](https://github.com/Aolin-MIR/triceratops-music-agent/releases) 选择实际提供的对应系统附件。Mac 解压后双击 `Install Triceratops.command`，安装器自动选择可用源，按需下载并校验 Python 和本地聊天运行环境。再在插件“设置”中一键下载、验证并应用所需依赖与模型。安装包不含大型运行环境或权重，首次使用需联网。备用代理仅传输公开文件，下载必须通过官方固定版本 SHA-256；音乐模型提供官方源与 HF-Mirror，本地聊天权重使用官方注册表。Windows 使用对应安装程序，无需 WSL。
 
 | 功能 | 默认权重大小 | 推荐方式 |
 | --- | --- | --- |
