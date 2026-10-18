@@ -18,6 +18,15 @@ PROJECT_ROOT = Path(__file__).resolve().parents[2]
 INFERENCE_DIR = PROJECT_ROOT / "text2music" / "inference"
 RUNS_DIR = Path(os.environ.get("TEXT2SCORE_RUNS_DIR", PROJECT_ROOT / "text2music" / "artifacts" / "agent_runs"))
 
+
+def _use_warm_worker_queue() -> bool:
+    """The packaged Windows agent runs inference directly in its native Python."""
+    return os.name != "nt"
+
+
+def _generation_command(plan_path: Path, output_dir: Path) -> list[str]:
+    return [sys.executable, "inference.py", "--plan_path", str(plan_path), "--output_folder", str(output_dir)]
+
 KEY_SIGNATURES = {
     "c": 0, "a minor": 0, "g": 1, "e minor": 1, "d": 2, "b minor": 2,
     "a": 3, "f# minor": 3, "e": 4, "c# minor": 4, "b": 5, "g# minor": 5,
@@ -227,101 +236,80 @@ def run_generation(plan: str, progress_callback: Callable[[str, int, str, str, s
         if progress_callback:
             progress_callback(stage, percent, detail, str(run_dir), str(plan_path))
 
-    worker_queue = RUNS_DIR / "worker_queue"
-    worker_queue.mkdir(parents=True, exist_ok=True)
-    req_id = f"req-{uuid.uuid4().hex[:8]}"
+    # The packaged Windows runtime is native. The warm worker queue belongs to
+    # the source-tree/Linux workflow and has no consumer in a Windows install.
+    if _use_warm_worker_queue():
+        worker_queue = RUNS_DIR / "worker_queue"
+        worker_queue.mkdir(parents=True, exist_ok=True)
+        req_id = f"req-{uuid.uuid4().hex[:8]}"
+        req_file = worker_queue / f"{req_id}.request.json"
+        resp_file = worker_queue / f"{req_id}.response.json"
+        prog_file = worker_queue / f"{req_id}.progress.json"
+        request_data = {"id": req_id, "plan": plan, "output_folder": str(output_dir),
+                        "cancel_path": str(run_dir / "cancel")}
 
-    wsl_output = f"/mnt/e/text2score/text2music/artifacts/agent_runs/{run_dir.name}/output" if os.name == "nt" else str(output_dir)
-    wsl_cancel = f"/mnt/e/text2score/text2music/artifacts/agent_runs/{run_dir.name}/cancel" if os.name == "nt" else str(run_dir / "cancel")
-
-    req_file = worker_queue / f"{req_id}.request.json"
-    resp_file = worker_queue / f"{req_id}.response.json"
-    prog_file = worker_queue / f"{req_id}.progress.json"
-
-    request_data = {
-        "id": req_id,
-        "plan": plan,
-        "output_folder": wsl_output,
-        "cancel_path": wsl_cancel,
-    }
-
-    report("loading_model", 18, "Submitting score plan to local GPU worker...")
-    # Clean up any stale response/progress from previous runs
-    resp_file.unlink(missing_ok=True)
-    prog_file.unlink(missing_ok=True)
-    req_file.write_text(json.dumps(request_data, ensure_ascii=False), encoding="utf-8")
-
-    started = time.monotonic()
-    last_heartbeat = -1
-    worker_restarted = False
-    while True:
-        if resp_file.exists():
-            try:
-                resp = json.loads(resp_file.read_text(encoding="utf-8"))
-                resp_file.unlink(missing_ok=True)
-                prog_file.unlink(missing_ok=True)
-                if not resp.get("ok"):
-                    return str(run_dir), [], f"Worker error: {resp.get('error')}"
-                files = [str(path) for path in sorted(output_dir.rglob("*.abc"))] if output_dir.exists() else []
-                report("verifying", 88, "Checking generated notation")
-                return str(run_dir), files, "Generation completed successfully on GPU worker."
-            except Exception:
-                pass
-
-        cancel_file = run_dir / "cancel"
-        if cancel_file.exists():
-            req_file.unlink(missing_ok=True)
-            return str(run_dir), [], "Generation cancelled"
-
-        elapsed = int(time.monotonic() - started)
-        if prog_file.exists():
-            try:
-                prog = json.loads(prog_file.read_text(encoding="utf-8"))
-                phase = prog.get("phase", "")
-                if phase == "sampling":
-                    current_step = int(prog.get("step", 0))
-                    total_steps = int(prog.get("total_steps", 0))
-                    if total_steps > 0:
-                        pct = min(88, 30 + int(current_step * 58 / total_steps))
-                        detail_msg = f"Sampling score tokens with warm GPU model ({current_step}/{total_steps} tokens, {elapsed}s)"
-                    else:
-                        pct = min(88, 30 + elapsed // 2)
-                        detail_msg = f"Sampling score tokens with warm GPU model... ({elapsed}s elapsed)"
-                    report("sampling", pct, detail_msg)
-            except Exception:
-                pass
-        elif elapsed != last_heartbeat:
-            last_heartbeat = elapsed
-            report("loading_model", min(30, 15 + elapsed // 4), f"Waiting for GPU model worker... ({elapsed}s)")
-            # Self-heal: if the worker died or was stopped, relaunch it once
-            # instead of waiting out the full queue timeout.
-            if not worker_restarted and elapsed >= 30 and os.name != "nt":
+        report("loading_model", 18, "Submitting score plan to local GPU worker...")
+        resp_file.unlink(missing_ok=True)
+        prog_file.unlink(missing_ok=True)
+        req_file.write_text(json.dumps(request_data, ensure_ascii=False), encoding="utf-8")
+        started = time.monotonic()
+        last_heartbeat = -1
+        worker_restarted = False
+        while True:
+            if resp_file.exists():
                 try:
-                    worker_text = (worker_queue / "worker-state.txt").read_text(
-                        encoding="utf-8", errors="replace")
-                except OSError:
-                    worker_text = ""
-                worker_state = ""
-                for line in worker_text.splitlines():
-                    if line.startswith("STATE: "):
-                        worker_state = line.partition(": ")[2].strip()
-                        break
-                if worker_state in {"error", "stopped", ""}:
-                    script = Path(__file__).resolve().parent / "launch_reaper_worker.sh"
-                    if script.exists():
-                        try:
-                            subprocess.Popen(["bash", str(script)], start_new_session=True,
-                                             stdout=subprocess.DEVNULL,
-                                             stderr=subprocess.DEVNULL)
-                            worker_restarted = True
-                            report("loading_model", 20, "GPU worker was not running; restarting it...")
-                        except OSError:
-                            pass
+                    resp = json.loads(resp_file.read_text(encoding="utf-8"))
+                    resp_file.unlink(missing_ok=True)
+                    prog_file.unlink(missing_ok=True)
+                    if not resp.get("ok"):
+                        return str(run_dir), [], f"Worker error: {resp.get('error')}"
+                    files = [str(path) for path in sorted(output_dir.rglob("*.abc"))] if output_dir.exists() else []
+                    report("verifying", 88, "Checking generated notation")
+                    return str(run_dir), files, "Generation completed successfully on GPU worker."
+                except (OSError, ValueError, TypeError):
+                    pass
 
-        if time.monotonic() - started > 600:
-            req_file.unlink(missing_ok=True)
-            break
-        time.sleep(0.3)
+            if (run_dir / "cancel").exists():
+                req_file.unlink(missing_ok=True)
+                return str(run_dir), [], "Generation cancelled"
+
+            elapsed = int(time.monotonic() - started)
+            if prog_file.exists():
+                try:
+                    prog = json.loads(prog_file.read_text(encoding="utf-8"))
+                    if prog.get("phase") == "sampling":
+                        current_step = int(prog.get("step", 0))
+                        total_steps = int(prog.get("total_steps", 0))
+                        pct = min(88, 30 + int(current_step * 58 / total_steps)) if total_steps > 0 else min(88, 30 + elapsed // 2)
+                        detail = (f"Sampling score tokens with warm GPU model ({current_step}/{total_steps} tokens, {elapsed}s)"
+                                  if total_steps > 0 else f"Sampling score tokens with warm GPU model... ({elapsed}s elapsed)")
+                        report("sampling", pct, detail)
+                except (OSError, ValueError, TypeError):
+                    pass
+            elif elapsed != last_heartbeat:
+                last_heartbeat = elapsed
+                report("loading_model", min(30, 15 + elapsed // 4), f"Waiting for GPU model worker... ({elapsed}s)")
+                if not worker_restarted and elapsed >= 30:
+                    try:
+                        worker_text = (worker_queue / "worker-state.txt").read_text(encoding="utf-8", errors="replace")
+                    except OSError:
+                        worker_text = ""
+                    worker_state = next((line.partition(": ")[2].strip() for line in worker_text.splitlines()
+                                         if line.startswith("STATE: ")), "")
+                    if worker_state in {"error", "stopped", ""}:
+                        script = Path(__file__).resolve().parent / "launch_reaper_worker.sh"
+                        if script.exists():
+                            try:
+                                subprocess.Popen(["bash", str(script)], start_new_session=True,
+                                                 stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+                                worker_restarted = True
+                                report("loading_model", 20, "GPU worker was not running; restarting it...")
+                            except OSError:
+                                pass
+            if time.monotonic() - started > 600:
+                req_file.unlink(missing_ok=True)
+                break
+            time.sleep(0.3)
 
     # Fallback to direct process if warm worker queue did not respond
     log_path = run_dir / "generation.log"
@@ -329,12 +317,7 @@ def run_generation(plan: str, progress_callback: Callable[[str, int, str, str, s
     env = os.environ.copy()
     env["PYTHONUNBUFFERED"] = "1"
 
-    if os.name == "nt":
-        wsl_plan = f"/mnt/e/text2score/text2music/artifacts/agent_runs/{run_dir.name}/plan.txt"
-        command = ["wsl.exe", "-e", "bash", "-c",
-                   f"export TMP=/tmp TEMP=/tmp TMPDIR=/tmp && cd /mnt/e/text2score/text2music/inference && /usr/bin/python3 inference.py --plan_path '{wsl_plan}' --output_folder '{wsl_output}'"]
-    else:
-        command = [sys.executable, "inference.py", "--plan_path", str(plan_path), "--output_folder", str(output_dir)]
+    command = _generation_command(plan_path, output_dir)
 
     with log_path.open("w", encoding="utf-8") as log:
         process = subprocess.Popen(command, cwd=INFERENCE_DIR, text=True, stdout=log, stderr=subprocess.STDOUT, env=env)

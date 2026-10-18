@@ -34,3 +34,15 @@ def test_english_failure_never_claims_success():
     reply,error=operation_report("audio_to_midi",[{"tool":"audio_to_midi","state":"failed",
         "result":{"error":"No audio attached"}}],language="en")
     assert reply.startswith("Operation did not complete") and error=="No audio attached"
+
+
+def test_capability_report_is_bilingual_and_limited_to_installed_tools():
+    trace = [{"tool": "list_capabilities", "state": "completed", "result": {
+        "capabilities": {"generate_draft": "Generate MIDI", "transform_midi": "Edit MIDI",
+                         "analyze_audio": "Analyze audio"}}}]
+    zh, error = operation_report("list_capabilities", trace, language="zh")
+    en, english_error = operation_report("list_capabilities", trace, language="en")
+    assert "创作 MIDI" in zh and "调整力度" in zh and "音频" in zh
+    assert "歌词" not in zh and "lyrics" not in en.lower()
+    assert "Create MIDI" in en and "velocity" in en.lower() and "audio" in en.lower()
+    assert not error and not english_error

@@ -170,7 +170,7 @@ def transform_midi_file(source: Path, request: str, destination: Path, *, operat
     quantize = bool(re.search(r"quantize|tight(?:er)?|更紧|对齐|量化", request, re.IGNORECASE))
     velocity_delta = 18 if intense else -16 if softer else 0
     if operations is not None:
-        allowed = {"transpose", "velocity_delta", "quantize", "extend", "power_chords", "preserve_melody"}
+        allowed = {"transpose", "velocity_delta", "quantize", "extend", "power_chords", "preserve_melody", "protect_melody_track"}
         if not isinstance(operations, dict) or set(operations) - allowed:
             raise ValueError("Unsupported MIDI operations")
         for key, value in operations.items():
@@ -185,7 +185,7 @@ def transform_midi_file(source: Path, request: str, destination: Path, *, operat
         quantize = operations.get("quantize", False)
         extend = operations.get("extend", False)
         power = operations.get("power_chords", False)
-        preserve_melody = operations.get("preserve_melody", False)
+        preserve_melody = operations.get("protect_melody_track", operations.get("preserve_melody", False))
     if not any((transpose, velocity_delta, quantize, extend, power)):
         raise ValueError("No supported MIDI edit was specified; no file was changed")
     grid = max(1, midi.ticks_per_beat // 4)

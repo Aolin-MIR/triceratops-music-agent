@@ -23,6 +23,7 @@ def test_continuation_rejects_invalid_length_before_loading_model(tmp_path, leng
 
 def test_missing_model_fails_instead_of_falling_back(monkeypatch, tmp_path: Path):
     monkeypatch.setattr(symbolic_models, "MIDI_LLM_MODEL", tmp_path / "missing")
+    monkeypatch.setattr(symbolic_models, "MIDI_GPT_MODEL", tmp_path / "missing-gpt.safetensors")
     with pytest.raises(RuntimeError, match="not installed completely"):
         symbolic_models.generate_midi_llm("piano", tmp_path / "out")
 

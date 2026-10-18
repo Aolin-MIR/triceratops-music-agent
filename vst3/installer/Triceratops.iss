@@ -1,4 +1,4 @@
-#define AppVersion "0.9.0"
+#define AppVersion "1.0.0"
 #ifndef PayloadRoot
   #define PayloadRoot "..\package\payload"
 #endif
@@ -12,7 +12,7 @@ AppSupportURL=https://github.com/Aolin-MIR/triceratops-music-agent/issues
 DefaultDirName={autopf}\Triceratops
 DefaultGroupName=Triceratops
 OutputDir=..\package\release
-OutputBaseFilename=Triceratops-0.9.0-Windows-x64-Setup
+OutputBaseFilename=Triceratops-1.0.0-Windows-x64-Setup
 ArchitecturesAllowed=x64compatible
 ArchitecturesInstallIn64BitMode=x64compatible
 PrivilegesRequired=admin
@@ -22,7 +22,7 @@ Compression=lzma2
 SolidCompression=yes
 CloseApplications=yes
 RestartApplications=no
-UninstallDisplayName=Triceratops Music Agent 0.9
+UninstallDisplayName=Triceratops Music Agent 1.0
 SetupLogging=yes
 [Languages]
 Name: "english"; MessagesFile: "compiler:Default.isl"
@@ -31,17 +31,17 @@ Source: "{#PayloadRoot}\Triceratops.vst3\*"; DestDir: "{commoncf64}\VST3\Tricera
 Source: "{#PayloadRoot}\backend\*"; DestDir: "{app}\backend"; Flags: ignoreversion recursesubdirs createallsubdirs
 Source: "{#PayloadRoot}\python\*"; DestDir: "{app}\python"; Flags: ignoreversion recursesubdirs createallsubdirs
 Source: "{#PayloadRoot}\docs\*"; DestDir: "{app}\docs"; Flags: ignoreversion recursesubdirs createallsubdirs
-Source: "Setup-Runtime.ps1"; DestDir: "{app}"; Flags: ignoreversion
-Source: "requirements-runtime.txt"; DestDir: "{app}"; Flags: ignoreversion
+Source: "{#PayloadRoot}\ollama\*"; DestDir: "{app}\ollama"; Flags: ignoreversion recursesubdirs createallsubdirs
+Source: "{#PayloadRoot}\llama-cpp\*"; DestDir: "{app}\llama-cpp"; Flags: ignoreversion recursesubdirs createallsubdirs
 Source: "..\package\tools\vc_redist.x64.exe"; DestDir: "{tmp}"; Flags: deleteafterinstall
 [Icons]
-Name: "{group}\Configure runtime and download models"; Filename: "{sys}\WindowsPowerShell\v1.0\powershell.exe"; Parameters: "-NoProfile -ExecutionPolicy Bypass -File ""{app}\Setup-Runtime.ps1"""; WorkingDir: "{app}"
 Name: "{group}\Readme (English)"; Filename: "{app}\docs\README.en.md"
 Name: "{group}\Readme (Chinese)"; Filename: "{app}\docs\readme.md"
 Name: "{group}\Uninstall Triceratops"; Filename: "{uninstallexe}"
 [Run]
 Filename: "{tmp}\vc_redist.x64.exe"; Parameters: "/install /quiet /norestart"; StatusMsg: "Installing Microsoft C++ runtime..."; Flags: waituntilterminated
-Filename: "{sys}\WindowsPowerShell\v1.0\powershell.exe"; Parameters: "-NoProfile -ExecutionPolicy Bypass -File ""{app}\Setup-Runtime.ps1"""; Description: "Configure native runtime and download models (Internet required)"; Flags: postinstall skipifsilent runasoriginaluser
+Filename: "{app}\python\pythonw.exe"; Parameters: "-X utf8 ""{app}\backend\text2music\agent\first_run.py"""; StatusMsg: "Preparing in-plugin setup..."; Flags: waituntilterminated runasoriginaluser
+
 [Code]
 function PrepareToInstall(var NeedsRestart: Boolean): String;
 begin

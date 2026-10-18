@@ -132,7 +132,7 @@ def infill_midi_gpt(source: Path, destination: Path, *, track_ids: list[int],
     config = InferenceConfig(seed=int(seed), temperature=float(temperature),
                              model_dim=4, mask_mode="attention")
     started = time.monotonic()
-    engine = InferenceEngine.from_checkpoint(str(MIDI_GPT_MODEL), device=os.environ.get("TRICERATOPS_DEVICE", "cuda"))
+    engine = InferenceEngine.from_checkpoint(str(MIDI_GPT_MODEL), device=os.environ.get("TRICERATOPS_MIDI_GPT_DEVICE", os.environ.get("TRICERATOPS_DEVICE", "cuda")))
     generated = engine.session(score, GenerationRequest(tracks=prompts, config=config)).run()
     destination.parent.mkdir(parents=True, exist_ok=True)
     generated.to_midi(str(destination))
@@ -170,7 +170,7 @@ def continue_midi_gpt(source: Path, destination: Path, *, bar_count: int = 4,
         config=InferenceConfig(seed=seed, temperature=temperature, model_dim=4, mask_mode="attention"),
     )
     started = time.monotonic()
-    engine = InferenceEngine.from_checkpoint(str(MIDI_GPT_MODEL), device=os.environ.get("TRICERATOPS_DEVICE", "cuda"))
+    engine = InferenceEngine.from_checkpoint(str(MIDI_GPT_MODEL), device=os.environ.get("TRICERATOPS_MIDI_GPT_DEVICE", os.environ.get("TRICERATOPS_DEVICE", "cuda")))
     generated = engine.session(score, request).run().resample(original.resolution)
     if len(generated.tracks) != len(original.tracks):
         raise RuntimeError("Continuation changed the number of source tracks")

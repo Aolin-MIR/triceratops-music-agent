@@ -31,22 +31,22 @@
 
 | 功能 | 当前后端 / 设备行为 | 配置影响 |
 | --- | --- | --- |
-| 聊天、意图整理、工具选择 | 用户配置的外部聊天 API；目前按钮也进入工具调用流程 | 不占用本地聊天模型显存；需要网络、凭据、额度和有效工具调用支持。不是任意“兼容”API 都已验证 |
+| 聊天、意图整理、工具选择 | 可选外部聊天 API；Windows 本地聊天用 llama.cpp Vulkan 固定在 GPU；明确按钮直接执行本地工具，无需聊天模型 | 云端模式需要网络、凭据、额度及工具调用支持；本地聊天模型固定常驻 GPU，不回退 CPU。Mac 本地聊天尚未验证 |
 | 文本生成 MIDI | MIDI-LLM；CUDA BF16，CPU / 当前 MPS 加载分支为 FP32 | 实际权重约 17.24 亿参数，虽以 Llama 3.2 1B 为基座，音乐词表扩展后参数更多。BF16 权重约 3.45 GB（3.21 GiB），转为 FP32 仅权重约 6.90 GB（6.42 GiB），另需激活、KV cache、框架和加载空间；这些计算不是实测峰值 |
 | 续写 / 填充 | MIDI-GPT Yellow Medium；使用选择的 Torch 设备 | 权重文件约 351 MB；运行时还需上下文、激活和框架内存，不能按文件大小推断最低内存 |
 | 四分轨 | 固定 HTDemucs；使用选择的 Torch 设备 | 时长、声道、采样率和分段影响内存与耗时；当前没有全时长范围的峰值保证 |
 | 音频转 MIDI | Basic Pitch ICASSP 2022 ONNX；使用 `onnxruntime` 依赖 | 当前未配置 CUDA / CoreML ONNX Execution Provider，不能声称随 Torch 的 GPU 选择而加速；以实际会话 provider 为准 |
 | 音频分析 | librosa / NumPy 的速度、起音、色度与分段算法 | CPU 工作；不是额外的音乐生成模型。当前分析最多读取 900 秒单声道 22.05 kHz 音频 |
-| MIDI 编辑、统计、记忆与检索 | 本地 MIDI 和文件 / 检索工具 | 本身不要求音乐生成 GPU；通过当前 Agent 发起仍涉及聊天 API |
+| MIDI 编辑、统计、记忆与检索 | 本地 MIDI 和文件 / 检索工具 | 本身不要求音乐生成 GPU；明确按钮无需聊天 API；自由对话由所选语言模型调度 |
 | 播放 MIDI | REAPER 中的用户音源 | 生成 MIDI 不等于合成音频；声卡、采样库及音源的内存 / CPU 开销另计 |
 
-本地聊天模型目前不随包安装，也未纳入上述资源预算。若自行部署，本地推理服务器、聊天模型权重和 KV cache 要另算；不能据此承诺它与全部音乐模型可同时常驻同一 GPU。
+Windows 本地聊天用 Ollama 工具从模型 registry 下载 Qwen3.5 GGUF，实际推理由 llama.cpp Vulkan 完成；安装包附带这两个运行程序，但不附带聊天权重。聊天权重约 3.32 GB，另需计算服务器进程和 KV cache；不能据此承诺它与所有音乐模型可同时常驻同一 GPU。
 
 ### 已有证据与边界
 
 - 本机：Windows 11 x64、AMD Ryzen 9 5900HX、操作系统当前可见内存约 27.9 GiB、RTX 3080 **Laptop** GPU 16 GiB；REAPER 7.80 x64。这里写实际可见容量，不能当作 16 GB 机器通过测试的证据。
 - Windows 原生 CPU / `torch 2.13.0+cpu` 的固定短素材测试：音频分析成功、Basic Pitch 得到 12 个音符、MIDI-GPT 追加 4 小节约 2.44 秒、MIDI-LLM 192 新 token 约 78.84 秒、HTDemucs 得到 4 个 12 秒声部。不同任务条件不一致，不能据此进行跨设备速度排名。
-- 同机 WSL / CUDA MIDI-LLM 的 3 段试听：每段上限 1024 新 token，耗时约 144–184 秒，输出约 16–33 秒 MIDI。包含加载等开销；不是 Windows 原生 CUDA 的全功能认证，也不是实时生成承诺。
+- Windows 原生 RTX 3080 Laptop GPU 上的本地 Qwen3.5 4B / llama.cpp Vulkan：真实聊天与工具流程 21/21 通过，含 MIDI 生成、编辑、续写、记忆、知识检索和音频分析；工具调用及工具结果回传检查通过，测试前后模型均报告 GPU 常驻。启动日志确认 33/33 层卸载至 GPU。该测试证明选定本地聊天路径可运行，不证明所有音乐模型与聊天模型可并发占用 GPU，也不是所有输入的质量保证。
 - Windows REAPER 已检查实际 MIDI / 分轨导入与双语界面；完整 Mac 实机流程尚无结果。未测完整任务树的内存峰值、长音频上限、所有 API 提供方和所有驱动 / GPU 组合。
 - 证据摘要核对日期：2026-10-18。本地测试报告保留在 `text2music/artifacts/agent_runs/release-0.9/` 和 `listening-2026-10-16/`，含私有运行材料，不作为可公开下载的测试附件。
 
@@ -83,23 +83,30 @@ This page describes the v0.9 implementation. Installer constraints, planning bud
 
 | Feature | Actual backend | Resource implications |
 | --- | --- | --- |
-| Chat / intent rewriting / tool dispatch | User-configured external chat API, including current action-button dispatch | No local chat-model VRAM; internet, credentials, quota and native tool-calling compatibility required. Providers are not universally validated |
+| Chat / intent rewriting / tool dispatch | User-selected cloud API or Windows local llama.cpp Vulkan on a fixed GPU; explicit buttons bypass the LLM | Cloud mode requires internet, credentials and native tool calling; local chat stays on GPU with no CPU fallback. Mac local chat is unverified |
 | Text-to-MIDI | MIDI-LLM, BF16 on CUDA; FP32 on CPU / the current MPS loading branch | The checkpoint has about 1.724 billion parameters after vocabulary expansion, despite its Llama 3.2 1B base. Weight-only size is about 3.45 GB / 3.21 GiB in BF16 or 6.90 GB / 6.42 GiB in FP32, plus activations, KV cache, framework and loading overhead. These are calculations, not measured peaks |
 | Continuation / infill | MIDI-GPT Yellow Medium on the selected Torch device | Approximately 351 MB weight file, plus runtime context, activations and framework overhead |
 | Four-stem separation | Pinned HTDemucs on the selected Torch device | Duration, channels, sample rate and segmentation affect resources; no peak guarantee across all input lengths |
 | Audio-to-MIDI | Basic Pitch ICASSP 2022 ONNX | No CUDA / CoreML ONNX Execution Provider is configured; Torch's GPU selection does not certify ONNX acceleration. Inspect the actual session providers |
 | Audio analysis | librosa / NumPy algorithms | CPU work, not another generation model. Analysis currently reads at most 900 seconds at 22.05 kHz mono |
-| MIDI edits / statistics / memory / retrieval | Local MIDI and file / retrieval tools | Do not intrinsically require a generation GPU; dispatch through the current Agent still involves the chat API |
+| MIDI edits / statistics / memory / retrieval | Local MIDI and file / retrieval tools | Do not intrinsically require a generation GPU; explicit buttons require no chat API; free-form requests use the selected LLM |
 | MIDI playback | User instruments in REAPER | MIDI is not rendered audio; budget separately for instruments, samples and audio processing |
 
-Local chat-model servers are neither bundled nor included in these budgets. Their weights, KV cache and server processes require additional resources; simultaneous GPU residency with all music models is not certified.
+On Windows, the installer bundles Ollama only as a model-download utility and includes llama.cpp Vulkan for inference; the Qwen3.5 GGUF weights are not bundled. Budget about 3.32 GB for the chat weights plus server and KV cache. Simultaneous GPU residency with every music model is not certified.
 
 ### Evidence and limits
 
 - Local hardware: Windows 11 x64, Ryzen 9 5900HX, approximately 27.9 GiB currently visible system memory, RTX 3080 **Laptop** GPU with 16 GiB VRAM, REAPER 7.80 x64. This is not evidence of full-feature success on a 16 GB RAM computer.
 - Native Windows CPU / `torch 2.13.0+cpu`, short fixtures: audio analysis passed; Basic Pitch produced 12 notes; MIDI-GPT appended 4 bars in about 2.44 s; MIDI-LLM generated up to 192 new tokens in about 78.84 s; HTDemucs produced four 12-second stems.
-- Same-machine WSL / CUDA listening samples: three MIDI-LLM generations capped at 1024 new tokens each took about 144–184 s including loading and produced about 16–33 s of MIDI. These are not native Windows CUDA certification, real-time guarantees or a fair cross-device speed comparison.
+- Native Windows RTX 3080 Laptop GPU, local Qwen3.5 4B through llama.cpp Vulkan: 21/21 real chat/tool scenarios passed, including MIDI generation, edits, continuation, memory, retrieval and audio analysis. Native tool calls and tool-result replay passed; GPU residency was confirmed before and after evaluation, with all 33/33 model layers offloaded in the startup log. This does not certify simultaneous execution with every music model or output quality for all prompts.
 - Actual MIDI / stem import and bilingual UI were checked in Windows REAPER. Full Mac operation, complete peak-memory measurements, long-audio limits, every API provider and every driver / GPU combination remain unverified.
 - Evidence reviewed on 2026-10-18. Local reports remain in `text2music/artifacts/agent_runs/release-0.9/` and `listening-2026-10-16/`; they contain private runtime material and are not advertised as public downloadable fixtures.
 
 Implementation sources are linked in the Chinese section above. [MIDI-LLM upstream](https://github.com/slSeanWU/MIDI-LLM) recommends 16 GB+ VRAM; this is guidance, not this project's measured minimum.
+
+本地 LLM 使用固定 CPU/GPU 和常驻策略，不在任务之间卸载或自动改变设备。音乐模型可分别指定 `midi_llm_device`、`midi_gpt_device` 和 `stem_device`，不存在资源不足时自动切换的逻辑。Local LLM residency is fixed to CPU/GPU; music devices are selected independently, without automatic fallback.
+
+
+2026-10-18 本地 1.0 工作区补充 / local 1.0 working-tree update: Ryzen 9 5900HX 原生 CPU 的默认长度 MIDI-LLM（768 新 token 上限）约 247 秒；四小节 MIDI-GPT 续写首次约 11.2 秒、重复约 3.7 秒；12 秒音频的 HTDemucs 四分轨约 19.9 秒，分析约 19.2 秒，短小号转写约 13.2 秒。These figures include the stated loading/import conditions and are not a cross-device benchmark. 本地 Qwen3.5 4B 的常驻与音乐模型并行实测仍在进行，不能据设备规划器的预算推断已全部验证。Automatic device budgets are planning estimates, not measured peak-memory certification.
+
+1.0 模型空间补充 / Model storage: 音乐模型约 4 GB，默认 Qwen3.5 4B 本地聊天模型另需约 3.32 GB；安装器中的 Ollama 下载工具、llama.cpp Vulkan、Python/Torch、缓存和用户素材另计。Music weights use about 4 GB; the default local-chat model adds about 3.32 GB, excluding the bundled Ollama download utility, llama.cpp Vulkan, Python/Torch, caches and user media. Windows 1.0 安装器不内嵌聊天模型权重；本地聊天和所有音乐模型同时运行仍待验证 / Simultaneous local chat and every music model remain unverified.

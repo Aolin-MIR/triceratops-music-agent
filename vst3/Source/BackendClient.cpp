@@ -77,8 +77,14 @@ juce::var BackendClient::status()
 {
     auto payload = new juce::DynamicObject();
     payload->setProperty("session", sessionId);
-    return request("/session/ping", "POST", juce::var(payload));
+    auto result = request("/session/ping", "POST", juce::var(payload));
+    if (result.isVoid()) return openSession();
+    return result;
 }
+
+juce::var BackendClient::settings() { return request("/settings", "GET"); }
+juce::var BackendClient::configureSettings(const juce::var& payload) { return request("/settings/task", "POST", payload); }
+juce::var BackendClient::cancelConfiguration() { return request("/settings/cancel", "POST", juce::var(new juce::DynamicObject())); }
 
 juce::var BackendClient::history()
 {

@@ -49,3 +49,18 @@ def test_reaper_importer_uses_configured_runs_directory(tmp_path, monkeypatch):
 def test_native_windows_file_path_does_not_become_a_wsl_mount(monkeypatch):
     monkeypatch.setattr(vst_service, "os", SimpleNamespace(name="nt"))
     assert str(vst_service._windows_to_wsl("C:\\Music\\clip.mid")) == "C:\\Music\\clip.mid"
+
+
+def test_fixed_devices_are_configured_independently(tmp_path, monkeypatch):
+    monkeypatch.setattr(os, "environ", dict(os.environ))
+    monkeypatch.setattr(runtime.sys, "path", list(runtime.sys.path))
+    config = tmp_path / "runtime.json"
+    config.write_text(json.dumps(dict(python="/python", runs_dir=str(tmp_path / "runs"),
+        model_home=str(tmp_path / "models"), reaper="/reaper", device="cuda", api_key="",
+        llm_provider="ollama", llm_device="gpu", midi_gpt_device="cpu", stem_device="cpu")))
+    runtime.configure(config)
+    assert os.environ["TRICERATOPS_LLM_DEVICE"] == "gpu"
+    assert os.environ["TRICERATOPS_MIDI_LLM_DEVICE"] == "cuda"
+    assert os.environ["TRICERATOPS_MIDI_GPT_DEVICE"] == "cpu"
+    assert os.environ["TRICERATOPS_STEM_DEVICE"] == "cpu"
+    assert os.environ["QWEN_API_KEY"] == ""

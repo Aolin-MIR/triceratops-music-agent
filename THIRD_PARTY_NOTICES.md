@@ -1,4 +1,4 @@
-# Third-party notices · Triceratops 0.9
+# Third-party notices · Triceratops 1.0
 
 The release ships the Triceratops REAPER VST3, desktop Agent source and a Python seed runtime. It does not redistribute the original Text2Score training data or trained checkpoints. Research code retained in the repository comes from Keshav Bhandari/Text2Score; the upstream repository did not provide a repository-wide license at the time of this release. No new license claim is made over that material.
 
@@ -10,8 +10,10 @@ The release ships the Triceratops REAPER VST3, desktop Agent source and a Python
 - HTDemucs four-stem model and Demucs runtime: Alexandre Défossez and contributors, MIT. The runtime loads `adefossez/HTDemucs` at revision `cbc8a9b1a87023b7fd74e7b3412e6321c0eab003`. https://github.com/facebookresearch/demucs ; https://huggingface.co/adefossez/HTDemucs
 - Basic Pitch ICASSP 2022 ONNX model and runtime: Spotify AB and contributors, Apache 2.0. The model is installed with `basic-pitch[onnx]==0.4.0`. https://github.com/spotify/basic-pitch
 - Anticipation MIDI decoder: pinned upstream source with its own license metadata retained by pip. https://github.com/jthickstun/anticipation
+- Ollama runtime 0.40.6: Ollama contributors, MIT; the Windows 1.0 installer includes the official portable runtime with its accompanying license files. https://github.com/ollama/ollama/tree/v0.40.6
+- Local chat Qwen3.5-4B (Q4_K_M GGUF): Qwen team, Apache 2.0. Downloaded separately through the Ollama registry utility and run with llama.cpp Vulkan on Windows. The selected model passed the native tool-call and conversation compatibility evaluation. https://huggingface.co/Qwen/Qwen3.5-4B
 - Microsoft Visual C++ Redistributable: redistributed as Microsoft's unmodified signed installer under its redistribution terms. https://learn.microsoft.com/cpp/windows/latest-supported-vc-redist
 
 Large model files are downloaded separately from their pinned upstream repositories, using the selected Hugging Face endpoint. Consult each model card and license before your intended use. The release is a public testing version, not a grant of commercial model rights.
 
-The active v0.9 music-model inventory is MIDI-LLM, MIDI-GPT Yellow Medium, HTDemucs and Basic Pitch ONNX. Text2Score is retained as source provenance, not as an installed model. User-selected remote chat providers are not bundled model dependencies. Candidates discussed in research are not release components.
+The active music-model inventory is MIDI-LLM, MIDI-GPT Yellow Medium, HTDemucs and Basic Pitch ONNX. Text2Score is retained as source provenance, not as an installed model. User-selected remote chat providers are not bundled model dependencies. Local chat weights are downloaded separately from the Ollama registry utility; llama.cpp is the inference server and the model weights have separate licenses. Candidates discussed in research are not release components.

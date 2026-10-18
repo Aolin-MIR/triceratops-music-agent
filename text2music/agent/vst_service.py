@@ -245,14 +245,25 @@ class TriceratopsState:
         self.last_error = ""
         self.last_result: dict[str, Any] = {}
         self.server: ThreadingHTTPServer | None = None
+        config_path = os.environ.get("TRICERATOPS_CONFIG", "")
+        if config_path:
+            from text2music.agent.configuration import ConfigurationJobs
+            self.configuration = ConfigurationJobs(Path(config_path))
+        else:
+            self.configuration = None
 
     def snapshot(self) -> dict[str, Any]:
         with self.lock:
             data = {
-                "service": "ready", "busy": self.busy, "sessions": len(self.sessions),
+                "service": "ready", "app_version": "1.0.0", "api_version": 2, "busy": self.busy, "sessions": len(self.sessions),
                 "reply": self.last_reply, "error": self.last_error,
                 "result": self.last_result, "history": _history(),
             }
+        if self.configuration:
+            public = self.configuration.snapshot()
+            data["setup_required"] = public["setup_required"]
+            data["configuration_job"] = public["job"]
+            data["api_requirement"] = public["api_requirement"]
         data.update(_read_status())
         return data
 
@@ -298,23 +309,6 @@ class TriceratopsState:
             self.ever_opened = True
         return self.snapshot()
 
-    def stop_when_unused(self) -> None:
-        idle_seconds = max(5, int(os.environ.get("TRICERATOPS_GPU_IDLE_SECONDS", "900")))
-        deadline = time.monotonic() + idle_seconds
-        while time.monotonic() < deadline:
-            time.sleep(min(10.0, max(0.1, deadline - time.monotonic())))
-            with self.lock:
-                if self.sessions or self.busy:
-                    return
-        with self.lock:
-            if self.sessions or self.busy:
-                return
-            if time.monotonic() - self.last_activity < idle_seconds:
-                return
-            SHUTDOWN.parent.mkdir(parents=True, exist_ok=True)
-            SHUTDOWN.write_text("idle timeout\n", encoding="utf-8")
-        _write_status("ready", "0", "Agent ready; GPU model released after idle timeout")
-
     def session_watchdog(self) -> None:
         while self.server is not None:
             time.sleep(10.0)
@@ -328,8 +322,7 @@ class TriceratopsState:
                 for session in stale:
                     self.sessions.pop(session, None)
                 became_empty = bool(stale) and not self.sessions
-            if became_empty:
-                threading.Thread(target=self.stop_when_unused, daemon=True).start()
+
 
     def append_turn(self, role: str, content: str, tool: str = "") -> None:
         entry = {"time": time.strftime("%Y-%m-%d %H:%M:%S"), "role": role, "content": content}
@@ -390,7 +383,7 @@ class TriceratopsState:
             from text2music.agent.capabilities import record_feedback, load_memory, memory_context
             from text2music.agent.midi_tools import transform_midi_file
             from text2music.agent.symbolic_models import (
-                generate_midi_llm, infill_midi_gpt, continue_midi_gpt, model_status, release_text2score_worker,
+                generate_midi_llm, infill_midi_gpt, continue_midi_gpt, model_status,
             )
             from text2music.agent.tool_loop import run_tool_loop
 
@@ -437,7 +430,10 @@ class TriceratopsState:
                         raise ValueError("Drop or capture a MIDI clip before asking for an edit")
                     output = RUNS_DIR / "vst_midi" / f"revision-{uuid.uuid4().hex}.mid"
                     output.parent.mkdir(parents=True, exist_ok=True)
-                    transformed = transform_midi_file(midi, request_text, output, operations=arguments.get("operations"))
+                    operations = dict(arguments.get("operations") or {})
+                    if "protect_melody_track" in operations:
+                        operations["preserve_melody"] = operations.pop("protect_melody_track")
+                    transformed = transform_midi_file(midi, request_text, output, operations=operations)
                     result.update(transformed)
                     result["midi"] = str(output)
                     result["midi_windows"] = _windows_path(output)
@@ -445,7 +441,6 @@ class TriceratopsState:
                 elif tool == "continue_midi":
                     if not midi or not midi.is_file():
                         raise ValueError("Load or capture MIDI before asking for a continuation")
-                    release_text2score_worker(RUNS_DIR)
                     output = RUNS_DIR / "vst_midi" / f"continuation-{uuid.uuid4().hex}.mid"
                     result.update(continue_midi_gpt(midi, output, bar_count=arguments.get("bar_count", 4)))
                     result["midi_windows"] = _windows_path(output)
@@ -453,7 +448,6 @@ class TriceratopsState:
                 elif tool == "infill_midi":
                     if not midi or not midi.exists():
                         raise ValueError("Drop or capture a MIDI clip before asking for generative infill")
-                    release_text2score_worker(RUNS_DIR)
                     output = RUNS_DIR / "vst_midi" / f"infill-{uuid.uuid4().hex}.mid"
                     generated = infill_midi_gpt(
                         midi, output,
@@ -484,7 +478,6 @@ class TriceratopsState:
                     backend = "midi_llm" if requested_backend == "auto" else requested_backend
                     request = request_text + "\n\nVST3 host context:\n" + context
                     if backend == "midi_llm":
-                        release_text2score_worker(RUNS_DIR)
                         entry = generate_midi_llm(
                             request_text, RUNS_DIR / "midi_llm" / uuid.uuid4().hex,
                             max_tokens=int(arguments.get("max_tokens", 768)),
@@ -495,7 +488,7 @@ class TriceratopsState:
                             handle.write(json.dumps(history_entry, ensure_ascii=False) + "\n")
                     elif backend == "text2score":
                         if os.environ.get("TRICERATOPS_ENABLE_LEGACY") != "1":
-                            raise ValueError("Text2Score is a developer-only backend; v0.9 uses MIDI-LLM")
+                            raise ValueError("Text2Score is a developer-only backend; Triceratops uses MIDI-LLM")
                         from text2music.agent.workflow import run_agent
                         self.start_worker()
                         entry = run_agent(request)
@@ -539,17 +532,23 @@ class TriceratopsState:
                     self.last_result = {**result, "event": event}
                 _write_status("working", "30", f"{event['tool']}: {event['state']}")
 
-            decision = run_tool_loop(message, context=context,
-                                     selection=midi if midi and midi.exists() else None,
-                                     conversation=conversation, execute=execute, on_event=on_event,
-                                     forced_tool=str(payload.get("action", "")),
-                                     cancelled=self.cancel_event.is_set)
+            from text2music.agent.direct_actions import run_direct_action
+            action = str(payload.get("action", ""))
+            if action:
+                decision = run_direct_action(action, arguments=payload.get("arguments", {}),
+                                             selection=midi, context=context, execute=execute,
+                                             on_event=on_event, cancelled=self.cancel_event.is_set)
+            else:
+                decision = run_tool_loop(message, context=context,
+                                         selection=midi if midi and midi.exists() else None,
+                                         conversation=conversation, execute=execute, on_event=on_event,
+                                         cancelled=self.cancel_event.is_set)
             result["trace"] = decision.trace
             reply = decision.reply
             report_error = ""
             if payload.get("action"):
                 from text2music.agent.operation_report import operation_report
-                reply, report_error = operation_report(str(payload["action"]), decision.trace, language=language)
+                reply, report_error = operation_report(decision.tool, decision.trace, language=language)
             with self.lock:
                 self.last_result = result
                 self.last_reply = reply
@@ -579,7 +578,7 @@ APP = TriceratopsState()
 
 
 class Handler(BaseHTTPRequestHandler):
-    server_version = "Triceratops/0.9.0"
+    server_version = "Triceratops/1.0.0"
 
     def log_message(self, format: str, *args: Any) -> None:
         return
@@ -607,6 +606,8 @@ class Handler(BaseHTTPRequestHandler):
     def do_GET(self) -> None:
         if self.path in {"/health", "/status"}:
             self._json(200, APP.snapshot())
+        elif self.path == "/settings":
+            self._json(200, APP.configuration.snapshot() if APP.configuration else {"error": "Runtime configuration path is missing"})
         elif self.path == "/history":
             self._json(200, {"history": _history()})
         else:
@@ -619,7 +620,51 @@ class Handler(BaseHTTPRequestHandler):
             except (ValueError, UnicodeError) as exc:
                 self._json(400, {"error": f"Invalid request: {exc}"})
                 return
-            if self.path == "/session/open":
+            if self.path == "/settings/cancel":
+                if not APP.configuration:
+                    self._json(503, {"error": "Runtime configuration path is missing"})
+                    return
+                self._json(200, APP.configuration.cancel())
+            elif self.path == "/settings/task":
+                if not APP.configuration:
+                    self._json(503, {"error": "Runtime configuration path is missing"})
+                    return
+                def done(job):
+                    with APP.lock:
+                        if job["state"] == "complete":
+                            from text2music.agent.runtime import configure
+                            configure(APP.configuration.path)
+                        APP.busy = False
+                        APP.last_result = {}
+                        APP.last_error = ""
+                        APP.last_reply = ""
+                        APP.last_activity = time.monotonic()
+                    _write_status("ready", "0", "Settings: " + job.get("detail", ""))
+                    from text2music.agent.configuration import read_config
+                    applied = read_config(APP.configuration.path).get("configuration_job") == job.get("id")
+                    if applied and APP.server:
+                        def restart():
+                            # Release Python's imported device contexts, while the independent
+                            # Ollama server/model stays resident. The editor reconnects itself.
+                            time.sleep(2)
+                            APP.server.shutdown()
+                        threading.Thread(target=restart, daemon=True).start()
+                with APP.lock:
+                    if APP.busy:
+                        self._json(409, {"error": "Stop the active task before configuring"})
+                        return
+                    try:
+                        APP.busy = True
+                        result = APP.configuration.start(payload, done)
+                    except (ValueError, RuntimeError) as exc:
+                        APP.busy = False
+                        self._json(409 if isinstance(exc, RuntimeError) else 400, {"error": str(exc)})
+                        return
+                    except Exception:
+                        APP.busy = False
+                        raise
+                self._json(202, result)
+            elif self.path == "/session/open":
                 session = str(payload.get("session") or uuid.uuid4())
                 with APP.lock:
                     APP.sessions[session] = time.monotonic()
@@ -640,8 +685,7 @@ class Handler(BaseHTTPRequestHandler):
                     APP.sessions.pop(str(payload.get("session", "")), None)
                     APP.last_activity = time.monotonic()
                     empty = not APP.sessions
-                if empty:
-                    threading.Thread(target=APP.stop_when_unused, daemon=True).start()
+
                 self._json(200, APP.snapshot())
             elif self.path == "/chat/clear":
                 with APP.lock:
@@ -691,14 +735,24 @@ class Handler(BaseHTTPRequestHandler):
                 else:
                     self._json(400, {**APP.snapshot(), "error": "No MIDI file path available to import"})
             elif self.path == "/chat":
-                from text2music.agent.tool_loop import DESCRIPTIONS
+                if APP.configuration and APP.configuration.snapshot()["setup_required"]:
+                    self._json(409, {"error": "Complete model setup inside Settings before using music tools"})
+                    return
+                from text2music.agent.direct_actions import DIRECT_ACTIONS
                 if payload.get("language", "zh") not in ("zh", "en"):
                     self._json(400, {"error": "language must be zh or en"})
                     return
                 action = payload.get("action", "")
-                if not isinstance(action, str) or (action and action not in DESCRIPTIONS):
+                if not isinstance(action, str) or (action and action not in DIRECT_ACTIONS):
                     self._json(400, {"error": "action must identify a supported tool"})
                     return
+                if action:
+                    try:
+                        from text2music.agent.direct_actions import action_arguments
+                        action_arguments(action, payload.get("arguments", {}))
+                    except (ValueError, TypeError) as exc:
+                        self._json(400, {"error": str(exc)})
+                        return
                 if not isinstance(payload.get("message"), str) or not payload["message"].strip():
                     self._json(400, {"error": "message must be a non-empty string"})
                     return

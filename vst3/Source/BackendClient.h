@@ -15,6 +15,9 @@ public:
     juce::var closeSession();
     juce::var status();
     juce::var history();
+    juce::var settings();
+    juce::var configureSettings(const juce::var&);
+    juce::var cancelConfiguration();
     juce::var clearChat();
     juce::var cancelTask();
     juce::var importReaperTrack(const juce::String& filePath, const juce::var& files = {});

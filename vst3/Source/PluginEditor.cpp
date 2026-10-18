@@ -222,6 +222,11 @@ TriceratopsAudioProcessorEditor::TriceratopsAudioProcessorEditor(TriceratopsAudi
     setResizable(true, true);
     setResizeLimits(900, 650, 1920, 1200);
 
+    settingsPanel = std::make_unique<SettingsPanel>(ownerProcessor.backend());
+    addChildComponent(*settingsPanel);
+    settingsPanel->onClose = [this] { settingsPanel->setVisible(false); };
+    addAndMakeVisible(settingsBtn);
+    settingsBtn.onClick = [this] { settingsPanel->open(chinese); };
     // Setup Text Editors
     for (auto* editor : { &chatDisplay, &prompt, &arrangement, &history })
     {
@@ -250,9 +255,9 @@ TriceratopsAudioProcessorEditor::TriceratopsAudioProcessorEditor(TriceratopsAudi
     }
     statusLabel.setText(ui("CONNECTING TO AGENT"), juce::dontSendNotification);
     statusLabel.setColour(juce::Label::textColourId, accentBlue);
-    progressLabel.setText(ui("Local GPU Model Service"), juce::dontSendNotification);
+    progressLabel.setText(chinese ? juce::String::fromUTF8("本地音乐工具") : "Local music tools", juce::dontSendNotification);
 
-    warmupBanner.setText(ui("AI Model Warmup / Caching... Please wait (Model Caching... Generation Paused)"), juce::dontSendNotification);
+    warmupBanner.setText(chinese ? juce::String::fromUTF8("正在连接本地音乐助手...") : "Connecting to the local music agent...", juce::dontSendNotification);
     warmupBanner.setColour(juce::Label::backgroundColourId, warmupBg);
     warmupBanner.setColour(juce::Label::textColourId, warmupText);
     warmupBanner.setColour(juce::Label::outlineColourId, warmupText.withAlpha(0.4f));
@@ -268,7 +273,7 @@ TriceratopsAudioProcessorEditor::TriceratopsAudioProcessorEditor(TriceratopsAudi
 
     // Setup Buttons
     for (auto* button : { &languageBtn, &send, &cancel, &clearChatBtn, &autoImportBtn, &importReaperBtn, &sidebarToggleBtn,
-                          &newMusic, &editMidi, &analyze, &continueFour, &moreEnergy, &tightenTiming,
+                          &helpBtn, &newMusic, &editMidi, &analyze, &continueFour, &moreEnergy, &tightenTiming,
                           &undoBtn, &keepBtn, &rejectBtn, &stems, &audioMidi,
                           &loadMidi, &loadAudio, &clearMidiBtn, &clearAudioBtn,
                           &playMidi, &dragMidi, &capture, &captureAudio })
@@ -294,13 +299,15 @@ TriceratopsAudioProcessorEditor::TriceratopsAudioProcessorEditor(TriceratopsAudi
     importReaperBtn.onClick = [this] { importToReaper(); };
     sidebarToggleBtn.onClick = [this] { showSidebar = !showSidebar; resized(); };
 
+    helpBtn.onClick       = [this] { runQuickAction(ui("Show my available music features and examples."), "list_capabilities"); };
+    helpBtn.setTooltip(ui("View available tools and examples"));
     newMusic.onClick      = [this] { setStarter(ui("Create music: ")); };
     editMidi.onClick      = [this] { setStarter(ui("Change this MIDI: ")); };
     analyze.onClick       = [this] { runQuickAction(ui("Analyze what I loaded and explain the most useful musical details."),
         midiPath.isNotEmpty() ? "analyze_selected_midi" : (audioPath.isNotEmpty() ? "analyze_audio" : "inspect_project")); };
     continueFour.onClick  = [this] { runQuickAction(ui("Continue the loaded MIDI for four bars, keeping its musical identity."), "continue_midi"); };
-    moreEnergy.onClick    = [this] { runQuickAction(ui("Make the loaded MIDI more energetic while keeping the main melody."), "transform_midi"); };
-    tightenTiming.onClick = [this] { runQuickAction(ui("Tighten the timing of the loaded MIDI without changing its notes."), "transform_midi"); };
+    moreEnergy.onClick    = [this] { runQuickAction(ui("Make the loaded MIDI more energetic while keeping the main melody."), "more_energy"); };
+    tightenTiming.onClick = [this] { runQuickAction(ui("Tighten the timing of the loaded MIDI without changing its notes."), "tighten_timing"); };
     undoBtn.onClick       = [this] { runQuickAction(ui("Undo the last MIDI change."), "undo"); };
     keepBtn.onClick       = [this] { runQuickAction(ui("Keep this version. I like it."), "accept"); };
     rejectBtn.onClick     = [this] { runQuickAction(ui("Reject this version and remember that I do not like it."), "reject"); };
@@ -340,7 +347,7 @@ TriceratopsAudioProcessorEditor::TriceratopsAudioProcessorEditor(TriceratopsAudi
     warmupStartMs = juce::Time::currentTimeMillis();
     chatTurns.push_back({
         "assistant",
-        ui("Welcome to Triceratops Music Agent!\nOpening plugin session. Models load when their tools are requested."),
+        ui("Welcome to Triceratops Music Agent!\nDescribe a musical goal in your own words. Try: create a wistful piano phrase; transpose this MIDI by two semitones; continue it for four bars; analyze this audio; split it into stems. Load MIDI or audio before file-based actions. Use Features for the full list. Requests outside music and REAPER will be identified clearly."),
         juce::Time::getCurrentTime().formatted("%H:%M:%S"),
         "",
         {}
@@ -394,7 +401,7 @@ void TriceratopsAudioProcessorEditor::paint(juce::Graphics& g)
 
     g.setFont(juce::FontOptions(11.0f, juce::Font::bold));
     g.setColour(textSub);
-    g.drawText(ui("LOCAL AI AGENT"), 190, 0, 110, 48, juce::Justification::centredLeft);
+    if (getWidth() >= 1100) g.drawText(ui("LOCAL AI AGENT"), 190, 0, 110, 48, juce::Justification::centredLeft);
 }
 
 void TriceratopsAudioProcessorEditor::resized()
@@ -402,13 +409,15 @@ void TriceratopsAudioProcessorEditor::resized()
     auto area = getLocalBounds();
     auto header = area.removeFromTop(48).reduced(12, 6);
 
-    header.removeFromLeft(290);
-    statusLabel.setBounds(header.removeFromLeft(140));
+    header.removeFromLeft(getWidth() >= 1100 ? 290 : 220);
+    statusLabel.setBounds(header.removeFromLeft(100));
+    settingsBtn.setBounds(header.removeFromRight(80).reduced(2, 0));
+    if (settingsPanel) settingsPanel->setBounds(getLocalBounds().withTrimmedTop(49));
 
-    sidebarToggleBtn.setBounds(header.removeFromRight(120).reduced(2, 0));
-    autoImportBtn.setBounds(header.removeFromRight(140).reduced(2, 0));
-    clearChatBtn.setBounds(header.removeFromRight(100).reduced(2, 0));
-    languageBtn.setBounds(header.removeFromRight(80).reduced(2, 0));
+    sidebarToggleBtn.setBounds(header.removeFromRight(104).reduced(2, 0));
+    autoImportBtn.setBounds(header.removeFromRight(130).reduced(2, 0));
+    clearChatBtn.setBounds(header.removeFromRight(90).reduced(2, 0));
+    languageBtn.setBounds(header.removeFromRight(70).reduced(2, 0));
 
     if (modelIsWarmingUp)
         warmupBanner.setBounds(area.removeFromTop(32).reduced(12, 2));
@@ -448,10 +457,11 @@ void TriceratopsAudioProcessorEditor::resized()
     chatDisplay.setBounds(mainArea.reduced(0, 4));
 
     auto row2 = quickDock.removeFromTop(36);
-    const int modeWidth = row2.getWidth() / 6;
+    const int modeWidth = row2.getWidth() / 7;
     auto placePill = [&row2, modeWidth](juce::Component& btn) {
         btn.setBounds(row2.removeFromLeft(modeWidth).reduced(2, 4));
     };
+    placePill(helpBtn);
     placePill(newMusic);
     placePill(editMidi);
     placePill(analyze);
@@ -661,9 +671,18 @@ void TriceratopsAudioProcessorEditor::handleStatus(const juce::var& value)
         return;
     }
 
+    if (static_cast<bool>(object->getProperty("setup_required")) && !setupPrompted)
+    {
+        setupPrompted = true;
+        settingsPanel->open(chinese);
+    }
     const auto state = object->getProperty("state").toString();
     const auto worker = object->getProperty("worker_state").toString();
-    const auto busy = static_cast<bool>(object->getProperty("busy"));
+    const auto configJob = object->getProperty("configuration_job");
+    const auto* configObject = configJob.getDynamicObject();
+    const auto configState = configObject ? configObject->getProperty("state").toString() : juce::String();
+    backendConfiguring = configState == "running" || configState == "cancelling";
+    const auto busy = static_cast<bool>(object->getProperty("busy")) && !backendConfiguring;
     const auto workerIsLoading = (worker == "loading");
     const auto workerHasError   = (worker == "error");
 
@@ -783,8 +802,7 @@ void TriceratopsAudioProcessorEditor::handleStatus(const juce::var& value)
             addThinkingStep(stepText);
         }
     }
-    else if (busyGenerating && !busy && response.isNotEmpty()
-             && response != "Ready." && response != ui("Understanding your request..."))
+    else if (busyGenerating && !busy && queuedMessage.isEmpty())
     {
         // The backend is the source of truth: once it reports idle, the
         // generation is finished regardless of any stale state file, so the
@@ -797,7 +815,8 @@ void TriceratopsAudioProcessorEditor::handleStatus(const juce::var& value)
         const auto* finalResult = object->getProperty("result").getDynamicObject();
         const auto finalMidi = finalResult != nullptr
             ? finalResult->getProperty("midi_windows").toString() : juce::String();
-        chatTurns.push_back({
+        if (finalReply.isNotEmpty() && finalReply != "Ready." && finalReply != ui("Understanding your request..."))
+            chatTurns.push_back({
             "assistant",
             finalReply,
             juce::Time::getCurrentTime().formatted("%H:%M:%S"),
@@ -825,6 +844,18 @@ void TriceratopsAudioProcessorEditor::handleStatus(const juce::var& value)
         lastStateDetail.clear();
         updateChatDisplay();
     }
+
+    if (backendConfiguring)
+    {
+        statusLabel.setText(chinese ? juce::String::fromUTF8("正在配置...") : "CONFIGURING...", juce::dontSendNotification);
+        send.setEnabled(false);
+        send.setSpinning(false);
+        currentThinkingSteps.clear();
+    }
+    for (auto* button : { &newMusic, &editMidi, &analyze, &continueFour, &moreEnergy, &tightenTiming,
+                          &undoBtn, &keepBtn, &rejectBtn, &stems, &audioMidi })
+        button->setEnabled(!backendConfiguring && !busy);
+    if (!backendConfiguring && !busyGenerating && !modelIsWarmingUp) send.setEnabled(true);
 
     // Process Result Object & Update Score Visualizer
     if (auto* result = object->getProperty("result").getDynamicObject();
@@ -993,6 +1024,7 @@ void TriceratopsAudioProcessorEditor::clearChatHistory()
 
 void TriceratopsAudioProcessorEditor::cancelCurrentTask()
 {
+    if (backendConfiguring) { settingsPanel->stopSetup(); return; }
     queuedMessage.clear();
     queuedAction.clear();
     deferredAutoImport = false;
@@ -1240,8 +1272,10 @@ juce::File TriceratopsAudioProcessorEditor::languageFile() const
 
 void TriceratopsAudioProcessorEditor::applyLanguage()
 {
+    settingsBtn.setButtonText(chinese ? juce::String::fromUTF8("设置") : "Settings");
+    if (settingsPanel) settingsPanel->setChinese(chinese);
     for (auto* button : { &send, &cancel, &clearChatBtn, &autoImportBtn, &importReaperBtn,
-        &sidebarToggleBtn, &newMusic, &editMidi, &analyze, &continueFour, &moreEnergy,
+        &sidebarToggleBtn, &helpBtn, &newMusic, &editMidi, &analyze, &continueFour, &moreEnergy,
         &tightenTiming, &undoBtn, &keepBtn, &rejectBtn, &stems, &audioMidi, &loadMidi,
         &loadAudio, &playMidi, &dragMidi, &capture, &captureAudio })
     {
