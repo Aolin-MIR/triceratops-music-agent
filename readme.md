@@ -102,6 +102,5 @@ Windows 配置：`%APPDATA%\Triceratops\runtime.json`；模型与专用 Python�
 
 聊天可选用户配置的云端模型或经兼容性检查的本地 Qwen3.5 模型；Windows 本地推理由 llama.cpp Vulkan GPU 后端执行，发行包不附带聊天模型权重。未接入的候选模型不列入上述使用致谢。
 
-代码来源：本仓库起源于 [Keshav Bhandari 的 Text2Score](https://github.com/keshavbhandari/text2score)，因此保留源代码归属说明；**v0.9 发行版不安装、不下载、不调用 Text2Score 训练权重**。Triceratops 的 Agent、REAPER 集成及桌面发行工作在此仓库维护。完整归属及许可见 [NOTICE](NOTICE) 和 [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md)。
 
 本仓库源自 [Text2Score](https://github.com/keshavbhandari/text2score)，也感谢 [Anticipation](https://github.com/jthickstun/anticipation)、[JUCE](https://github.com/juce-framework/JUCE) 和 [librosa](https://github.com/librosa/librosa)。完整归属见 [NOTICE](NOTICE)。
