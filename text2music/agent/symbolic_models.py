@@ -21,7 +21,7 @@ MIDI_LLM_MODEL = Path(os.environ.get("MIDI_LLM_MODEL", PROJECT_ROOT / "models" /
 MIDI_GPT_MODEL = Path(os.environ.get(
     "MIDI_GPT_MODEL", PROJECT_ROOT / "models" / "midi-gpt" / "yellow_medium-final.safetensors"
 ))
-PYTHON = Path(os.environ.get("TEXT2SCORE_PYTHON", sys.executable))
+PYTHON = Path(os.environ.get("TRICERATOPS_MUSIC_PYTHON", sys.executable))
 MIDI_LLM_BYTES = 3_447_788_104
 MIDI_GPT_BYTES = 350_508_072
 
@@ -54,8 +54,8 @@ def _require_model(name: str) -> None:
         raise RuntimeError(f"{name} is not installed completely at {status['model']}")
 
 
-def release_text2score_worker(runs_dir: Path, timeout: float = 30.0) -> None:
-    """Release the warm Text2Score worker before another CUDA model is loaded."""
+def release_notation_worker(runs_dir: Path, timeout: float = 30.0) -> None:
+    """Release the warm notation worker before another CUDA model is loaded."""
     if sys.platform in {"win32", "darwin"}:
         return  # The legacy Linux worker is not part of either native release.
     shutdown = runs_dir / "worker_queue" / "shutdown"
@@ -69,7 +69,7 @@ def release_text2score_worker(runs_dir: Path, timeout: float = 30.0) -> None:
         if check.returncode != 0:
             return
         time.sleep(0.5)
-    raise RuntimeError("Text2Score GPU worker did not release before model switch")
+    raise RuntimeError("Notation GPU worker did not release before model switch")
 
 
 def generate_midi_llm(prompt: str, output_dir: Path, *, max_tokens: int = 768,

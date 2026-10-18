@@ -1,4 +1,4 @@
-"""Perception, validation, memory and trace tools for the Text2Score agent."""
+"""Perception, validation, memory and trace tools for the Triceratops agent."""
 from __future__ import annotations
 
 import json

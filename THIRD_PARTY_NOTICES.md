@@ -1,6 +1,6 @@
 # Third-party notices · Triceratops 1.0
 
-The release ships the Triceratops REAPER VST3, desktop Agent source and a Python seed runtime. It does not redistribute the original Text2Score training data or trained checkpoints. Research code retained in the repository comes from Keshav Bhandari/Text2Score; the upstream repository did not provide a repository-wide license at the time of this release. No new license claim is made over that material.
+The release includes the Triceratops REAPER VST3, desktop Agent source and a Python seed runtime. Third-party software and model artifacts retain their respective licenses.
 
 - JUCE: the pinned submodule `vst3/vendor/JUCE` is distributed under its AGPLv3 option for this open-source VST3. Corresponding source and build scripts are in this repository and its pinned submodule. https://github.com/juce-framework/JUCE
 - Native CPython 3.11.17 macOS standalone distribution (Astral python-build-standalone 20261013): downloaded separately, with the distribution’s license files retained. https://github.com/astral-sh/python-build-standalone/releases/tag/20261013
@@ -17,4 +17,4 @@ The release ships the Triceratops REAPER VST3, desktop Agent source and a Python
 
 Large model files are downloaded separately from their pinned upstream repositories, using the selected Hugging Face endpoint. Consult each model card and license before your intended use. The release is a public testing version, not a grant of commercial model rights.
 
-The active music-model inventory is MIDI-LLM, MIDI-GPT Yellow Medium, HTDemucs and Basic Pitch ONNX. Text2Score is retained as source provenance, not as an installed model. User-selected remote chat providers are not bundled model dependencies. Local chat weights are downloaded separately from the Ollama registry utility; llama.cpp is the inference server and the model weights have separate licenses. Candidates discussed in research are not release components.
+The active music-model inventory is MIDI-LLM, MIDI-GPT Yellow Medium, HTDemucs and Basic Pitch ONNX. User-selected remote chat providers are not bundled model dependencies. Local chat weights are downloaded separately from the official model registry and run with the platform-specific inference runtime. Model weights have separate licenses. Candidates discussed in research are not release components.

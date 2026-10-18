@@ -16,7 +16,7 @@ fi
 native_site="$HOME/.cache/text2score/site"
 # Core source, PyTorch and Transformers now live on Linux ext4.  Keep only
 # small optional dependencies (music21, mido, OpenAI) on the legacy venv path.
-export TEXT2SCORE_RUNS_DIR="$windows_runs"
+export TRICERATOPS_RUNS_DIR="$windows_runs"
 export PYTHONPATH="$project_root:$native_site:$legacy_site${PYTHONPATH:+:$PYTHONPATH}"
 if [[ -r "$agent_env" ]]; then
   set -a

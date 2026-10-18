@@ -1,4 +1,4 @@
-"""Planning and execution tools used by the local Text2Score music agent."""
+"""Planning and execution tools used by the local Triceratops music agent."""
 
 from __future__ import annotations
 
@@ -16,7 +16,7 @@ from typing import Callable
 
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
 INFERENCE_DIR = PROJECT_ROOT / "text2music" / "inference"
-RUNS_DIR = Path(os.environ.get("TEXT2SCORE_RUNS_DIR", PROJECT_ROOT / "text2music" / "artifacts" / "agent_runs"))
+RUNS_DIR = Path(os.environ.get("TRICERATOPS_RUNS_DIR", PROJECT_ROOT / "text2music" / "artifacts" / "agent_runs"))
 
 
 def _use_warm_worker_queue() -> bool:
@@ -49,7 +49,7 @@ class MusicBrief:
 
 QWEN_BASE_URL = "https://dashscope.aliyuncs.com/compatible-mode/v1"
 QWEN_MODEL = "qwen-plus"
-QWEN_SYSTEM_PROMPT = """You are the musical planning component of Text2Score, a sheet-music generation system.
+QWEN_SYSTEM_PROMPT = """You are the musical planning component of Triceratops, a music-generation system.
 Return one JSON object only, with no Markdown or explanation. Its keys are genre, instruments, measures.
 instruments is an array of MuseScore instrument names. measures contains 5 to 10 objects, each with measure
 (integer), instruments (array), pitch_min (integer MIDI note), pitch_max (integer MIDI note), density (Low,
@@ -65,7 +65,7 @@ def _key_signature(key: str) -> int:
 
 
 def _rock_chords(key_signature: int) -> list[list[int]]:
-    # Power-chord-friendly progressions; exact pitch classes are what Text2Score expects.
+    # Power-chord-friendly progressions; exact pitch classes are what the selected music model expects.
     if key_signature == 3:  # E major / C# minor
         return [[4, 8, 11], [1, 4, 8], [2, 6, 9], [4, 7, 11]]
     if key_signature == 2:  # D major / B minor
@@ -74,7 +74,7 @@ def _rock_chords(key_signature: int) -> list[list[int]]:
 
 
 def build_plan(brief: MusicBrief) -> str:
-    """Compile a user brief into the strict measure-wise plan Text2Score consumes."""
+    """Compile a user brief into the measure-wise plan consumed by the notation model."""
     measures = max(8, min(int(brief.measures), 128))
     tempo = max(40, min(int(brief.tempo), 240))
     key_signature = _key_signature(brief.key)
@@ -109,7 +109,7 @@ def build_plan(brief: MusicBrief) -> str:
 
 
 def _compile_qwen_plan(payload: dict, brief: MusicBrief) -> str:
-    """Convert Qwen's JSON into the exact textual grammar consumed by Text2Score."""
+    """Convert Qwen's JSON into the textual score-plan format consumed by the notation model."""
     instruments = payload.get("instruments") or [item.strip() for item in brief.instruments.split(",")]
     if not isinstance(instruments, list) or not all(isinstance(item, str) and item.strip() for item in instruments):
         raise ValueError("instruments must be a non-empty array of names")
@@ -117,7 +117,7 @@ def _compile_qwen_plan(payload: dict, brief: MusicBrief) -> str:
     raw_measures = payload.get("measures")
     if not isinstance(raw_measures, list) or len(raw_measures) < 5:
         raise ValueError("measures must contain at least 5 sections")
-    # Qwen may describe every bar. Text2Score benefits more from a compact set of
+    # Qwen may describe every bar. the notation model benefits from a compact set of
     # structural change points, so retain at most ten evenly-spaced sections.
     if len(raw_measures) > 10:
         selected = [round(index * (len(raw_measures) - 1) / 9) for index in range(10)]
@@ -221,7 +221,7 @@ def validate_plan(plan: str) -> list[str]:
 
 
 def run_generation(plan: str, progress_callback: Callable[[str, int, str, str, str], None] | None = None) -> tuple[str, list[str], str]:
-    """Run Text2Score in an isolated directory and return logs plus produced files."""
+    """Run the notation model in an isolated directory and return logs plus produced files."""
     findings = validate_plan(plan)
     if findings:
         return "", [], "Plan validation failed:\n- " + "\n- ".join(findings)

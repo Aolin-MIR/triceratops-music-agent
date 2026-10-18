@@ -8,6 +8,5 @@ under the GNU Affero General Public License, version 3 or (at your option)
 any later version. They are provided without warranty. The complete text is
 in `AGPL-3.0.txt`.
 
-This statement does not relicense upstream Text2Score research/training code,
-third-party dependencies, model code or model weights. Their own terms apply;
+Third-party dependencies, model code and model weights retain their own terms;
 see NOTICE and THIRD_PARTY_NOTICES.md.

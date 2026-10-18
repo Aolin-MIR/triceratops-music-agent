@@ -14,10 +14,10 @@ prior settings. WSL is not used.
 Auto setup tests local chat first. If it fails, cloud chat requires your own
 compatible API key and a successful native tool-call / tool-replay probe.
 Direct buttons work without any chat API. Selected devices stay fixed during
-use; local chat remains resident. Model downloads use public egress country
-and verify available domestic mirrors against pinned revisions. Ollama models
-use the official registry until a byte-identical domestic mirror is verified.
-Large model weights are downloaded inside the plug-in, not bundled in the EXE.
+use; local chat remains resident. Music-model downloads use the selected regional
+endpoint and verify pinned revisions. On Windows, local chat downloads only its
+GGUF model directly from the official registry. Large model weights are fetched
+inside the plug-in and are not bundled in the EXE.
 
 BUILD (Windows)
 1. Initialize the pinned JUCE submodule and build the MSVC Release VST3.
@@ -36,9 +36,6 @@ BUILD (Windows)
 
 Do not copy developer qwen.env, runtime.json, recordings or generated histories
 into a payload. package_release.py uses an explicit module allowlist.
-
-The official Windows Ollama archive must match the SHA-256 supplied in the
-pinned release sha256sum.txt. Preserve all accompanying license files.
 
 macOS builds are provided by .github/workflows/macos-vst3.yml. The setup script
 requires Apple Silicon, macOS 14+ and native ARM64 Python 3.10/3.11, and installs
