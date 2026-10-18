@@ -77,12 +77,14 @@ def public_config(path: Path) -> dict:
     for key in ('llm_choice', 'midi_llm_choice', 'midi_gpt_choice', 'stem_choice'):
         fields[key] = config.get(key, 'auto')
     fields['midi_llm_dtype'] = config.get('midi_llm_dtype', 'auto' if sys.platform == 'darwin' else 'default')
+    from text2music.agent.model_policy import precision_status
+    precision = precision_status(config) if sys.platform == 'darwin' else None
     return {'revision': revision(path), 'settings': fields, 'api_key_configured': bool(config.get('api_key')),
             'setup_required': not config.get('setup_complete', False), 'provider': provider,
             'api_requirement': config.get('api_requirement', 'unknown'),
             'devices': {key: config.get(key, config.get('device', 'cpu')) for key in ('llm_device', 'midi_llm_device', 'midi_gpt_device', 'stem_device')},
             'hardware_plan': config.get('hardware_plan', {}), 'model_sources': config.get('model_sources', {}),
-            'local_error': config.get('local_error', '')}
+            'local_error': config.get('local_error', ''), 'composition_precision': precision}
 
 
 def include_resident_gpu(hardware: dict, config: dict) -> dict:

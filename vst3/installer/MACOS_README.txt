@@ -44,3 +44,7 @@ See the release verification record for actual test coverage and limitations.
 Music models: official Hugging Face or HF-Mirror, pinned revisions and hashes.
 Local chat weights: official Ollama registry; no verified domestic model mirror.
 Network availability varies; download failures remain explicit and can be retried.
+
+Composition precision defaults to the original device precision (FP32 on CPU).
+Only the detected 8 GB low-memory tier automatically uses FP16. Explicit advanced
+precision overrides are preserved. This rule does not certify untested Mac GPUs.

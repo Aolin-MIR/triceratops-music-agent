@@ -57,6 +57,8 @@ Choose an actual platform attachment from [Releases](https://github.com/Aolin-MI
 | Audio-to-MIDI | ~225 KiB | CPU |
 | Local conversation | Default 4B / 4-bit | Sufficient memory and GPU; tool calling and residency must pass |
 
+Mac text composition keeps the original device precision by default (FP32 on CPU); only the detected 8 GB low-memory tier automatically uses FP16. Advanced settings retain explicit precision overrides. Unknown RAM is not classified as low memory. These are deployment rules, not performance certification for other Macs or automatic approval of GPU paths.
+
 Weight sizes are not working-memory requirements. Local chat uses native deployment with a compatible NVIDIA GPU on Windows and native Metal deployment on Apple Silicon. A complete local 4B host workflow on an 8 GB Mac is not certified; compatible cloud chat is available. Advanced settings retain custom model IDs, endpoints, precision and devices.
 
 ## 🌐 Music-model download routing
