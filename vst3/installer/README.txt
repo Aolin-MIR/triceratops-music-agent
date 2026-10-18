@@ -3,10 +3,13 @@ TRICERATOPS 1.0 - REAPER ONLY
 Windows users: download Triceratops-1.0.1-Windows-x64-Setup.exe from
 https://github.com/Aolin-MIR/triceratops-music-agent/releases/tag/v1.0.1
 
-The EXE installs the canonical VST3, a Python seed and the verified official
-Ollama runtime. Open Settings inside the plug-in to detect devices, install
-packages, download models and verify chat. Configuration and downloads run in
-background jobs; cancellation retains the prior settings. WSL is not used.
+The EXE installs the canonical VST3, a Python seed and the Vulkan llama.cpp
+runtime. Ollama is not installed or bundled on Windows. Open Settings inside
+the plug-in to detect devices, install packages, download models and verify
+chat. Local chat downloads its GGUF directly from the official model registry,
+checks its size and SHA-256, then runs it with llama.cpp on the selected GPU.
+Configuration and downloads run in background jobs; cancellation retains the
+prior settings. WSL is not used.
 
 Auto setup tests local chat first. If it fails, cloud chat requires your own
 compatible API key and a successful native tool-call / tool-replay probe.
@@ -25,7 +28,7 @@ BUILD (Windows)
    contain only Python, pip/setuptools/wheel and their dependencies, not models,
    credentials or development packages.
 4. Run:
-   python vst3/installer/package_release.py --platform windows --plugin <VST3 bundle> --python-seed <clean seed> --ollama-runtime <verified official Ollama directory> --llama-cpp-runtime <verified Vulkan llama.cpp directory> --output vst3/package/payload
+   python vst3/installer/package_release.py --platform windows --plugin <VST3 bundle> --python-seed <clean seed> --llama-cpp-runtime <verified Vulkan llama.cpp directory> --output vst3/package/payload
 5. Download Microsoft's signed VC++ x64 redistributable to
    vst3/package/tools/vc_redist.x64.exe. Verify its Authenticode signature.
 6. Compile vst3/installer/Triceratops.iss with Inno Setup 6.7.3 or newer.

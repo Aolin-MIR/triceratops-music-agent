@@ -1,7 +1,9 @@
-"""Use the verified local-chat runtime shipped with the installer."""
+"""Prepare native local-chat backends with explicit GPU verification."""
 from __future__ import annotations
+import hashlib
 import json
 import os
+import re
 import subprocess
 import shutil
 import time
@@ -10,6 +12,7 @@ from urllib.request import Request, build_opener, ProxyHandler
 from dataclasses import replace
 
 MODEL_DOWNLOAD_URL = 'http://127.0.0.1:11435'
+MODEL_REGISTRY = 'https://registry.ollama.ai'
 
 
 def ensure_ollama(config: dict, report) -> None:
@@ -71,19 +74,127 @@ def pull_model(config: dict, report) -> None:
             raise RuntimeError('Local model download did not finish successfully')
 
 
+def pull_model_registry(config: dict, report) -> None:
+    """Download only the GGUF layer needed by llama.cpp, without installing Ollama."""
+    model = config['local_model']
+    name, separator, tag = model.rpartition(':')
+    if not separator:
+        name, tag = model, 'latest'
+    if (not name or not re.fullmatch(r'[A-Za-z0-9._/-]+', name)
+            or any(part in {'.', '..'} for part in name.split('/'))
+            or not re.fullmatch(r'[A-Za-z0-9._-]+', tag)):
+        raise ValueError('The local model must use a valid registry name and tag')
+    repository = name if '/' in name else 'library/' + name
+    base_url = f'{MODEL_REGISTRY}/v2/{repository}'
+    manifest_request = Request(base_url + '/manifests/' + tag, headers={
+        'Accept': 'application/vnd.docker.distribution.manifest.v2+json, application/vnd.oci.image.manifest.v1+json',
+        'User-Agent': 'Triceratops/1.0 local-model-setup',
+    })
+    with build_opener().open(manifest_request, timeout=60) as response:
+        manifest = json.loads(response.read(2 * 1024 * 1024))
+    layers = [layer for layer in manifest.get('layers', [])
+              if layer.get('mediaType') == 'application/vnd.ollama.image.model']
+    if len(layers) != 1:
+        raise RuntimeError('The selected registry manifest must contain exactly one GGUF model layer')
+    layer = layers[0]
+    digest = layer.get('digest', '')
+    size = layer.get('size')
+    if (not re.fullmatch(r'sha256:[0-9a-f]{64}', digest)
+            or not isinstance(size, int) or size <= 0):
+        raise RuntimeError('The model registry returned an invalid GGUF layer descriptor')
+
+    model_store = Path(config.get('ollama_model_store', Path(config['model_home']) / 'ollama'))
+    blob = model_store / 'blobs' / digest.replace(':', '-')
+    partial = blob.with_name(blob.name + '.partial')
+    blob.parent.mkdir(parents=True, exist_ok=True)
+
+    def file_hash(path: Path) -> tuple[str, int]:
+        hasher = hashlib.sha256()
+        length = 0
+        with path.open('rb') as source:
+            for chunk in iter(lambda: source.read(4 * 1024 * 1024), b''):
+                hasher.update(chunk)
+                length += len(chunk)
+        return hasher.hexdigest(), length
+
+    if blob.is_file():
+        existing_hash, existing_size = file_hash(blob)
+        if existing_hash != digest[7:] or existing_size != size:
+            blob.unlink()
+        else:
+            report(f'Local GGUF is verified ({size // 1048576} MiB)')
+
+    if not blob.is_file():
+        offset = partial.stat().st_size if partial.is_file() else 0
+        if offset >= size:
+            partial.unlink()
+            offset = 0
+        headers = {'User-Agent': 'Triceratops/1.0 local-model-setup'}
+        if offset:
+            headers['Range'] = f'bytes={offset}-'
+        report('Local chat model: downloading verified GGUF from the official model registry')
+        request = Request(base_url + '/blobs/' + digest, headers=headers)
+        with build_opener().open(request, timeout=60) as response:
+            status = getattr(response, 'status', response.getcode())
+            if offset and status == 206:
+                content_range = response.headers.get('Content-Range', '')
+                if not content_range.startswith(f'bytes {offset}-'):
+                    raise RuntimeError('The model registry returned an invalid resume range')
+                mode = 'ab'
+            elif status == 200:
+                offset = 0
+                mode = 'wb'
+            else:
+                raise RuntimeError(f'The model registry returned unexpected HTTP status {status}')
+            hasher = hashlib.sha256()
+            if offset:
+                with partial.open('rb') as source:
+                    for chunk in iter(lambda: source.read(4 * 1024 * 1024), b''):
+                        hasher.update(chunk)
+            downloaded = offset
+            last_report = time.monotonic()
+            with partial.open(mode) as output:
+                while True:
+                    chunk = response.read(4 * 1024 * 1024)
+                    if not chunk:
+                        break
+                    output.write(chunk)
+                    hasher.update(chunk)
+                    downloaded += len(chunk)
+                    if downloaded > size:
+                        raise RuntimeError('The downloaded GGUF is larger than its registry descriptor')
+                    if time.monotonic() - last_report >= 1:
+                        report(f'Local model: {downloaded // 1048576}/{size // 1048576} MiB')
+                        last_report = time.monotonic()
+                output.flush()
+                os.fsync(output.fileno())
+        if downloaded != size or hasher.hexdigest() != digest[7:]:
+            raise RuntimeError('The downloaded GGUF size or SHA-256 does not match the registry manifest')
+        os.replace(partial, blob)
+
+    manifest_path = model_store / 'manifests' / 'registry.ollama.ai' / repository / tag
+    manifest_path.parent.mkdir(parents=True, exist_ok=True)
+    stored_manifest = {'schemaVersion': 2, 'layers': [layer]}
+    temporary_manifest = manifest_path.with_name(manifest_path.name + '.tmp')
+    temporary_manifest.write_text(json.dumps(stored_manifest), encoding='utf-8')
+    os.replace(temporary_manifest, manifest_path)
+    report(f'Local model verified: {size // 1048576} MiB (SHA-256)')
+
+
 def _model_gguf(config: dict) -> Path:
     model = config['local_model']
     name, separator, tag = model.rpartition(':')
     if not separator:
         name, tag = model, 'latest'
     model_store = Path(config.get('ollama_model_store', Path(config['model_home'])/'ollama'))
-    manifest = model_store/'manifests'/'registry.ollama.ai'/'library'/name/tag
+    repository = name if '/' in name else 'library/' + name
+    manifest = model_store/'manifests'/'registry.ollama.ai'/repository/tag
     if not manifest.is_file():
         raise FileNotFoundError(f'Local chat model manifest is missing: {manifest}')
     data = json.loads(manifest.read_text(encoding='utf-8'))
     layers = [layer for layer in data.get('layers', []) if layer.get('mediaType') == 'application/vnd.ollama.image.model']
     if len(layers) != 1 or not str(layers[0].get('digest', '')).startswith('sha256:'):
-        raise RuntimeError('The selected Ollama model manifest does not identify exactly one GGUF model layer')
+        raise RuntimeError('The selected model manifest does not identify exactly one GGUF model layer')
     blob = model_store/'blobs'/layers[0]['digest'].replace(':', '-')
     if not blob.is_file() or blob.stat().st_size != int(layers[0]['size']):
         raise RuntimeError('The local GGUF model layer is missing or incomplete')
@@ -103,9 +214,8 @@ def ensure_llama_cpp(config: dict, report, *, download: bool = False) -> None:
     parsed = __import__('urllib.parse', fromlist=['urlparse']).urlparse(model_server_url)
     if parsed.scheme != 'http' or parsed.hostname not in {'127.0.0.1', 'localhost', '::1'} or parsed.path.rstrip('/') != '/v1':
         raise ValueError('llama.cpp must bind to a loopback HTTP /v1 endpoint')
-    ensure_ollama(config, report)
     if download:
-        pull_model(config, report)
+        pull_model_registry(config, report)
     model_path = _model_gguf(config)
     devices = subprocess.run([str(executable), '--list-devices'], capture_output=True, text=True, timeout=20)
     if devices.returncode:

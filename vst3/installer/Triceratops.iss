@@ -31,7 +31,6 @@ Source: "{#PayloadRoot}\Triceratops.vst3\*"; DestDir: "{commoncf64}\VST3\Tricera
 Source: "{#PayloadRoot}\backend\*"; DestDir: "{app}\backend"; Flags: ignoreversion recursesubdirs createallsubdirs
 Source: "{#PayloadRoot}\python\*"; DestDir: "{app}\python"; Flags: ignoreversion recursesubdirs createallsubdirs
 Source: "{#PayloadRoot}\docs\*"; DestDir: "{app}\docs"; Flags: ignoreversion recursesubdirs createallsubdirs
-Source: "{#PayloadRoot}\ollama\*"; DestDir: "{app}\ollama"; Flags: ignoreversion recursesubdirs createallsubdirs
 Source: "{#PayloadRoot}\llama-cpp\*"; DestDir: "{app}\llama-cpp"; Flags: ignoreversion recursesubdirs createallsubdirs
 Source: "..\package\tools\vc_redist.x64.exe"; DestDir: "{tmp}"; Flags: deleteafterinstall
 [Icons]

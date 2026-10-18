@@ -16,8 +16,6 @@ def package(plugin: Path, output: Path, platform: str, python_seed: Path | None 
     for component in au_plugins or []:
         if platform != "macos" or component.suffix != ".component" or not component.is_dir():
             raise ValueError(f"Invalid macOS Audio Unit bundle: {component}")
-    if platform == "windows" and (ollama_runtime is None or not (ollama_runtime / "ollama.exe").is_file()):
-        raise ValueError("Windows 1.0 packaging requires a verified --ollama-runtime directory")
     if platform == "windows" and (llama_cpp_runtime is None or not (llama_cpp_runtime / "llama-server.exe").is_file()):
         raise ValueError("Windows 1.0 packaging requires a verified Vulkan --llama-cpp-runtime directory")
     if not plugin.is_dir():
@@ -52,7 +50,6 @@ def package(plugin: Path, output: Path, platform: str, python_seed: Path | None 
         if python_seed is None:
             raise ValueError("Windows packaging requires --python-seed")
         shutil.copytree(python_seed, output / "python", ignore=shutil.ignore_patterns("__pycache__", "*.pyc"))
-        shutil.copytree(ollama_runtime, output / "ollama")
         shutil.copytree(llama_cpp_runtime, output / "llama-cpp")
     else:
         if ollama_runtime is not None:

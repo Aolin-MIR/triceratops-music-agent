@@ -36,8 +36,8 @@ def model_sources(mode: str = 'auto', location: dict | None = None) -> dict:
     mirror = mode == 'china' or (mode == 'auto' and region.get('country') == 'CN')
     return {'mode': mode, **region, 'hf_endpoint': CHINA_MIRROR if mirror else OFFICIAL,
             'music_models': 'china-mirror' if mirror else 'official',
-            'local_chat_models': 'official-ollama',
-            'local_chat_reason': 'No verified byte-identical domestic mirror is configured for the selected Ollama model. Its official registry is used.',
+            'local_chat_models': 'official-model-registry',
+            'local_chat_reason': 'No verified byte-identical domestic mirror is configured for the selected GGUF model. The official registry is used.',
             'scope': 'model-downloads-only'}
 
 
