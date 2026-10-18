@@ -11,9 +11,11 @@
 
 | System | Host | Format |
 | --- | --- | --- |
-| Windows x64 | REAPER | VST3 |
+| Windows 10 / 11 x64 | REAPER x64 | VST3 |
 | macOS 14+ · Apple Silicon | REAPER | VST3 |
 | macOS 14+ · Apple Silicon | Logic Pro | MIDI FX AU + Audio FX AU |
+
+Describe style, mood, instruments and structure in Chinese or English without JSON or a fixed prompt format.
 
 Mac requires native ARM64 Python 3.10 / 3.11. Intel / Rosetta model backends are unsupported. Audio devices are selected in the host.
 
@@ -55,7 +57,7 @@ Choose an actual platform attachment from [Releases](https://github.com/Aolin-MI
 | Audio-to-MIDI | ~225 KiB | CPU |
 | Local conversation | Default 4B / 4-bit | Sufficient memory and GPU; tool calling and residency must pass |
 
-Weight sizes are not working-memory requirements. Local chat uses native GPU deployment on Windows and native Metal deployment on Apple Silicon. A complete local 4B host workflow on an 8 GB Mac is not certified; compatible cloud chat is available. Advanced settings retain custom model IDs, endpoints, precision and devices.
+Weight sizes are not working-memory requirements. Local chat uses native deployment with a compatible NVIDIA GPU on Windows and native Metal deployment on Apple Silicon. A complete local 4B host workflow on an 8 GB Mac is not certified; compatible cloud chat is available. Advanced settings retain custom model IDs, endpoints, precision and devices.
 
 ## 🌐 Music-model download routing
 

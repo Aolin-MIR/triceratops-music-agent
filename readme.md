@@ -11,9 +11,11 @@
 
 | 系统 | 宿主 | 插件 |
 | --- | --- | --- |
-| Windows x64 | REAPER | VST3 |
+| Windows 10 / 11 x64 | REAPER x64 | VST3 |
 | macOS 14+ · Apple Silicon | REAPER | VST3 |
 | macOS 14+ · Apple Silicon | Logic Pro | MIDI FX AU + Audio FX AU |
+
+可用中文或英文描述风格、情绪、乐器和结构，无需 JSON 或固定提示词格式。
 
 Mac 需要原生 ARM64 Python 3.10 / 3.11；不支持 Intel / Rosetta 模型后端。声音输出跟随宿主选择的设备。
 
@@ -61,7 +63,7 @@ Mac 需要原生 ARM64 Python 3.10 / 3.11；不支持 Intel / Rosetta 模型后�
 | 音频转 MIDI | 约 225 KiB | CPU |
 | 本地聊天 | 默认 4B / 4-bit | 足够内存及 GPU；须通过工具调用与设备驻留验证 |
 
-大小仅指权重，不是运行内存需求。本地聊天：Windows 使用原生 GPU 部署，Apple Silicon 使用原生 Metal 部署；8 GB Mac 尚未通过本地 4B 完整宿主验收，可选兼容云端服务。高级设置支持自定义模型标识、服务地址、精度和设备。不会将未通过兼容检查的组合宣称为可用。
+大小仅指权重，不是运行内存需求。本地聊天：Windows 使用兼容 NVIDIA GPU 的原生部署，Apple Silicon 使用原生 Metal 部署；8 GB Mac 尚未通过本地 4B 完整宿主验收，可选兼容云端服务。高级设置支持自定义模型标识、服务地址、精度和设备。不会将未通过兼容检查的组合宣称为可用。
 
 ## 🌐 音乐模型下载分流
 
