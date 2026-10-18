@@ -20,12 +20,15 @@ class ChatSettings:
     context_size: int
 
     @classmethod
-    def load(cls):
-        provider = os.environ.get("TRICERATOPS_LLM_PROVIDER", "remote")
+    def load(cls, provider_override=""):
+        import sys
+        if provider_override not in {"", "remote", "local"}:
+            raise ValueError("Chat selection must be configured default, remote or local")
+        provider = ("ollama" if sys.platform == "darwin" else "llama_cpp") if provider_override == "local" else (provider_override or os.environ.get("TRICERATOPS_LLM_PROVIDER", "remote"))
         if provider not in {"remote", "ollama", "llama_cpp", "disabled"}:
             raise ValueError("llm_provider must be remote, ollama, llama_cpp or disabled")
         local = provider in {"ollama", "llama_cpp"}
-        device = os.environ.get("TRICERATOPS_LLM_DEVICE", "gpu" if local else "cpu")
+        device = "gpu" if provider_override == "local" else os.environ.get("TRICERATOPS_LLM_DEVICE", "gpu" if local else "cpu")
         if device not in {"cpu", "gpu"}:
             raise ValueError("llm_device must be cpu or gpu")
         if local and device != "gpu":
@@ -116,6 +119,33 @@ class OllamaClient:
     def __init__(self, settings: ChatSettings):
         self.settings = settings
         self.chat = SimpleNamespace(completions=self)
+        self.cancelled = None
+        self.last_usage = {}
+
+    def _chat(self, payload):
+        # Closing this response cancels the request, not the resident model.
+        request = Request(self.settings.base_url + '/api/chat', data=json.dumps(payload).encode(),
+                          headers={'Content-Type':'application/json'})
+        content, calls, final = [], [], {}
+        if self.cancelled and self.cancelled():
+            raise RuntimeError('Local chat request cancelled; GPU model remains resident')
+        with build_opener(ProxyHandler({})).open(request, timeout=self.settings.timeout) as response:
+            for line in response:
+                if self.cancelled and self.cancelled():
+                    raise RuntimeError('Local chat request cancelled; GPU model remains resident')
+                if not line.strip():
+                    continue
+                item = json.loads(line)
+                if item.get('error'):
+                    raise RuntimeError('Local chat returned an error: ' + str(item['error']))
+                message = item.get('message', {})
+                content.append(message.get('content') or '')
+                calls.extend(message.get('tool_calls') or [])
+                if item.get('done'):
+                    final = item
+                    break
+        self.last_usage = {k:final[k] for k in ('prompt_eval_count','eval_count','total_duration','load_duration') if k in final}
+        return {**final, 'message':{'content':''.join(content),'tool_calls':calls}}
 
     def create(self, *, messages, tools, tool_choice="auto", **unused):
         if tool_choice != "auto":
@@ -137,11 +167,12 @@ class OllamaClient:
             if item.get("content") is None:
                 item["content"] = ""
             converted.append(item)
-        data = local_request(self.settings, "/api/chat", {
+        data = self._chat({
             "model": self.settings.model, "messages": converted, "tools": tools,
-            "stream": False, "think": False, "keep_alive": -1,
+            "stream": True, "think": False, "keep_alive": -1,
             "options": {"temperature": 0.2, "num_ctx": self.settings.context_size,
-                        "num_predict": 1024, "num_gpu": 0 if self.settings.device == "cpu" else 999},
+                        "num_predict": max(64, min(1024, int(unused.get("max_tokens", 1024)))),
+                        "num_gpu": 0 if self.settings.device == "cpu" else 999},
         })
         if data.get("done") is not True or data.get("done_reason") == "length":
             raise RuntimeError("Local model response was incomplete; no truncated tool call was executed")
@@ -161,8 +192,8 @@ class OllamaClient:
         return SimpleNamespace(choices=[SimpleNamespace(message=answer)])
 
 
-def create_chat_client():
-    settings = ChatSettings.load()
+def create_chat_client(provider_override=""):
+    settings = ChatSettings.load(provider_override)
     if settings.provider == "disabled":
         raise RuntimeError("Chat is disabled. Direct action buttons remain available; select a cloud "
                            "API or local model to use free-form chat.")
@@ -190,12 +221,12 @@ def create_chat_client():
     return OpenAI(api_key=key, base_url=settings.base_url, timeout=settings.timeout, max_retries=0), settings
 
 
-def check_chat_backend() -> dict:
+def check_chat_backend(provider_override="") -> dict:
     """Test native argument extraction and tool-result replay, without music mutations."""
-    settings = ChatSettings.load()
+    settings = ChatSettings.load(provider_override)
     if settings.provider == "disabled":
         return {"provider": "disabled", "direct_buttons": True, "chat": False}
-    client, settings = create_chat_client()
+    client, settings = create_chat_client(provider_override)
     schema = {"type": "function", "function": {"name": "compatibility_probe",
               "description": "Read a test value. This does not change files or generate music.",
               "parameters": {"type": "object", "properties": {"value": {"type": "integer"}},

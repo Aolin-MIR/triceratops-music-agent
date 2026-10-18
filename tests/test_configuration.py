@@ -200,3 +200,32 @@ def test_corrupt_worker_report_finishes_job_and_notifies_service(profile, monkey
     assert jobs.process is None
     assert received[0]['state'] == 'failed'
     assert not list(profile.parent.glob('configuration/*/request.json'))
+
+
+def test_explicit_2b_metal_profile_does_not_lower_default_4b_requirements():
+    h = dict(system='Darwin', architecture='arm64', ram_total=8*hardware.GIB,
+             ram_available=3*hardware.GIB, nvidia=[])
+    with pytest.raises(ValueError, match='Insufficient'):
+        hardware.plan_devices(h)
+    plan = hardware.plan_devices(h, local_model='qwen3.5:2b-q4_K_M')
+    assert plan['local_feasible'] and plan['llm_device'] == 'gpu'
+    assert plan['midi_llm_device'] == 'cpu'
+    assert not hardware.plan_devices({**h,'ram_available':hardware.GIB},
+        local_model='qwen3.5:2b-q4_K_M')['local_feasible']
+    assert not hardware.plan_devices(h, local_model='qwen3.5:2b-q4_K_M',
+        midi_llm_dtype='float32')['local_feasible']
+
+
+def test_metal_memory_credit_requires_selected_model_full_residency(monkeypatch):
+    h = dict(system='Darwin', architecture='arm64', ram_total=8*hardware.GIB,
+             ram_available=hardware.GIB, nvidia=[])
+    def actual(settings):
+        assert settings.model == 'qwen3.5:2b-q4_K_M' and settings.device == 'gpu'
+        return {'vram_bytes': 1631059966}
+    monkeypatch.setattr(llm_backend,'residency',actual)
+    c = {'local_model':'qwen3.5:2b-q4_K_M'}
+    credited = config.include_resident_gpu(h,c)
+    assert credited['ram_available'] == hardware.GIB + 1631059966
+    def failed(settings): raise RuntimeError('partial CPU offload')
+    monkeypatch.setattr(llm_backend,'residency',failed)
+    assert config.include_resident_gpu(h,c) == h

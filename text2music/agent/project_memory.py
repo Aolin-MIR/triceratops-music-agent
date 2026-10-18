@@ -65,12 +65,37 @@ class ProjectMemory:
         self._save(data)
         return {"updated_from": previous, "remembered": replacement, "category": category}
 
-    def context(self) -> str:
+    def update_music_context(self, updates: dict[str, Any], source: str) -> dict[str, Any]:
+        # Validate using the same public tool schema before touching storage.
+        from text2music.agent.direct_actions import validate_arguments
+        validate_arguments("update_music_context", {"updates": updates})
+        if not source.strip():
+            raise ValueError("Musical context needs its original user request")
+        data = self.load()
+        current = data.setdefault("music_context", {})
+        revision = int(data.get("music_revision", 0)) + 1
+        previous = {key: current.get(key) for key in updates}
+        for key, value in updates.items():
+            if value is None:
+                current.pop(key, None)
+                continue
+            current[key] = {"value": value, "source": source, "revision": revision, "updated": time.time()}
+        data["music_revision"] = revision
+        audit = data.setdefault("music_updates", [])
+        audit.append({"revision": revision, "previous": previous, "updates": updates, "source": source})
+        self._save(data)
+        return {"music_context": {k: v["value"] for k, v in current.items()}, "revision": revision}
+
+    def music_context(self) -> dict[str, Any]:
+        return {k: v["value"] for k, v in self.load().get("music_context", {}).items()}
+
+    def context(self, *, include_summary: bool = True) -> str:
         data = self.load()
         facts = data.get("facts", [])[-30:]
-        summary = str(data.get("conversation_summary", "")).strip()
+        summary = str(data.get("conversation_summary", "")).strip() if include_summary else ""
         lines = [f"- [{item.get('category', 'fact')}] {item.get('fact', '')}" for item in facts]
-        return "\n".join((["Project memory:", *lines] if lines else []) +
+        music = self.music_context()
+        return "\n".join((["Musical requirements (latest explicit values): " + json.dumps(music, ensure_ascii=False)] if music else []) + (["Project memory:", *lines] if lines else []) +
                          (["Conversation summary: " + summary] if summary else []))
 
     def recall(self, text: str) -> dict[str, Any]:

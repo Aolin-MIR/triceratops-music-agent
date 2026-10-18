@@ -89,3 +89,31 @@ def test_release_windows_payload_does_not_require_or_include_ollama(tmp_path):
     assert (output / "llama-cpp" / "llama-server.exe").is_file()
     assert not (output / "ollama").exists()
     assert not (output / "backend" / "text2music" / "agent" / "service.py").exists()
+
+
+def test_macos_complete_registry_keeps_old_manifest_until_all_layers_verify(tmp_path, monkeypatch):
+    import io
+    import json
+    from urllib import request
+    from text2music.agent import local_runtime, macos_bootstrap
+    sha = 'a' * 64
+    manifest = {'config': {'digest': 'sha256:' + sha, 'size': 2},
+                'layers': [{'digest': 'sha256:' + 'b' * 64, 'size': 3}]}
+    monkeypatch.setattr(request, 'urlopen', lambda *a, **k: io.BytesIO(json.dumps(manifest).encode()))
+    target = tmp_path/'ollama/manifests/registry.ollama.ai/library/test/2b'
+    target.parent.mkdir(parents=True)
+    target.write_text('{"previous":true}')
+    def failed(*args, **kwargs):
+        raise RuntimeError('checksum mismatch')
+    monkeypatch.setattr(macos_bootstrap, 'download', failed)
+    import pytest
+    with pytest.raises(RuntimeError, match='checksum'):
+        local_runtime.pull_macos_registry({'local_model':'test:2b', 'model_home':str(tmp_path)}, lambda _:None)
+    assert json.loads(target.read_text()) == {'previous':True}
+
+
+def test_macos_registry_rejects_escaping_model_before_network(tmp_path):
+    import pytest
+    from text2music.agent.local_runtime import pull_macos_registry
+    with pytest.raises(ValueError, match='valid registry'):
+        pull_macos_registry({'local_model':'../test:2b', 'model_home':str(tmp_path)}, lambda _:None)

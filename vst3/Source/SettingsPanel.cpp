@@ -27,14 +27,15 @@ SettingsPanel::SettingsPanel(BackendClient& client) : backend(client)
     status.setFont(juce::FontOptions(13.0f));
     addField("chat_policy", "Conversation", juce::String::fromUTF8("对话方式"), {"auto", "local", "remote", "disabled"}, {"Recommended / hardware checked", "Local GPU", "Cloud service", "Direct buttons only"});
     addField("local_model", "Custom chat model ID", juce::String::fromUTF8("自定义聊天模型标识"));
-    addField("llm_choice", "Local chat · 4B / 4-bit*", juce::String::fromUTF8("本地对话 · 4B / 4-bit*"), {"auto", "gpu"}, {"Recommended / GPU required", "GPU"});
+    addField("llm_context", "Chat context (tokens)", juce::String::fromUTF8("聊天上下文（token）"), {"4096", "8192", "16384"}, {"4096", "8192", "16384"});
+    addField("llm_choice", juce::String::fromUTF8("Local chat · 4B / 4-bit*"), juce::String::fromUTF8("本地对话 · 4B / 4-bit*"), {"auto", "gpu"}, {"Recommended / GPU required", "GPU"});
     const char* keys[] = {"midi_llm_choice", "midi_gpt_choice", "stem_choice"};
     const char* namesEn[] = {"Text composition · 3.2 GiB", "Continue / fill · 334 MiB", "Audio stems · 80 MiB"};
     const char* namesZh[] = {"文本作曲 · 3.2 GiB", "续写填充 · 334 MiB", "音频分轨 · 80 MiB"};
     for (int i = 0; i < 3; ++i)
     {
        #if JUCE_MAC
-        addField(keys[i], namesEn[i], juce::String::fromUTF8(namesZh[i]), {"auto", "cpu", "mps"}, {"Recommended / CPU", "CPU", "GPU / explicit test"});
+        addField(keys[i], juce::String::fromUTF8(namesEn[i]), juce::String::fromUTF8(namesZh[i]), {"auto", "cpu", "mps"}, {"Recommended / CPU", "CPU", "GPU / explicit test"});
        #else
         addField(keys[i], namesEn[i], juce::String::fromUTF8(namesZh[i]), {"auto", "cpu", "cuda"}, {"Recommended / hardware checked", "CPU", "GPU"});
        #endif
@@ -71,7 +72,7 @@ void SettingsPanel::addField(const juce::String& key, const juce::String& en, co
     auto field = std::make_unique<Field>();
     field->key = key; field->en = en; field->zh = zh; field->values = values;
     field->isChoice = !values.isEmpty();
-    field->advancedOnly = key == "local_model" || key == "midi_llm_dtype" || key == "base_url" || key == "chat_model" || key == "api_key" || key == "llama_cpp_url";
+    field->advancedOnly = key == "local_model" || key == "llm_context" || key == "midi_llm_dtype" || key == "base_url" || key == "chat_model" || key == "api_key" || key == "llama_cpp_url";
     form.addAndMakeVisible(field->label);
     field->label.setColour(juce::Label::textColourId, muted);
     field->label.setFont(juce::FontOptions(13.0f));

@@ -54,7 +54,8 @@ def inspect_hardware() -> dict:
 
 def plan_devices(hardware: dict, *, local_weight_bytes: int = 3_324_000_000,
                  local_chat: bool = True, llm_choice: str = "auto",
-                 music_choices: dict | None = None) -> dict:
+                 music_choices: dict | None = None, local_model: str = "",
+                 midi_llm_dtype: str = "auto") -> dict:
     # Budgets include context/activations and framework overhead. Actual residency
     # and model probes must still pass before any configuration can be saved.
     choices = music_choices or {}
@@ -68,6 +69,13 @@ def plan_devices(hardware: dict, *, local_weight_bytes: int = 3_324_000_000,
     reserve = int(1.5*GIB)
     llm_budget = max(int(5.5*GIB), int(local_weight_bytes*1.6),
                      max((g.get('resident_local_bytes', 0) for g in candidates), default=0))
+    metal = hardware['system'] == 'Darwin' and hardware['architecture'] == 'arm64'
+    small_metal = metal and local_model == 'qwen3.5:2b-q4_K_M'
+    if small_metal:
+        # Explicit custom model only. Measured at 4096 tokens on the 8 GB Mac:
+        # 1,631,059,966 bytes fully on Metal. Reserve additional runtime space;
+        # native tool compatibility and residency are still mandatory at apply.
+        llm_budget = int(2*GIB)
     music_budgets = {'midi_llm': int(6*GIB), 'midi_gpt': int(2*GIB), 'stem': int(2*GIB)}
     remaining = max(0, gpu['free'] - reserve) if gpu else 0
     devices = {name: 'cpu' for name in music_budgets}
@@ -89,7 +97,6 @@ def plan_devices(hardware: dict, *, local_weight_bytes: int = 3_324_000_000,
         remaining -= budget
         devices[name] = 'cuda'
     llm = 'cpu'
-    metal = hardware['system'] == 'Darwin' and hardware['architecture'] == 'arm64'
     if local_chat:
         if llm_choice == 'cpu':
             raise ValueError('Local chat requires GPU acceleration; CPU placement is disabled.')
@@ -97,7 +104,7 @@ def plan_devices(hardware: dict, *, local_weight_bytes: int = 3_324_000_000,
             llm = 'gpu'
             remaining -= llm_budget
             reasons.append('Local LLM fits the remaining GPU budget and will stay resident there.')
-        elif metal and hardware['ram_total'] >= 24*GIB:
+        elif metal and hardware['ram_total'] >= (8 if small_metal else 24)*GIB:
             llm = 'gpu'
             reasons.append('Apple Silicon local chat must pass actual Metal residency; music remains on CPU.')
         else:
@@ -112,8 +119,15 @@ def plan_devices(hardware: dict, *, local_weight_bytes: int = 3_324_000_000,
     if local_chat and metal and llm == 'gpu':
         chat_ram = llm_budget  # Metal allocations consume unified system memory.
     music_ram = int((9 if devices['midi_llm'] == 'cpu' else 2)*GIB)
+    if small_metal and devices['midi_llm'] == 'cpu' and (midi_llm_dtype == 'float16'
+            or midi_llm_dtype == 'auto' and hardware['ram_total'] <= 8.5*GIB):
+        music_ram = int(3.5*GIB)
     estimated_ram = chat_ram + music_ram
     feasible = hardware['ram_total'] >= 14*GIB and hardware['ram_available'] >= estimated_ram
+    if small_metal:
+        feasible = (hardware['ram_total'] >= estimated_ram + reserve
+                    and hardware['ram_available'] >= llm_budget)
+        reasons.append('Explicit 2B Metal profile: verify full GPU residency and tool calls; music remains CPU. Shared-memory pressure can reduce speed.')
     if not feasible:
         reasons.append('Insufficient physical-memory headroom for the selected model combination.')
     if hardware.get('gpu_probe_error'):

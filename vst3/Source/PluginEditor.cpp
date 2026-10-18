@@ -267,6 +267,24 @@ TriceratopsAudioProcessorEditor::TriceratopsAudioProcessorEditor(TriceratopsAudi
         editor->setScrollbarsShown(true);
         addAndMakeVisible(editor);
     }
+    chatBackendSelector.addItem("Default / 默认", 1);
+    chatBackendSelector.addItem("API", 2);
+    chatBackendSelector.addItem("Local GPU / 本地", 3);
+    chatBackendSelector.setSelectedId(1, juce::dontSendNotification);
+    chatBackendSelector.setTitle("Chat model / 聊天模型");
+    addAndMakeVisible(chatBackendSelector);
+    addAndMakeVisible(chatBackendStatus);
+    chatBackendStatus.setText("Default / 默认", juce::dontSendNotification);
+    chatBackendStatus.setColour(juce::Label::textColourId, textSub);
+    chatBackendSelector.onChange = [this] {
+        selectedChatBackend = chatBackendSelector.getSelectedId() == 2 ? "remote"
+            : chatBackendSelector.getSelectedId() == 3 ? "local" : "";
+        chatBackendReady = false;
+        deferredChatVerify = true;
+        chatSwitchPending = true;
+        send.setEnabled(false);
+        chatBackendStatus.setText(chinese ? "切换中：准备并验证…" : "Switching: preparing & verifying...", juce::dontSendNotification);
+    };
     chatDisplay.setReadOnly(true);
     prompt.setTextToShowWhenEmpty(ui("Say anything: sad piano, continue this, more energy, analyze it..."), textSub.withAlpha(0.6f));
     arrangement.setReadOnly(true);
@@ -393,6 +411,18 @@ TriceratopsAudioProcessorEditor::~TriceratopsAudioProcessorEditor()
         if (requestKind == RequestKind::import_reaper)
         {
             auto response = pending.get();
+        if (requestKind == RequestKind::verify_chat)
+        {
+            if (!static_cast<bool>(response.getProperty("accepted", false)))
+            {
+                chatSwitchPending = false;
+                const auto error = response.getProperty("error", "Backend connection failed").toString();
+                chatBackendStatus.setText((chinese ? "切换失败：" : "Switch failed: ") + error, juce::dontSendNotification);
+                chatBackendStatus.setTooltip(error);
+            }
+            requestKind = RequestKind::none;
+            return;
+        }
             if (auto* object = response.getDynamicObject(); object != nullptr && object->hasProperty("script_path"))
                 ownerProcessor.backend().reaperImportReceipt(object->getProperty("request_id").toString(), true);
         }
@@ -494,7 +524,7 @@ void TriceratopsAudioProcessorEditor::resized()
     // Main Chat Agent Layout. Keep quick actions at the top so host window
     // scaling can never clip them below the editor viewport.
     auto quickDock = mainArea.removeFromTop(72);
-    auto inputDock = mainArea.removeFromTop(82);
+    auto inputDock = mainArea.removeFromTop(110);
     auto bottomDock = mainArea.removeFromBottom(36);
     auto progressRow = mainArea.removeFromBottom(28);
 
@@ -543,6 +573,9 @@ void TriceratopsAudioProcessorEditor::resized()
     // dragMidi is placed in the header so it remains visible in compact AU
     // windows; leave the bottom dock slot empty.
 
+    auto modelRow = inputDock.removeFromTop(28);
+    chatBackendSelector.setBounds(modelRow.removeFromLeft(160).reduced(2, 0));
+    chatBackendStatus.setBounds(modelRow.reduced(4, 0));
     auto row4 = inputDock.reduced(0, 2);
     auto sendArea = row4.removeFromRight(140);
     send.setBounds(sendArea.removeFromTop(44).reduced(3, 2));
@@ -627,7 +660,15 @@ void TriceratopsAudioProcessorEditor::timerCallback()
         requestKind = RequestKind::none;
     }
 
-    if (requestKind == RequestKind::none && deferredCancel)
+    chatBackendSelector.setEnabled(!busyGenerating && !chatSwitchPending);
+    if (requestKind == RequestKind::none && deferredChatVerify)
+    {
+        deferredChatVerify = false;
+        const auto backend = selectedChatBackend;
+        pending = std::async(std::launch::async, [this, backend] { return ownerProcessor.backend().verifyChat(backend); });
+        requestKind = RequestKind::verify_chat;
+    }
+    else if (requestKind == RequestKind::none && deferredCancel)
     {
         deferredCancel = false;
         cancelCurrentTask();
@@ -664,9 +705,9 @@ void TriceratopsAudioProcessorEditor::pollStatus()
     requestKind = RequestKind::status;
 }
 
-void TriceratopsAudioProcessorEditor::sendMessage()
+void TriceratopsAudioProcessorEditor::sendMessage(bool directAction)
 {
-    if (busyGenerating)
+    if (busyGenerating || (!directAction && !chatBackendReady))
         return;
 
     const auto message = prompt.getText().trim();
@@ -675,6 +716,7 @@ void TriceratopsAudioProcessorEditor::sendMessage()
 
     prompt.setText("");
     queuedMessage = message;
+    queuedChatBackend = selectedChatBackend;
     queuedAction.clear();
 
     chatTurns.push_back({
@@ -700,8 +742,9 @@ void TriceratopsAudioProcessorEditor::startChat(const juce::String& message, con
     const auto selectedMidi = midiPath;
     const auto selectedAudio = audioPath;
     const auto language = chinese ? juce::String("zh") : juce::String("en");
-    pending = std::async(std::launch::async, [this, message, action, host, selectedMidi, selectedAudio, language] {
-        return ownerProcessor.backend().chat(message, host, selectedMidi, selectedAudio, action, language);
+    const auto backend = queuedChatBackend;
+    pending = std::async(std::launch::async, [this, message, action, host, selectedMidi, selectedAudio, language, backend] {
+        return ownerProcessor.backend().chat(message, host, selectedMidi, selectedAudio, action, language, backend);
     });
     requestKind = RequestKind::chat;
 }
@@ -736,6 +779,23 @@ void TriceratopsAudioProcessorEditor::addThinkingStep(const juce::String& step)
 
 void TriceratopsAudioProcessorEditor::handleStatus(const juce::var& value)
 {
+    if (chatSwitchPending && !deferredChatVerify)
+    {
+        auto switches = value.getProperty("chat_switches", {});
+        auto state = switches.getProperty(ownerProcessor.backend().getSessionId(), {});
+        const auto status = state.getProperty("state", "").toString();
+        if ((status == "ready" || status == "failed") && state.getProperty("selection", "").toString() == selectedChatBackend)
+        {
+            chatSwitchPending = false;
+            chatBackendReady = status == "ready";
+            const auto name = selectedChatBackend == "remote" ? "API" : selectedChatBackend == "local" ? (chinese ? "本地 GPU" : "Local GPU") : (chinese ? "默认模型" : "Default model");
+            const auto detail = chatBackendReady ? ((chinese ? "切换完成：" : "Ready: ") + juce::String(name))
+                : ((chinese ? "切换失败，请检查设置：" : "Switch failed; check Settings: ") + state.getProperty("error", "").toString());
+            chatBackendStatus.setText(detail, juce::dontSendNotification);
+            chatBackendStatus.setTooltip(detail);
+        }
+    }
+
     auto* object = value.getDynamicObject();
     if (object == nullptr)
     {
@@ -751,7 +811,7 @@ void TriceratopsAudioProcessorEditor::handleStatus(const juce::var& value)
             currentThinkingSteps.clear();
             updateChatDisplay();
         }
-        send.setEnabled(true);
+        send.setEnabled(chatBackendReady);
         prompt.setEnabled(true);
         return;
     }
@@ -813,10 +873,17 @@ void TriceratopsAudioProcessorEditor::handleStatus(const juce::var& value)
         // UI must always leave the "thinking" state here.
         busyGenerating = false;
         send.setSpinning(false);
-        send.setEnabled(!backendConnecting);
+        send.setEnabled(chatBackendReady && !backendConnecting);
 
         juce::String finalReply = error.isEmpty() ? response : ui("Operation failed:\n") + error;
         const auto* finalResult = object->getProperty("result").getDynamicObject();
+        if (finalResult != nullptr)
+        {
+            const auto provenance = finalResult->getProperty("context_usage").getProperty("chat_backend", {});
+            const auto provider = provenance.getProperty("provider", "").toString();
+            if (provider.isNotEmpty())
+                finalReply = "[" + juce::String(provider == "remote" ? "API" : "Local GPU") + "]\n" + finalReply;
+        }
         const auto finalMidi = finalResult != nullptr
             ? finalResult->getProperty("midi_windows").toString() : juce::String();
         if (finalReply.isNotEmpty() && finalReply != "Ready." && finalReply != ui("Understanding your request..."))
@@ -836,7 +903,7 @@ void TriceratopsAudioProcessorEditor::handleStatus(const juce::var& value)
     {
         busyGenerating = false;
         send.setSpinning(false);
-        send.setEnabled(!backendConnecting);
+        send.setEnabled(chatBackendReady && !backendConnecting);
         chatTurns.push_back({
             "assistant",
             ui("ERROR EXCEPTION DETAILS:\n----------------------------------------\n") + error + "\n----------------------------------------",
@@ -859,7 +926,7 @@ void TriceratopsAudioProcessorEditor::handleStatus(const juce::var& value)
     for (auto* button : { &newMusic, &editMidi, &analyze, &continueFour, &moreEnergy, &tightenTiming,
                           &undoBtn, &keepBtn, &rejectBtn, &stems, &audioMidi })
         button->setEnabled(!backendConfiguring && !busy);
-    if (!backendConfiguring && !busyGenerating && !backendConnecting) send.setEnabled(true);
+    if (!backendConfiguring && !busyGenerating && !backendConnecting) send.setEnabled(chatBackendReady);
 
     // Process Result Object & Update Score Visualizer
     if (auto* result = object->getProperty("result").getDynamicObject();
@@ -1205,7 +1272,7 @@ void TriceratopsAudioProcessorEditor::runQuickAction(const juce::String& text, c
     if (busyGenerating)
         return;
     prompt.setText(ui(text));
-    sendMessage();
+    sendMessage(action.isNotEmpty());
     queuedAction = action;
 }
 

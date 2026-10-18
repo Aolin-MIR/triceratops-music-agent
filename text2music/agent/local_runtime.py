@@ -59,6 +59,8 @@ def ensure_ollama(config: dict, report) -> None:
 
 
 def pull_model(config: dict, report) -> None:
+    if __import__('sys').platform == 'darwin':
+        return pull_macos_registry(config, report)
     request = Request(MODEL_DOWNLOAD_URL+'/api/pull',
                       data=json.dumps({'model': config['local_model'], 'stream': True}).encode(),
                       headers={'Content-Type': 'application/json'})
@@ -76,6 +78,54 @@ def pull_model(config: dict, report) -> None:
                 last = time.monotonic()
         if not complete:
             raise RuntimeError('Local model download did not finish successfully')
+
+
+def pull_macos_registry(config: dict, report) -> None:
+    """Install complete official layers with TLS and manifest SHA-256 checks.
+
+    Native macOS proxy DNS can expose synthetic IPs to Ollama's redirect
+    validator. Use the system HTTPS transport for the fixed official registry;
+    do not disable Ollama's redirect protection or accept unverified mirrors.
+    """
+    from urllib.request import urlopen
+    from text2music.agent.macos_bootstrap import download, digest
+    model = config['local_model']
+    name, separator, tag = model.rpartition(':')
+    if not separator:
+        name, tag = model, 'latest'
+    if (not re.fullmatch(r'[A-Za-z0-9._/-]+', name)
+            or any(part in {'', '.', '..'} for part in name.split('/'))
+            or not re.fullmatch(r'[A-Za-z0-9._-]+', tag)):
+        raise ValueError('The local model must use a valid registry name and tag')
+    repository = name if '/' in name else 'library/' + name
+    base = MODEL_REGISTRY + '/v2/' + repository
+    report('Local chat: downloading SHA-256 verified official registry layers')
+    with urlopen(Request(base + '/manifests/' + tag, headers={
+            'Accept': 'application/vnd.docker.distribution.manifest.v2+json'}), timeout=30) as response:
+        manifest = json.loads(response.read(2 * 1024 * 1024))
+    rows = [manifest['config'], *manifest['layers']]
+    for row in rows:
+        if (not re.fullmatch(r'sha256:[0-9a-f]{64}', row.get('digest', ''))
+                or type(row.get('size')) is not int or row['size'] <= 0):
+            raise ValueError('Invalid official model layer metadata')
+    store = Path(config.get('ollama_model_store', Path(config['model_home']) / 'ollama'))
+    blobs = store / 'blobs'
+    blobs.mkdir(parents=True, exist_ok=True)
+    for row in rows:
+        sha = row['digest'][7:]
+        destination = blobs / ('sha256-' + sha)
+        if (destination.is_file() and destination.stat().st_size == row['size']
+                and digest(destination) == sha):
+            continue
+        cached = download(base + '/blobs/sha256:' + sha, sha, row['size'],
+                          store / 'downloads', 'official', report)
+        temporary = destination.with_name(destination.name + '.installing')
+        shutil.copyfile(cached, temporary)
+        os.replace(temporary, destination)
+    from text2music.agent.configuration import atomic_json
+    # Publish only after every layer is present and verified. Existing models
+    # and the previously published manifest remain intact on a failed download.
+    atomic_json(store / 'manifests/registry.ollama.ai' / repository / tag, manifest)
 
 
 def pull_model_registry(config: dict, report) -> None:
@@ -309,8 +359,8 @@ def ensure_macos_local(config: dict, report, *, download: bool = False) -> None:
     settings = replace(ChatSettings.load(), timeout=180)
     report('Loading the selected local model on Metal; verifying actual GPU residency')
     local_request(settings, '/api/chat', {'model': settings.model, 'stream': False,
-        'messages': [{'role': 'user', 'content': 'Reply OK'}], 'keep_alive': -1,
-        'options': {'num_ctx': settings.context_size, 'num_predict': 4}})
+        'messages': [{'role': 'user', 'content': 'Reply OK'}], 'keep_alive': -1, 'think': False,
+        'options': {'num_ctx': settings.context_size, 'num_predict': 4, 'num_gpu': 999}})
     actual = residency(settings)
     report('Metal GPU residency verified: ' + str(actual['vram_bytes']) + ' bytes')
 

@@ -24,7 +24,9 @@ public:
     juce::var reaperImportReceipt(const juce::String& requestId, bool discard = false);
     juce::var chat(const juce::String& message, const juce::var& host,
                    const juce::String& midiPath, const juce::String& audioPath,
-                   const juce::String& action = {}, const juce::String& language = "en");
+                   const juce::String& action = {}, const juce::String& language = "en",
+                   const juce::String& chatBackend = {});
+    juce::var verifyChat(const juce::String& chatBackend);
 
     const juce::String& getSessionId() const noexcept { return sessionId; }
 

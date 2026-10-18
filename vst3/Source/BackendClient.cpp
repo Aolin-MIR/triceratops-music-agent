@@ -125,7 +125,7 @@ juce::var BackendClient::reaperImportReceipt(const juce::String& requestId, bool
 
 juce::var BackendClient::chat(const juce::String& message, const juce::var& host,
                               const juce::String& midiPath, const juce::String& audioPath,
-                              const juce::String& action, const juce::String& language)
+                              const juce::String& action, const juce::String& language, const juce::String& chatBackend)
 {
     auto payload = new juce::DynamicObject();
     payload->setProperty("session", sessionId);
@@ -135,7 +135,16 @@ juce::var BackendClient::chat(const juce::String& message, const juce::var& host
     payload->setProperty("audio_path", audioPath);
     payload->setProperty("action", action);
     payload->setProperty("language", language);
+    payload->setProperty("chat_backend", chatBackend);
     return request("/chat", "POST", juce::var(payload));
+}
+
+juce::var BackendClient::verifyChat(const juce::String& chatBackend)
+{
+    auto payload = new juce::DynamicObject();
+    payload->setProperty("session", sessionId);
+    payload->setProperty("chat_backend", chatBackend);
+    return request("/chat/verify", "POST", juce::var(payload));
 }
 
 juce::var BackendClient::request(const juce::String& path, const juce::String& method,

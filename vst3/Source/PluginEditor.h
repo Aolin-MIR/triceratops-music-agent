@@ -108,7 +108,7 @@ private:
     void saveUiSettings() const;
     void applyLanguage();
     void timerCallback() override;
-    void sendMessage();
+    void sendMessage(bool directAction = false);
     void pollStatus();
     void handleStatus(const juce::var&);
     void chooseMidi();
@@ -128,12 +128,16 @@ private:
     void toggleAudioCapture();
     juce::File nextCaptureFile(const juce::String& extension) const;
 
-    enum class RequestKind { none, open, status, chat, clear_chat, import_reaper, import_receipt };
+    enum class RequestKind { none, open, status, chat, clear_chat, import_reaper, import_receipt, verify_chat };
 
     TriceratopsAudioProcessor& ownerProcessor;
 
     // Chat stream & sidebar controls
     juce::TextEditor chatDisplay, prompt, arrangement, history;
+    juce::ComboBox chatBackendSelector;
+    juce::Label chatBackendStatus;
+    bool chatBackendReady = true, deferredChatVerify = false, chatSwitchPending = false;
+    juce::String selectedChatBackend, queuedChatBackend;
     juce::Label statusLabel, progressLabel, connectionBanner, midiLabel, audioLabel;
     juce::ProgressBar progressBar;
     ScoreStaveComponent scoreStave;

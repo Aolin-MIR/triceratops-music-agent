@@ -268,7 +268,8 @@ def _conversation_history(limit: int = 8) -> list[dict[str, str]]:
         try:
             item = json.loads(line)
             if item.get("role") in {"user", "assistant"} and item.get("content"):
-                turns.append({"role": str(item["role"]), "content": str(item["content"])})
+                turns.append({"role": str(item["role"]), "content": str(item["content"]),
+                              "executions": item.get("executions", [])})
         except json.JSONDecodeError:
             continue
     return turns
@@ -294,6 +295,7 @@ class TriceratopsState:
         self.lock = threading.RLock()
         self.busy = False
         self.cancel_event = threading.Event()
+        self.chat_switches = {}
         self.last_reply = "Ready."
         self.last_error = ""
         self.last_result: dict[str, Any] = {}
@@ -312,6 +314,7 @@ class TriceratopsState:
                 "backend_entry": str(Path(__file__).resolve()), "busy": self.busy, "sessions": len(self.sessions),
                 "reply": self.last_reply, "error": self.last_error,
                 "result": self.last_result, "history": _history(),
+                "chat_switches": dict(self.chat_switches),
             }
         if self.configuration:
             public = self.configuration.snapshot()
@@ -335,10 +338,14 @@ class TriceratopsState:
                     self.sessions.pop(session, None)
 
 
-    def append_turn(self, role: str, content: str, tool: str = "") -> None:
+    def append_turn(self, role: str, content: str, tool: str = "", executions=None) -> None:
         entry = {"time": time.strftime("%Y-%m-%d %H:%M:%S"), "role": role, "content": content}
         if tool:
             entry["tool"] = tool
+        if executions:
+            entry["executions"] = [{"tool": e["tool"], "state": e["state"],
+                **{k:e.get("result", {})[k] for k in ("midi", "error") if k in e.get("result", {})}}
+                for e in executions if e.get("state") in {"completed", "failed"}]
         with CONVERSATION.open("a", encoding="utf-8") as handle:
             handle.write(json.dumps(entry, ensure_ascii=False) + "\n")
 
@@ -362,6 +369,8 @@ class TriceratopsState:
             return
         if audio and audio.exists():
             context += f"\nAudio: {audio}"
+        if midi and midi.exists():
+            context += f"\nAttached MIDI: {midi}"
         with self.lock:
             self.busy = True
             self.last_error = ""
@@ -372,7 +381,7 @@ class TriceratopsState:
                 STATUS.write_text("STATE: planning\nPROGRESS: 15\nDETAIL: Observing project context and planning the score\n", encoding="utf-8")
             except OSError:
                 pass
-        conversation = _conversation_history(24)
+        conversation = _conversation_history(200)
         self.append_turn("user", message)
 
         normalized = message.lower()
@@ -402,13 +411,19 @@ class TriceratopsState:
                  PROJECT_ROOT / "knowledge", RUNS_DIR / "project_notes"],
             )
             context += "\n" + memory_context(load_memory(MEMORY))
-            context += "\n" + project_memory.context()
+            context += "\n" + project_memory.context(include_summary=False)
             result: dict[str, Any] = {}
             def execute(tool, arguments):
                 nonlocal result, midi
                 request_text = str(arguments.get("request") or message)
-                result = {"tool": tool}
-                if tool == "status":
+                musical_context = project_memory.music_context()
+                if tool == "generate_draft" and musical_context:
+                    request_text += "\nPersistent musical requirements: " + json.dumps(musical_context, ensure_ascii=False)
+                result = {"tool": tool, **({"context_usage": result["context_usage"]} if "context_usage" in result else {})}
+                if tool == "update_music_context":
+                    result.update(project_memory.update_music_context(arguments["updates"], message))
+                    reply = "Musical requirements updated."
+                elif tool == "status":
                     result["status"] = _read_status()
                     reply = "Current service status retrieved."
                 elif tool == "cancel":
@@ -557,7 +572,10 @@ class TriceratopsState:
                 decision = run_tool_loop(message, context=context,
                                          selection=midi if midi and midi.exists() else None,
                                          conversation=conversation, execute=execute, on_event=on_event,
-                                         cancelled=self.cancel_event.is_set)
+                                         cancelled=self.cancel_event.is_set,
+                                         on_context=lambda report: result.update(context_usage=report),
+                                         chat_backend=str(payload.get("chat_backend", "")))
+            result["music_context"] = project_memory.music_context()
             result["trace"] = decision.trace
             reply = decision.reply
             report_error = ""
@@ -565,13 +583,17 @@ class TriceratopsState:
             cancelled = self.cancel_event.is_set()
             if cancelled:
                 result["cancelled"] = True
-                reply = "任务已取消，本地模型进程已停止。" if language == "zh" else "Task cancelled; local model processes stopped."
+                reply = "任务已取消，音乐任务已停止，本地聊天模型保留驻留。" if language == "zh" else "Task cancelled; music task stopped, local chat model stays resident."
             elif failures:
                 from text2music.agent.operation_report import operation_report
                 reply, report_error = operation_report(failures[-1]["tool"], [failures[-1]], language=language)
             elif payload.get("action") or result.get("tool") in FACTUAL_REPORT_TOOLS:
                 from text2music.agent.operation_report import operation_report
                 reply, report_error = operation_report(decision.tool, decision.trace, language=language)
+            elif not decision.trace:
+                result["execution"] = "reply_only"
+                prefix = "对话回复（本轮未执行工具）：\n" if language == "zh" else "Conversation reply (no tool executed this turn):\n"
+                reply = prefix + reply
             with self.lock:
                 self.last_result = result
                 self.last_reply = reply
@@ -579,12 +601,18 @@ class TriceratopsState:
             _write_status("cancelled" if cancelled else "failed" if report_error else "completed", "100",
                           result.get("comparison", {}).get("summary", reply)
                           if isinstance(result.get("comparison"), dict) else reply)
-            self.append_turn("assistant", reply, decision.tool)
+            self.append_turn("assistant", reply, decision.tool, executions=decision.trace)
             _compact_conversation()
-            if len(conversation) >= 20:
-                compact = " | ".join(f"{turn['role']}: {turn['content'][:300]}" for turn in conversation[-20:])
-                project_memory.set_summary(compact)
         except Exception as exc:
+            if self.cancel_event.is_set():
+                reply = "任务已取消；本地聊天模型保留驻留。" if language == "zh" else "Task cancelled; the local chat model stays resident."
+                with self.lock:
+                    self.last_error = ""
+                    self.last_reply = reply
+                    self.last_result = {"cancelled": True}
+                _write_status("cancelled", "100", reply)
+                self.append_turn("assistant", reply, "cancel")
+                return
             import traceback
             tb = traceback.format_exc()
             err_msg = redact_error(f"{type(exc).__name__}: {exc}\n{tb}")
@@ -649,7 +677,34 @@ class Handler(BaseHTTPRequestHandler):
                 except ValueError as exc:
                     self._json(400, {"error": str(exc)})
                     return
-            if self.path == "/settings/cancel":
+            if self.path == "/chat/verify":
+                from text2music.agent.llm_backend import check_chat_backend
+                session = str(payload.get("session", ""))
+                backend = str(payload.get("chat_backend", ""))
+                if not session or len(session) > 80 or backend not in {"", "remote", "local"}:
+                    self._json(400, {"error": "Invalid chat switch request"})
+                    return
+                with APP.lock:
+                    if APP.busy or any(v.get("state") == "verifying" for v in APP.chat_switches.values()):
+                        self._json(409, {"error": "Wait for the current task or model verification"})
+                        return
+                    if len(APP.chat_switches) >= 32 and session not in APP.chat_switches:
+                        APP.chat_switches.pop(next(iter(APP.chat_switches)))
+                    APP.chat_switches[session] = {"state": "verifying", "selection": backend}
+                def verify():
+                    from text2music.agent.errors import redact_error
+                    try:
+                        report = check_chat_backend(backend)
+                        if not report.get("chat"):
+                            raise ValueError("Chat is disabled; configure API or local GPU in Settings")
+                        switch = {"state": "ready", "selection": backend, "report": report}
+                    except Exception as exc:
+                        switch = {"state": "failed", "selection": backend, "error": redact_error(str(exc))}
+                    with APP.lock:
+                        APP.chat_switches[session] = switch
+                threading.Thread(target=verify, daemon=True).start()
+                self._json(202, {"accepted": True})
+            elif self.path == "/settings/cancel":
                 if not APP.configuration:
                     self._json(503, {"error": "Runtime configuration path is missing"})
                     return
@@ -778,6 +833,9 @@ class Handler(BaseHTTPRequestHandler):
                 else:
                     self._json(400, {**APP.snapshot(), "error": "No MIDI file path available to import"})
             elif self.path == "/chat":
+                if payload.get("chat_backend", "") not in {"", "remote", "local"}:
+                    self._json(400, {"error": "Invalid per-message chat backend"})
+                    return
                 if APP.configuration and APP.configuration.snapshot()["setup_required"]:
                     self._json(409, {"error": "Complete model setup inside Settings before using music tools"})
                     return

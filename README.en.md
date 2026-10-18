@@ -23,7 +23,8 @@ The Mac installer downloads native ARM64 Python and the local-chat runtime when 
 
 - **Windows 1.0.1a update**: fixes text-to-MIDI generation and connection status. The smaller installer downloads local chat on demand inside the plug-in and keeps existing models and settings.
 - **Logic Pro support:** separate MIDI and Audio AUs, MIDI capture/output and audio recording.
-- **Local or cloud conversation:** native tool calling and compatibility checks; custom configuration remains available.
+- **Choose chat per message:** switch API / local GPU beside the input, with verification progress and results. History and memory are shared; no automatic provider substitution.
+- **Long conversations and musical context:** budget-aware history compaction retains original records, grounded user requirements and actual tool results. Save and update style, tempo, meter and key/mode.
 - **Improved intent handling:** creation, edits, analysis and conversation use the appropriate route; results reflect actual tools.
 - **Direct actions:** continue four bars, increase energy, tighten rhythm, separate stems and transcribe without a chat round trip.
 - **Hardware-aware deployment:** inspect memory and devices, configure each function separately, verify before applying.
@@ -60,7 +61,7 @@ Choose an actual platform attachment from [Releases](https://github.com/Aolin-MI
 
 Mac text composition keeps the original device precision by default (FP32 on CPU); only the detected 8 GB low-memory tier automatically uses FP16. Advanced settings retain explicit precision overrides. Unknown RAM is not classified as low memory. These are deployment rules, not performance certification for other Macs or automatic approval of GPU paths.
 
-Weight sizes are not working-memory requirements. Local chat uses native deployment with a compatible NVIDIA GPU on Windows and native Metal deployment on Apple Silicon. A complete local 4B host workflow on an 8 GB Mac is not certified; compatible cloud chat is available. Advanced settings retain custom model IDs, endpoints, precision and devices.
+Weight sizes are not working-memory requirements. Local chat uses native deployment with a compatible NVIDIA GPU on Windows and native Metal deployment on Apple Silicon. An 8 GB Mac defaults to the API recommendation, with 2B local GPU chat as an optional experimental configuration; 4B is not the low-memory default. Tool selection with 2B must be validated for the actual task, and is not promised to match larger models. Advanced settings retain custom model IDs, endpoints, precision and devices.
 
 ## 🌐 Music-model download routing
 

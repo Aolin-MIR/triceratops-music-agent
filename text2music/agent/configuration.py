@@ -12,7 +12,7 @@ import uuid
 from pathlib import Path
 
 FIELDS = {'chat_policy', 'local_model', 'llm_choice', 'midi_llm_choice', 'midi_gpt_choice',
-          'stem_choice', 'midi_llm_dtype', 'model_source', 'llama_cpp_url', 'api_key', 'base_url', 'chat_model'}
+          'stem_choice', 'midi_llm_dtype', 'model_source', 'llama_cpp_url', 'api_key', 'base_url', 'chat_model', 'llm_context'}
 
 
 def read_config(path: Path) -> dict:
@@ -39,7 +39,7 @@ def validate_changes(changes: dict) -> None:
         if not isinstance(value, str) or len(value) > 2048:
             raise ValueError(f'Invalid settings value: {key}')
     enums = {'chat_policy': {'auto', 'local', 'remote', 'disabled'}, 'llm_choice': {'auto', 'gpu'},
-             'model_source': {'auto', 'official', 'china'}}
+             'model_source': {'auto', 'official', 'china'}, 'llm_context': {'4096', '8192', '16384'}}
     for key in ('midi_llm_choice', 'midi_gpt_choice', 'stem_choice'):
         enums[key] = {'auto', 'cpu', 'cuda'}
     enums['midi_llm_dtype'] = {'auto', 'default', 'float32', 'float16', 'bfloat16'}
@@ -73,6 +73,7 @@ def public_config(path: Path) -> dict:
                   llama_cpp_url=config.get('llama_cpp_url', 'http://127.0.0.1:1234/v1'),
                   base_url=config.get('base_url', 'https://dashscope.aliyuncs.com/compatible-mode/v1'),
                   chat_model=config.get('chat_model', 'qwen-plus'), model_source=config.get('model_source', 'auto'))
+    fields['llm_context'] = str(config.get('llm_context', 8192))
     for key in ('llm_choice', 'midi_llm_choice', 'midi_gpt_choice', 'stem_choice'):
         fields[key] = config.get(key, 'auto')
     fields['midi_llm_dtype'] = config.get('midi_llm_dtype', 'auto' if sys.platform == 'darwin' else 'default')
@@ -88,6 +89,16 @@ def public_config(path: Path) -> dict:
 
 def include_resident_gpu(hardware: dict, config: dict) -> dict:
     """Credit verified llama.cpp weight residency while retaining runtime headroom."""
+    if hardware['system'] == 'Darwin' and hardware['architecture'] == 'arm64':
+        from text2music.agent.llm_backend import ChatSettings, residency
+        try:
+            actual = residency(ChatSettings('ollama', config.get('local_model', 'qwen3.5:4b-q4_K_M'),
+                'http://127.0.0.1:11435', 'gpu', 3, int(config.get('llm_context', 8192))))
+            resident = actual['vram_bytes']
+            return {**hardware, 'ram_available': min(hardware['ram_total'], hardware['ram_available'] + resident),
+                    'resident_local_bytes': resident}
+        except (OSError, ValueError, RuntimeError):
+            return hardware
     if (len(hardware['nvidia']) != 1 or config.get('llm_provider') != 'llama_cpp'
             or not config.get('model_home')):
         return hardware
@@ -267,7 +278,8 @@ def worker(path: Path, request: Path, output: Path):
         local_plan_error = ''
         try:
             plan = plan_devices(measured, local_chat=policy in {'auto', 'local'},
-                                llm_choice=config.get('llm_choice', 'auto'), music_choices=music_choices)
+                                llm_choice=config.get('llm_choice', 'auto'), music_choices=music_choices,
+                                local_model=config.get('local_model', ''), midi_llm_dtype=config.get('midi_llm_dtype', 'auto'))
         except ValueError as exc:
             if policy != 'auto': raise
             local_plan_error = str(exc)
@@ -320,6 +332,8 @@ def worker(path: Path, request: Path, output: Path):
             install(Path(config['model_home']), route['hf_endpoint'], report=report)
         config.setdefault('llama_cpp_url', 'http://127.0.0.1:1234/v1')
         config.setdefault('local_model', 'qwen3.5:4b-q4_K_M')
+        if measured['system'] == 'Darwin' and config['local_model'] == 'qwen3.5:2b-q4_K_M':
+            config.setdefault('llm_context', 8192)
         from text2music.agent.runtime import configure
         from text2music.agent.llm_backend import check_chat_backend
         config['local_error'] = local_plan_error
