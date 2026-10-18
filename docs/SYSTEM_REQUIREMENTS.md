@@ -47,7 +47,7 @@ Windows 本地聊天用 Ollama 工具从模型 registry 下载 Qwen3.5 GGUF，�
 - 本机：Windows 11 x64、AMD Ryzen 9 5900HX、操作系统当前可见内存约 27.9 GiB、RTX 3080 **Laptop** GPU 16 GiB；REAPER 7.80 x64。这里写实际可见容量，不能当作 16 GB 机器通过测试的证据。
 - Windows 原生 CPU / `torch 2.13.0+cpu` 的固定短素材测试：音频分析成功、Basic Pitch 得到 12 个音符、MIDI-GPT 追加 4 小节约 2.44 秒、MIDI-LLM 192 新 token 约 78.84 秒、HTDemucs 得到 4 个 12 秒声部。不同任务条件不一致，不能据此进行跨设备速度排名。
 - Windows 原生 RTX 3080 Laptop GPU 上的本地 Qwen3.5 4B / llama.cpp Vulkan：真实聊天与工具流程 21/21 通过，含 MIDI 生成、编辑、续写、记忆、知识检索和音频分析；工具调用及工具结果回传检查通过，测试前后模型均报告 GPU 常驻。启动日志确认 33/33 层卸载至 GPU。该测试证明选定本地聊天路径可运行，不证明所有音乐模型与聊天模型可并发占用 GPU，也不是所有输入的质量保证。
-- 同一 GPU 本地模型的补充检查：闲聊、能力发现、模糊编辑、越界请求、混合意图、记忆与知识检索等 13 项通过；一项真实中文文字引导 MIDI 生成保留了具体与抽象描述，并返回可解析且含音符的 MIDI。共 115 项 Python 单元测试通过。该格式检查不代表主观听感保证；生成输出仍需用户试听与判断。
+- 同一 GPU 本地模型的补充检查：闲聊、能力发现、模糊编辑、越界请求、混合意图、记忆与知识检索等 13 项通过；一项真实中文文字引导 MIDI 生成保留了具体与抽象描述，并返回可解析且含音符的 MIDI。共 118 项 Python 单元测试通过。该格式检查不代表主观听感保证；生成输出仍需用户试听与判断。
 - Windows REAPER 已检查实际 MIDI / 分轨导入与双语界面；完整 Mac 实机流程尚无结果。未测完整任务树的内存峰值、长音频上限、所有 API 提供方和所有驱动 / GPU 组合。
 - 证据摘要核对日期：2026-10-18。本地测试报告保留在 `text2music/artifacts/agent_runs/release-0.9/` 和 `listening-2026-10-16/`，含私有运行材料，不作为可公开下载的测试附件。
 
@@ -100,7 +100,7 @@ On Windows, the installer bundles Ollama only as a model-download utility and in
 - Local hardware: Windows 11 x64, Ryzen 9 5900HX, approximately 27.9 GiB currently visible system memory, RTX 3080 **Laptop** GPU with 16 GiB VRAM, REAPER 7.80 x64. This is not evidence of full-feature success on a 16 GB RAM computer.
 - Native Windows CPU / `torch 2.13.0+cpu`, short fixtures: audio analysis passed; Basic Pitch produced 12 notes; MIDI-GPT appended 4 bars in about 2.44 s; MIDI-LLM generated up to 192 new tokens in about 78.84 s; HTDemucs produced four 12-second stems.
 - Native Windows RTX 3080 Laptop GPU, local Qwen3.5 4B through llama.cpp Vulkan: 21/21 real chat/tool scenarios passed, including MIDI generation, edits, continuation, memory, retrieval and audio analysis. Native tool calls and tool-result replay passed; GPU residency was confirmed before and after evaluation, with all 33/33 model layers offloaded in the startup log. This does not certify simultaneous execution with every music model or output quality for all prompts.
-- Supplemental local-GPU checks passed for 13 small-talk, capability-discovery, ambiguous-edit, out-of-scope, mixed-intent, memory and retrieval cases. One real Chinese text-guided MIDI generation preserved concrete and abstract prompt details and returned a parseable MIDI containing notes. A total of 115 Python unit tests passed. Format validation does not guarantee subjective musical quality; users should audition generated output.
+- Supplemental local-GPU checks passed for 13 small-talk, capability-discovery, ambiguous-edit, out-of-scope, mixed-intent, memory and retrieval cases. One real Chinese text-guided MIDI generation preserved concrete and abstract prompt details and returned a parseable MIDI containing notes. A total of 118 Python unit tests passed. Format validation does not guarantee subjective musical quality; users should audition generated output.
 - Actual MIDI / stem import and bilingual UI were checked in Windows REAPER. Full Mac operation, complete peak-memory measurements, long-audio limits, every API provider and every driver / GPU combination remain unverified.
 - Evidence reviewed on 2026-10-18. Local reports remain in `text2music/artifacts/agent_runs/release-0.9/` and `listening-2026-10-16/`; they contain private runtime material and are not advertised as public downloadable fixtures.
 
