@@ -411,18 +411,6 @@ TriceratopsAudioProcessorEditor::~TriceratopsAudioProcessorEditor()
         if (requestKind == RequestKind::import_reaper)
         {
             auto response = pending.get();
-        if (requestKind == RequestKind::verify_chat)
-        {
-            if (!static_cast<bool>(response.getProperty("accepted", false)))
-            {
-                chatSwitchPending = false;
-                const auto error = response.getProperty("error", "Backend connection failed").toString();
-                chatBackendStatus.setText((chinese ? "切换失败：" : "Switch failed: ") + error, juce::dontSendNotification);
-                chatBackendStatus.setTooltip(error);
-            }
-            requestKind = RequestKind::none;
-            return;
-        }
             if (auto* object = response.getDynamicObject(); object != nullptr && object->hasProperty("script_path"))
                 ownerProcessor.backend().reaperImportReceipt(object->getProperty("request_id").toString(), true);
         }
@@ -624,6 +612,32 @@ void TriceratopsAudioProcessorEditor::timerCallback()
         && pending.wait_for(std::chrono::seconds(0)) == std::future_status::ready)
     {
         auto response = pending.get();
+        if (requestKind == RequestKind::verify_chat)
+        {
+            if (!static_cast<bool>(response.getProperty("accepted", false)))
+            {
+                chatSwitchPending = false;
+                const auto error = response.getProperty("error", "Backend connection failed").toString();
+                chatBackendStatus.setText((chinese ? "切换失败：" : "Switch failed: ") + error, juce::dontSendNotification);
+                chatBackendStatus.setTooltip(error);
+            }
+            requestKind = RequestKind::none;
+            return;
+        }
+        if (requestKind == RequestKind::chat && !static_cast<bool>(response.getProperty("accepted", false)))
+        {
+            busyGenerating = false;
+            send.setSpinning(false);
+            if (prompt.getText().isEmpty())
+                prompt.setText(submittedMessage);
+            const auto error = response.getProperty("error", "Backend connection failed. Check the local service and retry.").toString();
+            chatTurns.push_back({ "assistant", ui("Operation failed:\n") + error,
+                juce::Time::getCurrentTime().formatted("%H:%M:%S"), "", {} });
+            updateChatDisplay();
+            send.setEnabled(chatBackendReady && !backendConnecting);
+            requestKind = RequestKind::none;
+            return;
+        }
         if (requestKind == RequestKind::import_reaper)
         {
             if (auto* object = response.getDynamicObject(); object != nullptr && object->hasProperty("script_path"))
@@ -738,6 +752,7 @@ void TriceratopsAudioProcessorEditor::sendMessage(bool directAction)
 
 void TriceratopsAudioProcessorEditor::startChat(const juce::String& message, const juce::String& action)
 {
+    submittedMessage = message;
     const auto host = ownerProcessor.hostSnapshot();
     const auto selectedMidi = midiPath;
     const auto selectedAudio = audioPath;

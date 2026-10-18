@@ -144,7 +144,7 @@ def run_tool_loop(message: str, *, context: str = "", selection: Path | None = N
     settings = None
     if client is None:
         client, settings = create_chat_client(chat_backend)
-    if settings and settings.provider == 'ollama':
+    if settings:
         client.cancelled = cancelled
     from text2music.agent.audio_tools import extract_audio_paths
     audio_available = bool(extract_audio_paths(context))
@@ -242,8 +242,9 @@ def run_tool_loop(message: str, *, context: str = "", selection: Path | None = N
                     selection = Path(result["midi"])
                     # A generated/transcribed clip becomes an input for subsequent
                     # steps in the same request; keep the authoritative flag current.
-                    prefix = messages[0]["content"].rsplit("\nMIDI available: ", 1)[0]
-                    messages[0] = {"role": "system", "content": prefix + "\nMIDI available: " + str(selection.exists()) + "\nAudio available: " + str(audio_available)}
+                    content = messages[0]["content"].replace(
+                        "\nMIDI available: False", "\nMIDI available: " + str(selection.exists()), 1)
+                    messages[0] = {"role": "system", "content": content}
                 event.update(state="completed", result=result)
             except Exception as exc:
                 result = {"error": redact_error(f"{type(exc).__name__}: {exc}")}

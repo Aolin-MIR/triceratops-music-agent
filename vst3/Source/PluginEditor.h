@@ -166,7 +166,7 @@ private:
 
     juce::String midiPath, audioPath, latestResultMidi, latestStemResult;
     juce::Array<juce::var> latestStemFiles;
-    juce::String queuedMessage;
+    juce::String queuedMessage, submittedMessage;
     juce::String queuedAction;
     std::future<juce::var> pending;
     RequestKind requestKind = RequestKind::none;

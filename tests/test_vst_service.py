@@ -254,3 +254,54 @@ def test_losing_backend_start_does_not_overwrite_active_task_status(tmp_path, mo
         with pytest.raises(OSError):
             vst_service.main()
         assert vst_service.STATUS.read_text() == before
+
+
+def test_archive_compaction_does_not_drop_old_constraints_and_clear_starts_new_context(service_api):
+    state, post = service_api
+    state.append_turn('user','Important early constraint: no drums.')
+    for i in range(204):
+        state.append_turn('assistant',f'Historical reply {i}')
+    vst_service._compact_conversation()
+    assert vst_service.CONVERSATION_ARCHIVE.is_file()
+    history = vst_service._conversation_history()
+    assert len(history) == 205
+    assert history[0]['content'] == 'Important early constraint: no drums.'
+    assert post('/chat/clear',{})[0] == 200
+    assert vst_service._conversation_history() == []
+    state.append_turn('user','New conversation.')
+    assert [h['content'] for h in vst_service._conversation_history()] == ['New conversation.']
+
+
+def test_verification_blocks_task_and_settings_races_and_reports_failure(service_api, monkeypatch):
+    from text2music.agent import llm_backend
+    state, post = service_api
+    started, release = threading.Event(), threading.Event()
+    def verify(selection):
+        assert selection == 'local'
+        started.set()
+        assert release.wait(5)
+        raise RuntimeError('GPU server unavailable')
+    monkeypatch.setattr(llm_backend,'check_chat_backend',verify)
+    try:
+        assert post('/chat/verify',{'session':'editor','chat_backend':'local'})[0] == 202
+        assert started.wait(2)
+        assert state.chat_switches['editor']['state'] == 'verifying'
+        assert post('/chat/verify',{'session':'other','chat_backend':'remote'})[0] == 409
+        assert post('/chat',{'message':'Do not start during verification'})[0] == 409
+    finally:
+        release.set()
+    import time
+    deadline = time.monotonic()+3
+    while state.chat_switches['editor']['state'] == 'verifying' and time.monotonic()<deadline:
+        time.sleep(.01)
+    assert state.chat_switches['editor']['state'] == 'failed'
+    assert 'GPU server unavailable' in state.chat_switches['editor']['error']
+    assert not state.busy
+
+
+def test_persistent_executor_record_retains_actual_values_without_recursive_trace(service_api):
+    state, _ = service_api
+    state.append_turn('assistant','Analysis done.',executions=[{'tool':'analyze_audio','state':'completed',
+        'arguments':{},'result':{'tempo':93,'key':'D minor','trace':['recursive'],'context_usage':{'large':True}}}])
+    event = vst_service._conversation_history()[0]['executions'][0]
+    assert event['result'] == {'tempo':93,'key':'D minor'}

@@ -192,6 +192,69 @@ class OllamaClient:
         return SimpleNamespace(choices=[SimpleNamespace(message=answer)])
 
 
+
+class OpenAIChatClient:
+    """Cancellable OpenAI-compatible requests for API and Windows llama.cpp.
+
+    Cancellation closes only this completion stream. The GPU server stays up.
+    Partial tool-call arguments are never dispatched.
+    """
+    def __init__(self, client):
+        self.client = client
+        self.chat = SimpleNamespace(completions=self)
+        self.cancelled = None
+        self.last_usage = {}
+
+    def create(self, **kwargs):
+        if self.cancelled is None:
+            return self.client.chat.completions.create(**kwargs)
+        import threading
+        from openai.types.chat import ChatCompletionMessage
+        if self.cancelled():
+            raise RuntimeError("Chat request cancelled before execution")
+        stream = self.client.chat.completions.create(**kwargs, stream=True)
+        finished = threading.Event()
+        def cancel_stream():
+            while not finished.wait(0.05):
+                if self.cancelled():
+                    stream.close()
+                    return
+        watcher = threading.Thread(target=cancel_stream, daemon=True)
+        watcher.start()
+        content, calls, finish_reason = [], {}, None
+        try:
+            for chunk in stream:
+                if self.cancelled():
+                    raise RuntimeError("Chat request cancelled; resident local model retained")
+                if not chunk.choices:
+                    continue
+                choice = chunk.choices[0]
+                if choice.finish_reason:
+                    finish_reason = choice.finish_reason
+                delta = choice.delta
+                if delta.content:
+                    content.append(delta.content)
+                for part in delta.tool_calls or []:
+                    call = calls.setdefault(part.index, {"id": "", "type": "function",
+                        "function": {"name": "", "arguments": ""}})
+                    if part.id:
+                        call["id"] = part.id
+                    if part.function:
+                        call["function"]["name"] += part.function.name or ""
+                        call["function"]["arguments"] += part.function.arguments or ""
+            if self.cancelled():
+                raise RuntimeError("Chat request cancelled; no partial tool call executed")
+            if finish_reason not in {"stop", "tool_calls"}:
+                raise RuntimeError("Chat response was incomplete; no truncated tool call was executed")
+            answer = ChatCompletionMessage(role="assistant", content="".join(content) or None,
+                tool_calls=[calls[k] for k in sorted(calls)] or None)
+            return SimpleNamespace(choices=[SimpleNamespace(message=answer)])
+        finally:
+            finished.set()
+            stream.close()
+            watcher.join(timeout=1)
+
+
 def create_chat_client(provider_override=""):
     settings = ChatSettings.load(provider_override)
     if settings.provider == "disabled":
@@ -207,7 +270,7 @@ def create_chat_client(provider_override=""):
         if not capabilities.get("supports_tools"):
             raise RuntimeError("The selected llama.cpp model template does not support tool calls")
         from openai import OpenAI
-        return OpenAI(api_key="local-only", base_url=settings.base_url, timeout=settings.timeout, max_retries=0), settings
+        return OpenAIChatClient(OpenAI(api_key="local-only", base_url=settings.base_url, timeout=settings.timeout, max_retries=0)), settings
     if settings.provider == "ollama":
         metadata = local_request(settings, "/api/show", {"model": settings.model})
         if "tools" not in metadata.get("capabilities", []):
@@ -218,7 +281,7 @@ def create_chat_client(provider_override=""):
         raise RuntimeError("Cloud chat requires an API key (QWEN_API_KEY). Use direct buttons without a key, "
                            "or explicitly configure a local model.")
     from openai import OpenAI
-    return OpenAI(api_key=key, base_url=settings.base_url, timeout=settings.timeout, max_retries=0), settings
+    return OpenAIChatClient(OpenAI(api_key=key, base_url=settings.base_url, timeout=settings.timeout, max_retries=0)), settings
 
 
 def check_chat_backend(provider_override="") -> dict:

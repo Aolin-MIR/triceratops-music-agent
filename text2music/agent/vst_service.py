@@ -150,6 +150,8 @@ def _archive_and_clear_conversation() -> None:
             if content:
                 with CONVERSATION_ARCHIVE.open("a", encoding="utf-8") as archive:
                     archive.write(content + "\n")
+            with CONVERSATION_ARCHIVE.open("a", encoding="utf-8") as archive:
+                archive.write(json.dumps({"event": "conversation_cleared"}) + "\n")
             CONVERSATION.write_text("", encoding="utf-8")
         except OSError:
             pass
@@ -260,13 +262,20 @@ def _host_context(host: dict[str, Any]) -> str:
     )
 
 
-def _conversation_history(limit: int = 8) -> list[dict[str, str]]:
-    if not CONVERSATION.exists():
-        return []
+def _conversation_history(limit: int | None = None) -> list[dict[str, str]]:
+    lines = []
+    for path in (CONVERSATION_ARCHIVE, CONVERSATION):
+        if path.exists():
+            lines.extend(path.read_text(encoding="utf-8").splitlines())
+    if limit is not None:
+        lines = lines[-limit:]
     turns: list[dict[str, str]] = []
-    for line in CONVERSATION.read_text(encoding="utf-8", errors="replace").splitlines()[-limit:]:
+    for line in lines:
         try:
             item = json.loads(line)
+            if item.get("event") == "conversation_cleared":
+                turns.clear()
+                continue
             if item.get("role") in {"user", "assistant"} and item.get("content"):
                 turns.append({"role": str(item["role"]), "content": str(item["content"]),
                               "executions": item.get("executions", [])})
@@ -344,7 +353,9 @@ class TriceratopsState:
             entry["tool"] = tool
         if executions:
             entry["executions"] = [{"tool": e["tool"], "state": e["state"],
-                **{k:e.get("result", {})[k] for k in ("midi", "error") if k in e.get("result", {})}}
+                "arguments": e.get("arguments", {}),
+                "result": {k: v for k, v in e.get("result", {}).items()
+                           if k not in {"context_usage", "trace", "event"}}}
                 for e in executions if e.get("state") in {"completed", "failed"}]
         with CONVERSATION.open("a", encoding="utf-8") as handle:
             handle.write(json.dumps(entry, ensure_ascii=False) + "\n")
@@ -381,7 +392,7 @@ class TriceratopsState:
                 STATUS.write_text("STATE: planning\nPROGRESS: 15\nDETAIL: Observing project context and planning the score\n", encoding="utf-8")
             except OSError:
                 pass
-        conversation = _conversation_history(200)
+        conversation = _conversation_history()
         self.append_turn("user", message)
 
         normalized = message.lower()
@@ -733,8 +744,8 @@ class Handler(BaseHTTPRequestHandler):
                             APP.server.shutdown()
                         threading.Thread(target=restart, daemon=True).start()
                 with APP.lock:
-                    if APP.busy:
-                        self._json(409, {"error": "Stop the active task before configuring"})
+                    if APP.busy or any(v.get("state") == "verifying" for v in APP.chat_switches.values()):
+                        self._json(409, {"error": "Wait for the active task or chat verification before configuring"})
                         return
                     try:
                         APP.busy = True
@@ -863,7 +874,7 @@ class Handler(BaseHTTPRequestHandler):
                     self._json(400, {"error": f"Invalid host context: {exc}"})
                     return
                 with APP.lock:
-                    if APP.busy:
+                    if APP.busy or any(v.get("state") == "verifying" for v in APP.chat_switches.values()):
                         rejected = True
                     else:
                         APP.cancel_event.clear()

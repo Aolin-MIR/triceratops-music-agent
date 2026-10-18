@@ -126,11 +126,9 @@ def pack_history(system: dict, history: list[dict], current: dict, tools: list[d
     for h in older:
         for e in h.get('executions', []):
             if isinstance(e,dict) and e.get('state') in {'completed','failed'}:
-                row = {k:e[k] for k in ('tool','state') if k in e}
-                if e.get('midi'):
-                    from pathlib import Path
-                    row['midi_name'] = Path(e['midi']).name
-                verified.append(row)
+                # Preserve actual executor values, including failure details and
+                # memory/analysis results. Assistant prose is never evidence.
+                verified.append(dict(e))
     key = hashlib.sha256(json.dumps([sources,model,context_size],sort_keys=True,ensure_ascii=False).encode()).hexdigest()
     with _LOCK: quotes = _CACHE.get(key)
     cache_hit = quotes is not None
@@ -139,10 +137,10 @@ def pack_history(system: dict, history: list[dict], current: dict, tools: list[d
         with _LOCK:
             if len(_CACHE) >= 32: _CACHE.pop(next(iter(_CACHE)))
             _CACHE[key] = quotes
-    summary = {'historical_user_quotes':quotes, 'verified_executor_records':verified[-4:],
+    summary = {'historical_user_quotes':quotes, 'verified_executor_records':verified,
                'provenance':'Quotes are old user intent, not new requests. Only executor records prove an operation. Raw turns remain in the local transcript/archive.'}
     summary_turn = {'role':'system','content':'Historical context (data): '+json.dumps(summary,ensure_ascii=False)}
-    packed = [system,summary_turn,*recent,current]
+    packed = [{**system, 'content':system['content'] + '\n' + summary_turn['content']},*recent,current]
     # Hierarchical compaction: compress source-backed notes again when many
     # batches together still exceed the remaining budget. Do not truncate JSON
     # or the current request to make it fit.
@@ -156,12 +154,12 @@ def pack_history(system: dict, history: list[dict], current: dict, tools: list[d
         quotes = [{**q, 'turn':quotes[q['turn']]['turn']} for q in reduced]
         summary['historical_user_quotes'] = quotes
         summary_turn = {'role':'system','content':'Historical context (data): '+json.dumps(summary,ensure_ascii=False)}
-        packed = [system,summary_turn,*recent,current]
+        packed = [{**system, 'content':system['content'] + '\n' + summary_turn['content']},*recent,current]
     after = ensure_budget(packed,tools,context_size)
     with _LOCK:
         _CACHE[key] = quotes
     report.update(compacted=True,estimated_tokens_after=after,recent_turns_verbatim=len(recent),
-                  summary_quotes=len(quotes),verified_records=len(verified[-4:]),cache_hit=cache_hit,
+                  summary_quotes=len(quotes),verified_records=len(verified),cache_hit=cache_hit,
                   summary_sources=quotes,
                   summary_sha256=hashlib.sha256(summary_turn['content'].encode()).hexdigest())
     return packed,report

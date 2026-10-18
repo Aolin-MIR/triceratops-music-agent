@@ -33,10 +33,10 @@ def test_long_history_compacts_quotes_but_never_promotes_assistant_claims_to_exe
     before=json.dumps(history,ensure_ascii=False)
     messages,report=pack_history({'role':'system','content':'rules'},history,current,[],client=c,model='test',context_size=8192)
     assert report['compacted'] and report['estimated_tokens_after'] < report['estimated_tokens_before']
-    assert messages[-1] == current and '不要鼓' in messages[1]['content']
-    assert 'deleted every track' not in messages[1]['content'] and 'verified_executor_records' in messages[1]['content']
+    assert messages[-1] == current and '不要鼓' in messages[0]['content']
+    assert 'deleted every track' not in messages[0]['content'] and 'verified_executor_records' in messages[0]['content']
     assert json.dumps(history,ensure_ascii=False) == before
-    _,second=pack_history(messages[0],history,current,[],client=c,model='test',context_size=8192)
+    _,second=pack_history({'role':'system','content':'rules'},history,current,[],client=c,model='test',context_size=8192)
     assert second['cache_hit'] and len(requests)==1
 
 
@@ -54,3 +54,21 @@ def test_oversized_current_request_is_explicitly_rejected_without_truncation():
     with pytest.raises(RuntimeError,match='budget exceeded'):
         pack_history({'role':'system','content':'rules'},[],{'role':'user','content':'原始约束'*5000},[],client=c,model='test',context_size=8192)
     assert not requests
+
+
+def test_compacted_context_has_one_system_role_and_retains_all_executor_records():
+    _CACHE.clear()
+    records = [{'tool':'analyze_selected_midi', 'state':'completed',
+                'result':{'note_count':i, 'error':None}} for i in range(6)]
+    history = [{'role':'user','content':'No drums.'},
+               {'role':'assistant','content':'filler '*7000,'executions':records}]
+    c, _ = client([{'turn':0,'quote':'No drums.','kind':'constraint'}])
+    current = {'role':'user','content':'Keep velocities unchanged.'}
+    packed, report = pack_history({'role':'system','content':'Authoritative rules.'},history,current,[],
+                                 client=c,model='test',context_size=8192)
+    assert [m['role'] for m in packed].count('system') == 1
+    assert packed[0]['content'].startswith('Authoritative rules.')
+    assert packed[-1] == current
+    assert report['verified_records'] == 6
+    data = json.loads(packed[0]['content'].split('Historical context (data): ',1)[1])
+    assert data['verified_executor_records'] == records
