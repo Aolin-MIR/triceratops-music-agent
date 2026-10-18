@@ -45,8 +45,8 @@ def test_button_does_not_accept_a_promise_without_execution():
 
 def test_observe_execute_and_report_actual_results():
     client = Client([Answer(tool="inspect_project"),
-                     Answer(tool="transform_midi", arguments={"request": "transpose up 2 semitones"}),
-                     Answer(tool="respond", arguments={"message": "已完成升高两个半音。"})])
+                     Answer(tool="transform_midi", arguments={"request": "transpose up 2 semitones", "operations": {"transpose": 2}}),
+                     Answer("已完成升高两个半音。")])
     calls = []
     def execute(name, args):
         calls.append((name, args))
@@ -122,6 +122,30 @@ def test_real_midi_analysis_and_structured_edit(tmp_path):
         transform_midi_file(source, "change something unspecified", output)
 
 
+def test_full_clip_transposition_keeps_timing_and_velocity_even_if_quality_is_preserved(tmp_path):
+    from mido import MidiFile, MidiTrack, Message
+    from text2music.agent.midi_tools import transform_midi_file
+    from text2music.agent.tool_loop import tool_schemas
+    schema = next(item['function']['parameters'] for item in tool_schemas()
+                  if item['function']['name'] == 'transform_midi')
+    assert 'protect_melody_track' in schema['properties']['operations']['properties']
+    assert 'preserve_melody' not in schema['properties']['operations']['properties']
+    source, output = tmp_path/'before.mid', tmp_path/'after.mid'
+    midi = MidiFile(ticks_per_beat=480)
+    midi.tracks.append(MidiTrack([Message('note_on', note=60, velocity=73),
+                                  Message('note_off', note=60, velocity=0, time=120)]))
+    midi.save(source)
+    transform_midi_file(source, 'transpose all notes up two semitones; keep timing and velocity', output,
+                        operations={'transpose': 2, 'preserve_melody': False})
+    before = [(m.type, m.time, getattr(m, 'note', None), getattr(m, 'velocity', None))
+              for track in MidiFile(source).tracks for m in track]
+    after = [(m.type, m.time, getattr(m, 'note', None), getattr(m, 'velocity', None))
+             for track in MidiFile(output).tracks for m in track]
+    assert len(before) == len(after)
+    assert all(a[0:2] == b[0:2] and a[2] + 2 == b[2] and a[3] == b[3]
+               for a, b in zip(before, after) if a[2] is not None)
+
+
 def test_cancel_prevents_next_model_or_tool_call():
     result = run_tool_loop("edit", client=Client([]), cancelled=lambda: True)
     assert "取消" in result.reply
@@ -188,3 +212,29 @@ def test_natural_request_cannot_complete_with_a_plain_text_promise():
         run_tool_loop("Sparse piano, no drums", client=client,
                       execute=lambda *args: pytest.fail("No actual tool was selected"))
     assert client.requests[0]["tool_choice"] == "required"
+
+def test_tool_prompt_has_explicit_host_file_availability(tmp_path):
+    from text2music.agent.tool_loop import run_tool_loop
+    client = Client([Answer(tool='respond', arguments={'message': '请先加载音频。'})])
+    result = run_tool_loop('把附件分轨', client=client, context='Tempo: 120',
+                           execute=lambda *args: pytest.fail('missing file executed'))
+    system = client.requests[0]['messages'][0]['content']
+    assert 'Audio available: False' in system and 'MIDI available: False' in system
+    assert 'A user saying attached does not create an attachment' in system
+    assert result.reply == '请先加载音频。'
+
+
+def test_new_real_midi_updates_file_availability_for_later_agent_steps(tmp_path):
+    from mido import MidiFile, MidiTrack, Message
+    generated = tmp_path/'generated.mid'
+    client = Client([Answer(tool='generate_draft', arguments={'request':'Sparse piano'}), Answer('Done')])
+    def execute(name, arguments):
+        midi = MidiFile()
+        midi.tracks.append(MidiTrack([Message('note_on', note=60, velocity=70), Message('note_off', note=60, time=480)]))
+        midi.save(generated)
+        return {'midi':str(generated)}
+    result = run_tool_loop('Generate sparse piano', client=client, execute=execute)
+    assert 'MIDI available: False' in client.requests[0]['messages'][0]['content']
+    assert result.trace[0]['result']['midi'] == str(generated)
+    assert generated.is_file()
+    assert len(client.requests) == 1  # Successful mutation reports real output without a second model round-trip.

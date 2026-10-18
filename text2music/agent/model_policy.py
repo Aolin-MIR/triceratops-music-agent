@@ -62,7 +62,7 @@ def _auto_policy(hardware: dict[str, Any]) -> dict[str, str]:
     result = {
         "midi_llm_device": "cpu",
         "midi_llm_dtype": "float16",
-        "midi_gpt_device": "cpu" if profile == "mac-low-memory" else "mps",
+        "midi_gpt_device": "cpu",
         "audio_device": "cpu",
         "chat_deployment": "remote",
     }

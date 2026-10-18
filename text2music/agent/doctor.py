@@ -16,21 +16,23 @@ def available_hosts(settings: dict) -> list[str]:
     return hosts
 
 
-def check(config: Path) -> None:
+def check(config: Path, *, check_chat: bool = True) -> None:
     settings = configure(config)
     import torch
     for name in ("transformers", "accelerate", "openai", "mido", "music21", "librosa",
-                 "soundfile", "demucs", "sphn", "basic_pitch", "onnxruntime", "midigpt", "anticipation"):
+                 "soundfile", "jsonschema", "demucs", "sphn", "basic_pitch", "onnxruntime", "midigpt", "anticipation"):
         importlib.import_module(name)
         print(f"Import OK: {name}", flush=True)
     hosts = available_hosts(settings)
     if not hosts:
         raise RuntimeError("No configured supported host executable exists; configure REAPER or macOS Logic Pro")
     print("Host executables found: " + ", ".join(hosts), flush=True)
-    device = settings["resolved_model_policy"]["midi_llm_device"]
-    if device == "cuda" and not torch.cuda.is_available():
+    devices = {settings["resolved_model_policy"][name] for name in ("midi_llm_device", "midi_gpt_device", "audio_device")}
+    if "cuda" in devices and not torch.cuda.is_available():
         raise RuntimeError("CUDA was selected but Torch cannot use your NVIDIA GPU; update the driver or explicitly select CPU")
-    if device == "mps" and not torch.backends.mps.is_available():
+    if settings["resolved_model_policy"]["midi_llm_device"] == "cuda" and not torch.cuda.is_bf16_supported():
+        raise RuntimeError("MIDI-LLM CUDA generation requires BF16 support on the selected GPU")
+    if "mps" in devices and not torch.backends.mps.is_available():
         raise RuntimeError("MPS was selected but is not available")
     gpt_device = settings["resolved_model_policy"]["midi_gpt_device"]
     if gpt_device == "mps" and not torch.backends.mps.is_available():
@@ -47,6 +49,11 @@ def check(config: Path) -> None:
     import onnxruntime
     onnxruntime.InferenceSession(str(basic_pitch_model_path()),
                                 providers=["CPUExecutionProvider"])
+    from text2music.agent.llm_backend import check_chat_backend
+    if check_chat:
+        report = check_chat_backend()
+        import json
+        print("Chat compatibility: " + json.dumps(report), flush=True)
     print("Runtime, model checksums and Basic Pitch ONNX session OK", flush=True)
 
 

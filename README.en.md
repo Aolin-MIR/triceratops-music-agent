@@ -1,99 +1,67 @@
-# Triceratops Music Agent · 0.9
+<p align="center"><img src="docs/images/triceratops-mark.svg" width="88" alt="Triceratops mark"></p>
 
-[中文](readme.md) | [English](README.en.md)
+<h1 align="center">Triceratops Music Agent</h1>
+<p align="center">🦕 Music tools for Windows / macOS · REAPER / Logic Pro</p>
 
-**Keep the next few bars inside your REAPER project.**
+[中文](readme.md) · [English](README.en.md) · [Downloads](https://github.com/Aolin-MIR/triceratops-music-agent/releases/latest)
 
-Triceratops is a music Agent VST3 for REAPER. Describe an idea naturally or use the action buttons to generate, continue, edit and analyze MIDI, then import editable results into real REAPER tracks.
+<p align="center"><img src="docs/images/windows.png" height="24" alt="Windows"> Windows &nbsp; <img src="docs/images/apple.png" height="24" alt="macOS"> macOS &nbsp; <img src="docs/images/reaper.png" height="24" alt="REAPER"> REAPER &nbsp; <img src="docs/images/logic-pro.png" height="24" alt="Logic Pro"> Logic Pro</p>
 
-**v0.9 supports REAPER only. Windows uses a native Python backend; WSL is not required.** Chat and intent rewriting use your configured Qwen / OpenAI-compatible API. Music generation, continuation, stem separation and transcription run locally.
+## 🎹 Platforms
 
-[![Triceratops 0.9 feature overview](docs/images/triceratops-0.9-overview.webp)](https://github.com/Aolin-MIR/triceratops-music-agent/releases/download/v0.9.0/Triceratops-0.9.0-Feature-Overview.png)
-
-## Local fixes and validation for v1.0.1
-
-This work starts from `main`. The Windows 1.0 update will be merged and retested before a combined v1.0.1 release. Published attachments remain v0.9.0; the local results below are a partial validation record.
-
-- **Shared runtime fixes:** report failed mutations accurately, stop their tool loop, terminate owned model processes on cancellation or backend exit, preserve events and expression outside MIDI-GPT infill selections, retain short notes during quantization, edit drum timing/velocity correctly, redact errors, verify pinned model/decoder assets and explicitly retry the same official revision after mirror failures, and restore Basic Pitch's `pkg_resources` dependency. MIDI-LLM precision is explicitly configurable; existing default precision and device selection are retained. Explicit drum/instrument constraints retain raw MIDI and an audit of postprocessing. Required native dispatch prevents unexecuted promises; completed music operations receive factual reports. Generated continuation tails are bounded to requested bars with raw tails retained. Fractional-PPQ quantization, final short-note bounds and trailing rests are preserved, and the plug-in reconnects an exited backend asynchronously. Recording state and auto-import preferences survive editor reopen; full two-minute audio buffers remain saveable and same-second captures do not overwrite. Memory corrections are atomic, saved facts are read from disk, empty deletion is rejected and saving cannot trigger an unrequested deletion. Knowledge questions progress from lookup to an answer, with execution evidence retained on failure.
-- **macOS fixes:** require native ARM64 Python, preserve existing paths/device/API settings, restrict configuration and backups to `0600`, validate installation before replacing and backing up the VST3, and exclude native Mac processes from legacy Linux worker cleanup, and save recordings under `~/Library/Application Support/Triceratops/Captures`.
-- **Actual REAPER checks:** an 8 GB A18 Pro Mac running macOS 27.0.1, ARM64 Python 3.11.17 and REAPER 7.82 scanned and loaded the rebuilt VST3, started its backend, switched interface languages, invoked Basic Pitch through Qwen native tool calls, imported real MIDI automatically and manually, opened its piano roll, and rendered an eight-second Apple DLSMusicDevice piano audition. Natural-language MIDI-LLM generation also ran in the host (CPU/float16, 512-token cap, about 124 seconds): raw output had 170 notes including 45 drum notes; explicit postprocessing retained all tonal events and delivered 125 piano notes with no drums. Host MIDI-GPT continuation retained the original 125-note stream, added 97 notes and clipped three releases to eight bars / 16 seconds, then actually auto-imported. Host quantization, velocity, transposition, Undo and targeted infill were checked against real events. All four HTDemucs stems were actually imported, played and rendered; internal host routing captured 16 MIDI notes and about eight seconds of non-silent audio. Audio device selection belongs to REAPER's user settings; the plug-in does not fix a sound card.
-- **Model/backend checks:** real CPU MIDI-GPT continuation and infill with event comparisons; two HTDemucs four-stem runs on eight seconds of original audio (about 8.02 / 6.60 seconds); Basic Pitch on `CPUExecutionProvider`; file/event checks for editing, Undo, feedback, memory and retrieval. Host checks also covered model-child termination after cancellation, invalid API 401, network failure, missing-model/MIDI errors and recovery; original configuration fields and `0600` permissions were restored. Generated piano was actually played through Apple DLSMusicDevice, opened in the piano roll and rendered to an eight-second audition. The local regression suite passes 91 tests. These do not certify every GUI flow or a Windows retest.
-- **Pending:** interface/default-input paths, arbitrary selected-item context and remaining failure scenarios; recording-state, preference persistence and two-minute capacity fixes have passed host retests. System-default output playback works; Studio 26c output-only initialization still blocks in CoreAudio I/O callback registration and is not a sound-card pass. Authentic window-sampled videos (about 0.7–1.5 fps, not full-frame continuous recording), host reopen and automatic backend-exit recovery have been verified. Arbitrary selected-item capture is still pending; host continuation/edit checks currently use MIDI loaded in the plug-in. VST3 chat context does not yet supply the real project path: verified memory CRUD uses its local VST3 memory file, not certified isolation between projects. This context integration must be reconciled with the Windows 1.0 feature update. Default CPU/float32 MIDI-LLM timed out at 300 seconds with a 96-token cap on this Mac. Explicit CPU/float16 produced valid MIDI twice in about 30 seconds, but wrong instruments or drums in raw output failed the requested musical constraints. Explicit postprocessing can enforce instrument/drum constraints; it does not establish mood, sparse phrasing or musical quality. Only MIDI-GPT has been tested on MPS; this is not evidence of GPU support for every model.
-
-Measurements apply to this Mac, not a certified minimum or speed guarantee for all Macs.
-
-### Logic AU and REAPER import regression (local, pending v1.0.1)
-
-macOS now builds `Triceratops MIDI` for Logic MIDI FX before the instrument and `Triceratops Audio` for Audio FX. Both use the same backend and pinned models. Logic 12.4 actually loaded both AUs: native API chat, MIDI-LLM generation, 24-note MIDI output and input capture, internal electric-piano audio recording, and Basic Pitch transcription followed by real piano-roll import passed. Original generated MIDI, hashes and postprocessing counts are retained when drum constraints or duplicate/retrigger cleanup are applied. Empty MIDI capture reports an error. POSIX backend startup restores SIGTERM; whole AU bundles are re-signed and strictly verified after incremental linking. Native drag-to-track completion remains unverified; use Logic's tested MIDI file import. Audio devices remain the host user's choice.
-
-**Shared fix:** unique import request IDs require matching host receipts with the actual project and imported count. Atomic receipt publication rejects stale success, errors are displayed, and the import button prevents repeated requests. Windows keeps its existing `-nonewinst` launch path and awaits a physical Windows retest. **Mac fix:** command-line imports could open a second REAPER instance. Import now runs through the owning VST3 host's API on its UI thread, retaining the host interface and resolving its project parent after initialization. An inactive owning project produces an explicit error without launching another host.
-
-REAPER 7.82 regression reused an earlier genuine 24-note MIDI-LLM result, then actually invoked Qwen's quantization tool through the plug-in. All 24 pitches, velocities and channels survived; 17 onsets changed, with at most 0.01 beat rounding at 50 PPQ. Manual and automatic imports, rapid repeat-click protection, exact host import Undo, normal quit/reopen and project persistence passed in a separate test copy. Actual DLSMusicDevice piano playback was captured into a 6.82-second audition and an authentic 53-frame / 6.13-second sampled window video. Both rebuilt AUs again passed strict signatures, Apple auval and actual Logic MIDI/audio capture. There are 91 passing regression tests. Import project checks do not certify chat context, memory or history isolation across projects; these and the final Windows merge still require validation.
-
-**Shared idle-status fix:** the generic idle branch previously claimed GPU model release even with a CPU profile. It now reports only “Service ready”; a legacy shutdown flag does not verify the device or worker exit. Two regressions cover idle status and editor reopening. A real Logic AU close/reopen test used an independent credential-free CPU profile with a five-second test timeout. The canonical profile remained byte-for-byte unchanged and its backend automatically restarted and reconnected. Native MIDI drag was attempted again but a dropped region remains unverified.
-
-Idle checking and status publication now share one critical section, preventing an older idle writer from overwriting a new request’s completion. The concurrency regression failed on the old implementation and passes with the fix. A real Logic AU separately verified request completion, close-to-idle and a new request after reopening with an isolated CPU profile. The exact thread interleaving is a controlled unit test, not claimed as a reproduced GUI race.
-
-Each import now owns its command, script and receipt directory so another instance or legacy panel cannot replace or claim it. Unexecuted requests are discarded after a rejected project switch or early editor close; completed receipts remain authoritative. Unit tests cover 12 concurrent preparations and isolated abandonment. Two actual REAPER imports of earlier genuine 24-note and 16-note model results matched their separate request receipts and real track events. Host history restored 16 → 15 → 14 tracks while preserving existing track GUIDs and MIDI source blocks. Temporary Mac import actions leave no new entries in the action list. Exact GUI timing of a project switch or editor close during the short request remains unverified; the unit tests do not certify that host race.
-
-## Download and install
-
-- [Windows x64 EXE installer](https://github.com/Aolin-MIR/triceratops-music-agent/releases/download/v0.9.0/Triceratops-0.9.0-Windows-x64-Setup.exe)
-- [Release notes, checksums and available assets](https://github.com/Aolin-MIR/triceratops-music-agent/releases/tag/v0.9.0)
-- [macOS Apple Silicon ZIP](https://github.com/Aolin-MIR/triceratops-music-agent/releases/download/v0.9.0/Triceratops-0.9.0-macOS-AppleSilicon.zip): requires **Apple Silicon, macOS 14+, and native ARM64 Python 3.10 / 3.11**. Extract and keep the directory, then run `bash setup-macos.sh`. The universal VST3 build passed; partial REAPER checks on a physical Mac are recorded above. Intel Mac model execution is not supported.
-
-1. Save your project and close REAPER. Run the EXE. The single VST3 installation is `C:\Program Files\Common Files\VST3\Triceratops.vst3`.
-2. Open **Configure runtime and download models** at the end of installation or from the Start menu. Select REAPER, a model directory and compute device; enter your own API key. A dedicated native Python seed is included, without modifying system Python.
-3. First setup downloads runtime packages and models. It defaults to the Tsinghua PyPI mirror and `hf-mirror.com`. Failed downloads report an error; rerun setup to resume. Missing models never silently select a different generator.
-4. In REAPER, open **Preferences → Plug-ins → VST → Re-scan**, then insert **Triceratops**.
-5. Rerun configuration to change settings or download missing files. Uninstalling the application retains user models, credentials and generated work for backup or manual removal.
-
-The EXE includes the plug-in, configuration utility and Python seed. **Large weights are downloaded by setup, not embedded in the EXE.** CPU is the default. An unavailable selected device produces an error rather than a silent device switch.
-
-Use **中文 / English** in the plug-in header to switch buttons, status text, hints and operation reports. The language preference is remembered; chat defaults to the selected interface language.
-
-## System requirements
-
-### Hardware-aware model deployment
-
-The installer reads the architecture and unified-memory capacity and chooses devices per model from validated paths. On an 8 GB Apple-Silicon Mac, MIDI-LLM defaults to CPU/float16, MIDI-GPT to CPU, and HTDemucs/Basic Pitch to CPU while chat remains on the configured remote Qwen service. Larger Apple-Silicon systems may select MPS for MIDI-GPT separately. MIDI-LLM does not switch to MPS just because MPS exists; the local default-model test was too slow to certify. When the Windows 1.0 local Qwen 4B OpenAI-compatible service is available, set `local_chat_available: true`, `local_chat_base_url`, and `local_chat_model` in `runtime.json` to select it.
-
-Use `model_policy: "custom"` to set `midi_llm_device`, `midi_llm_dtype`, `midi_gpt_device`, `audio_device`, and `chat_deployment` independently. The doctor reports an unavailable explicit device instead of silently changing it. A local Qwen service must already be running at the configured OpenAI-compatible endpoint.
-
-**Software constraints, suggested resource budgets and tested configurations are different.** A full-feature minimum has not been established by testing machines with different memory capacities; these recommendations are not certified minimums.
-
-| Item | Windows | macOS |
+| System | Host | Format |
 | --- | --- | --- |
-| OS / architecture | Windows 10 / 11 x64; Windows 11 tested, Windows 10 not separately verified | Apple Silicon (M1 or newer), macOS 14+; Intel Mac model execution is unsupported |
-| Host | REAPER x64; 7.80 tested, 7.80 or newer recommended | Native Apple Silicon REAPER, 7.80 or newer recommended; full physical-machine testing pending |
-| Python | Dedicated Python 3.11.9 included; no WSL required | User-installed native ARM64 Python 3.10 / 3.11; setup looks for `python3.11` by default |
-| Memory budget | Start with 16 GB for CPU use; 32 GB gives more room for instruments / longer audio; not a measured minimum | Start with 16 GB unified memory, preferably 32 GB; 8 GB A18 Pro measurements have started; default CPU/float32 MIDI-LLM showed severe resource pressure and timed out, so full-feature validation has not passed |
-| Graphics | No discrete GPU needed for CPU mode; the current CUDA path uses BF16, so a BF16-capable Ampere or newer NVIDIA GPU and a conservative 16 GB VRAM budget are recommended | The policy selects devices per model: CPU by default on this 8 GB Mac; MIDI-GPT has separately run on MPS and may use it on larger Apple-Silicon systems; other model acceleration and MLX remain unvalidated |
-| Free storage budget | Reserve 20 GB for CPU or 30 GB for CUDA installation, plus download caches, audio and projects | Reserve 20 GB, plus download caches, audio and projects |
-| Network / API | Internet for initial dependencies / weights; current chat and button tool dispatch need a user-configured API with native tool calling | Same; the Mac ZIP includes neither Python nor model weights |
+| Windows x64 | REAPER | VST3 |
+| macOS 14+ · Apple Silicon | REAPER | VST3 |
+| macOS 14+ · Apple Silicon | Logic Pro | MIDI FX AU + Audio FX AU |
 
-Storage and memory figures are conservative planning recommendations, not measured peaks for every feature. Approximately 4 GB of weights does not mean a 4 GB installation or runtime footprint. CPU generation is an offline task with no real-time guarantee. CUDA also requires an NVIDIA driver that can run the installer's `cu130` PyTorch build; the CUDA version shown by `nvidia-smi` alone does not prove compatibility. AMD / Intel GPU acceleration, Windows ARM64 and Intel Mac are outside current support.
+Mac requires native ARM64 Python 3.10 / 3.11. Intel / Rosetta model backends are unsupported. Audio devices are selected in the host.
 
-See **[System requirements and support scope (中文 / English)](docs/SYSTEM_REQUIREMENTS.md)** for evidence, tested configurations and differences between features.
+## ✨ From 1.0 to 1.0.1
 
-## Features
+- **Logic Pro support:** separate MIDI and Audio AUs, MIDI capture/output and audio recording.
+- **Local or cloud conversation:** native tool calling and compatibility checks; custom configuration remains available.
+- **Improved intent handling:** creation, edits, analysis and conversation use the appropriate route; results reflect actual tools.
+- **Direct actions:** continue four bars, increase energy, tighten rhythm, separate stems and transcribe without a chat round trip.
+- **Hardware-aware deployment:** inspect memory and devices, configure each function separately, verify before applying.
+- **Complete note overview:** fit both timeline and pitch range.
+- **Workflow fixes:** isolated import requests, duplicate-click protection, version rollback, service reconnection and cancellation.
 
-| Action | Implementation |
-| --- | --- |
-| Chat / New score | Native LLM tool-calling loop, intent rewriting and local MIDI-LLM generation |
-| Edit MIDI / More energy / Tighten timing | Explicit transposition, velocity and timing edits |
-| Continue 4 bars / bar infill | MIDI-GPT generates new content; continuation appends bars while retaining original MIDI events |
-| Analyze | MIDI note and rhythm statistics; estimated audio tempo/key, onsets and sections |
-| Stem split | Demucs HTDemucs: vocals, drums, bass and other |
-| Audio → MIDI | Basic Pitch ONNX transcription |
-| Rec MIDI / Rec audio | Capture signals routed into the plug-in |
-| Auto-Import / Import to REAPER | Add generated MIDI or separated audio to new REAPER tracks; automatic import can be disabled |
-| Keep / Reject / Undo | Store preference feedback and restore the previous MIDI version; this does not delete previously imported host tracks |
-| Memory / RAG | Persist project constraints, preferences and conversation summaries; retrieve local knowledge and project notes |
 
-Examples: “Sparse piano and cello for an overcast evening”, “Continue this clip for four bars”, or “Tighten the rhythm while keeping the melody.” No JSON or rigid prompt template is required. Editing operations are limited to the transformations exposed by the tools.
+<details>
+<summary>View plug-in screenshots</summary>
 
-MIDI needs an instrument in REAPER to produce sound. Transcription and separation can contain model errors; reported audio key is an estimate.
+![Triceratops MIDI in Logic Pro](docs/images/triceratops-1.0.1-logic.png)
+
+![Functions, sizes and deployment settings](docs/images/triceratops-1.0.1-settings.png)
+
+</details>
+
+## 🎼 Features
+
+Text-to-MIDI composition; continuation and infill; quantization, velocity and transposition; four audio stems; monophonic transcription; audio analysis; MIDI/audio recording; feedback and local knowledge retrieval. REAPER supports manual/automatic import; Logic supports file import, MIDI output and recording.
+
+Generated music and transcription may contain errors. Successful file generation does not certify musical quality. Full project isolation for conversation and memory remains unverified; explicitly load the material to edit. Automated acceptance of Logic cross-window drag remains incomplete; file import and recording are available.
+
+## ⚙️ Install and configure
+
+Choose an actual platform attachment from [Releases](https://github.com/Aolin-MIR/triceratops-music-agent/releases). On Mac, extract and run `bash setup-macos.sh`, then use Settings in the plug-in to detect, download, verify and apply. Windows uses its native installer without WSL.
+
+| Function | Default weights | Recommended deployment |
+| --- | --- | --- |
+| Text composition | ~3.2 GiB | Hardware checked; CPU by default on Mac, GPU verified separately |
+| Continuation / infill | ~334 MiB | Start with CPU; verify GPU separately |
+| Four audio stems | ~80 MiB | Start with CPU; verify GPU separately |
+| Audio-to-MIDI | ~225 KiB | CPU |
+| Local conversation | Default 4B / 4-bit | Sufficient memory and GPU; tool calling and residency must pass |
+
+Weight sizes are not working-memory requirements. Local chat uses native GPU deployment on Windows and native Metal deployment on Apple Silicon. A complete local 4B host workflow on an 8 GB Mac is not certified; compatible cloud chat is available. Advanced settings retain custom model IDs, endpoints, precision and devices.
+
+## 🌐 Music-model download routing
+
+<img src="docs/images/huggingface.png" height="28" alt="Hugging Face"> **Hugging Face** · <img src="docs/images/hf-mirror.ico" height="24" alt="HF-Mirror"> **HF-Mirror**
+
+Routes by network egress, with manual selection available. Mainland China checks the mirror first; an unavailable mirror is reported before retrying the same pinned revision upstream. Weights are verified. Local chat runtimes use their own download channels.
 
 ## Models and licenses
 
@@ -108,7 +76,7 @@ The downloader checks SHA-256 for MIDI-LLM, MIDI-GPT, HTDemucs and decoder asset
 
 ## Configuration and privacy
 
-Windows settings: `%APPDATA%\Triceratops\runtime.json`; dedicated Python and weights: `%LOCALAPPDATA%\Triceratops\`; generated work and memory: `%APPDATA%\Triceratops\runs\`. Keys stay in the user-owned configuration and are excluded from packages and repository commits. Chat API calls send conversation and necessary project/analysis context to your chosen provider, which may charge for usage. The backend listens only on `127.0.0.1:49327`.
+Windows settings: `%APPDATA%\Triceratops\runtime.json`; dedicated Python and weights: `%LOCALAPPDATA%\Triceratops\`; generated work and memory: `%APPDATA%\Triceratops\runs\`. Keys stay in the user-owned configuration and are excluded from packages and repository commits. Cloud-mode chat calls send conversation and necessary project/analysis context to your chosen provider, which may charge for usage. Automatic model-source selection contacts an IP geolocation service and retains only the country code and lookup time, without saving the public IP, city or precise location. A proxy/VPN can change the observed egress. Manual source selection skips this query. The backend listens only on `127.0.0.1:49327`.
 
 ## Testing feedback
 
@@ -116,7 +84,7 @@ Open an [issue](https://github.com/Aolin-MIR/triceratops-music-agent/issues) wit
 
 ## Credits
 
-Music models and tools actually used by v0.9:
+Music models and tools used by this project:
 
 - [MIDI-LLM / Shih-Lun Wu et al.](https://github.com/slSeanWU/MIDI-LLM): text-conditioned multitrack MIDI generation, based on Llama 3.2 with an extended music vocabulary. Built with Llama.
 - [MIDI-GPT / Metacreation Lab](https://github.com/Metacreation/MIDI-GPT): **Yellow Medium** weights for continuation and infill, retaining the CC BY-NC 4.0 restriction.
@@ -124,6 +92,8 @@ Music models and tools actually used by v0.9:
 - [Basic Pitch / Spotify](https://github.com/spotify/basic-pitch): the ICASSP 2022 ONNX model for MIDI transcription.
 - [Anticipation / John Thickstun et al.](https://github.com/jthickstun/anticipation): music-event conversion / decoding used by MIDI-LLM; [JUCE](https://github.com/juce-framework/JUCE) provides the VST3 framework and [librosa](https://github.com/librosa/librosa) provides audio analysis algorithms.
 
-The chat model depends on the user's API configuration; no chat-model weights are bundled. Unintegrated candidate models are not listed as used components.
+Chat uses a user-configured cloud model or a compatibility-checked local Qwen3.5 model. Windows local inference runs through llama.cpp Vulkan on the GPU; chat weights are not bundled. Unintegrated candidate models are not listed as used components.
 
 Source provenance: this repository originated from [Keshav Bhandari/Text2Score](https://github.com/keshavbhandari/text2score), so source attribution is retained. **The v0.9 release does not install, download or invoke Text2Score trained weights.** Triceratops Agent, REAPER integration and desktop distribution work are maintained here. Full attribution and licenses are in [NOTICE](NOTICE) and [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md).
+
+This repository originated from [Text2Score](https://github.com/keshavbhandari/text2score). Thanks also to [Anticipation](https://github.com/jthickstun/anticipation), [JUCE](https://github.com/juce-framework/JUCE) and [librosa](https://github.com/librosa/librosa). See [NOTICE](NOTICE) for full attribution.

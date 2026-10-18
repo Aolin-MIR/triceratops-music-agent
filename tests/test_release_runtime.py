@@ -309,3 +309,17 @@ def test_idle_status_cannot_overwrite_a_new_chat_completion(tmp_path, monkeypatc
     assert not idle.is_alive() and not chat.is_alive()
     assert vst_service._read_status()["state"] == "completed"
     assert state.last_result["tool"] == "status"
+
+def test_fixed_devices_are_configured_independently(tmp_path, monkeypatch):
+    monkeypatch.setattr(os, "environ", dict(os.environ))
+    monkeypatch.setattr(runtime.sys, "path", list(runtime.sys.path))
+    config = tmp_path / "runtime.json"
+    config.write_text(json.dumps(dict(python="/python", runs_dir=str(tmp_path / "runs"),
+        model_home=str(tmp_path / "models"), reaper="/reaper", device="cuda", api_key="",
+        llm_provider="ollama", llm_device="gpu", midi_gpt_device="cpu", stem_device="cpu")))
+    runtime.configure(config)
+    assert os.environ["TRICERATOPS_LLM_DEVICE"] == "gpu"
+    assert os.environ["TRICERATOPS_MIDI_LLM_DEVICE"] == "cuda"
+    assert os.environ["TRICERATOPS_MIDI_GPT_DEVICE"] == "cpu"
+    assert os.environ["TRICERATOPS_STEM_DEVICE"] == "cpu"
+    assert os.environ["QWEN_API_KEY"] == ""

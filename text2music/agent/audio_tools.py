@@ -81,7 +81,7 @@ def separate_stems(path: Path, output_dir: Path) -> list[Path]:
         raise RuntimeError("Demucs is not installed")
     output_dir.mkdir(parents=True, exist_ok=True)
     subprocess.run([sys.executable, "-X", "utf8", "-m", "text2music.agent.demucs_runner", "-n", "hf://htdemucs",
-                    "-d", os.environ.get("TRICERATOPS_AUDIO_DEVICE", os.environ.get("TRICERATOPS_DEVICE", "cpu")),
+                    "-d", os.environ.get("TRICERATOPS_STEM_DEVICE", os.environ.get("TRICERATOPS_DEVICE", "cpu")),
                     "-o", str(output_dir), str(path)], check=True)
     files = sorted((output_dir / "htdemucs" / path.stem).glob("*.wav"))
     if not files:

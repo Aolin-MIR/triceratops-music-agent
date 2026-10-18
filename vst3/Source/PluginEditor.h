@@ -4,6 +4,7 @@
 #include <future>
 #include "PluginProcessor.h"
 #include "UiStrings.h"
+#include "SettingsPanel.h"
 
 class AnimatedButton : public juce::TextButton, private juce::Timer
 {
@@ -140,11 +141,15 @@ private:
     double progress = 0.0;
     float eqPhase = 0.0f;
 
+    std::unique_ptr<SettingsPanel> settingsPanel;
+    bool setupPrompted = false;
+    bool backendConfiguring = false;
+    AnimatedButton settingsBtn { "Settings" };
     AnimatedButton languageBtn { "中文" }, send { "Send", true }, cancel { "Stop", false },
                    clearChatBtn { "Clear Chat" }, autoImportBtn { "Auto-Import: ON", true },
                    importReaperBtn { "Import to REAPER", true },
                    sidebarToggleBtn { "Plan / History" },
-                   newMusic { "New score" }, editMidi { "Edit MIDI" },
+                   helpBtn { "Features" }, newMusic { "New score" }, editMidi { "Edit MIDI" },
                    analyze { "Analyze" }, continueFour { "Continue 4 bars" },
                    moreEnergy { "More energy" }, tightenTiming { "Tighten timing" },
                    undoBtn { "Undo" }, keepBtn { "Keep" }, rejectBtn { "Reject" },

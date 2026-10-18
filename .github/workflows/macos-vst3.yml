@@ -18,8 +18,8 @@ jobs:
         run: |
           python3 vst3/installer/package_release.py --platform macos --plugin vst3/build-macos/Triceratops_artefacts/Release/VST3/Triceratops.vst3 --output vst3/package/macos --au-plugin "vst3/build-macos/TriceratopsMidiAU_artefacts/Release/AU/Triceratops MIDI.component" --au-plugin "vst3/build-macos/TriceratopsAudioAU_artefacts/Release/AU/Triceratops Audio.component"
           cd vst3/package/macos
-          ditto -c -k --sequesterRsrc --keepParent . ../Triceratops-0.9.1-macOS-AppleSilicon.zip
+          ditto -c -k --sequesterRsrc --keepParent . ../Triceratops-1.0.1-macOS-AppleSilicon.zip
       - uses: actions/upload-artifact@v4
         with:
-          name: Triceratops-0.9.1-macOS-AppleSilicon
-          path: vst3/package/Triceratops-0.9.1-macOS-AppleSilicon.zip
+          name: Triceratops-1.0.1-macOS-AppleSilicon
+          path: vst3/package/Triceratops-1.0.1-macOS-AppleSilicon.zip

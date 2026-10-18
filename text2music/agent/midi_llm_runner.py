@@ -14,7 +14,7 @@ def main():
     from text2music.agent.symbolic_models import MIDI_LLM_ROOT
     sys.path.insert(0, str(MIDI_LLM_ROOT))
     namespace = runpy.run_path(str(MIDI_LLM_ROOT / "generate_transformers.py"))
-    device = os.environ.get("TRICERATOPS_DEVICE", "cuda")
+    device = os.environ.get("TRICERATOPS_MIDI_LLM_DEVICE", os.environ.get("TRICERATOPS_DEVICE", "cuda"))
     if device not in {"cpu", "cuda", "mps"}:
         raise ValueError("TRICERATOPS_DEVICE must be cpu, cuda or mps")
     def load(model_path):

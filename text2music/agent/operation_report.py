@@ -13,9 +13,58 @@ def operation_report(action: str, trace: list[dict], *, language: str = "zh") ->
         detail = str(events[-1].get("result", {}).get("error", "工具没有执行完成")) if events else "工具没有执行完成"
         return "操作未完成：" + detail, detail
     data = events[-1]["result"]
-    if action == "generate_draft" and "postprocess" in data:
+    if action == "list_capabilities":
+        if language == "en":
+            capabilities = data.get("capabilities", {})
+            labels = {
+                "generate_draft": "Create MIDI from a musical idea",
+                "transform_midi": "Transpose, change velocity, quantize to sixteenth notes, repeat once, or add power chords",
+                "continue_midi": "Continue a loaded MIDI with new bars",
+                "infill_midi": "Fill selected MIDI bars/tracks with continuation and fill",
+                "analyze_selected_midi": "Analyze loaded MIDI",
+                "analyze_audio": "Analyze loaded audio",
+                "separate_stems": "Separate loaded audio into stems",
+                "audio_to_midi": "Transcribe loaded audio to MIDI",
+                "inspect_project": "Read REAPER tempo and project context",
+                "undo": "Undo the previous MIDI edit",
+                "accept": "Keep a result and save feedback",
+                "reject": "Reject a result and save feedback",
+                "search_knowledge": "Search indexed manuals, project notes, and music knowledge",
+                "remember_fact": "Remember an explicit project preference",
+                "forget_fact": "Forget a saved project fact",
+                "status": "Check task status",
+                "cancel": "Cancel an active task",
+            }
+            items = [label for name, label in labels.items() if name in capabilities]
+            reply = "I can help with these REAPER music tasks:\n• " + "\n• ".join(items)
+            reply += "\n\nStart with a button, or describe the result you want in your own words. Load MIDI/audio first for file-based actions. I will say when a request is outside this scope."
+        else:
+            capabilities = data.get("capabilities", {})
+            labels = {
+                "generate_draft": "根据音乐想法创作 MIDI",
+                "transform_midi": "移调、调整力度、十六分音符量化、重复一次或添加强力和弦",
+                "continue_midi": "为已载入的 MIDI 续写新小节",
+                "infill_midi": "填充指定 MIDI 小节或声部",
+                "analyze_selected_midi": "分析已载入的 MIDI",
+                "analyze_audio": "分析已载入的音频",
+                "separate_stems": "将已载入的音频分轨",
+                "audio_to_midi": "将已载入的音频转成 MIDI",
+                "inspect_project": "读取 REAPER 速度和工程上下文",
+                "undo": "撤销上一次 MIDI 修改",
+                "accept": "保留结果并记录反馈",
+                "reject": "拒绝结果并记录反馈",
+                "search_knowledge": "搜索已索引的手册、工程笔记和音乐知识",
+                "remember_fact": "记住明确提出的工程偏好",
+                "forget_fact": "删除已保存的工程信息",
+                "status": "查看任务状态",
+                "cancel": "取消正在执行的任务",
+            }
+            items = [label for name, label in labels.items() if name in capabilities]
+            reply = "我可以在 REAPER 音乐工作流中帮你：\n• " + "\n• ".join(items)
+            reply += "\n\n可以点功能按钮，也可以直接用自己的话描述目标。处理文件前先载入 MIDI 或音频；超出这些范围的请求我会明确说明。"
+    elif action == "generate_draft" and "postprocess" in data:
         raw, final, changes = data["postprocess"]["raw_validation"], data["validation"], data["postprocess"]
-        reply = (f"MIDI-LLM 已生成 MIDI。原始输出：{raw['note_count']} 个音符，其中 {raw['drum_notes']} 个鼓音符。\n"
+        reply = (f"文本作曲已生成 MIDI。原始输出：{raw['note_count']} 个音符，其中 {raw['drum_notes']} 个鼓音符。\n"
                  f"交付版本：{final['note_count']} 个音符，其中 {final['drum_notes']} 个鼓音符，时长 {final['duration_seconds']} 秒。\n"
                  f"后处理：移除 {changes['removed_drum_events']} 条鼓事件，修改 {changes['changed_program_events']} 条音色事件，"
                  f"补充 {changes['inserted_program_events']} 条音色设置。\n原始 MIDI 保留：{data['raw_midi']}\n"
@@ -25,7 +74,7 @@ def operation_report(action: str, trace: list[dict], *, language: str = "zh") ->
             reply += (f"\n起音整理：合并 {audit['merged_simultaneous_note_ons']} 个同刻同音高重复起音，"
                       f"裁剪 {audit['clipped_overlapping_note_offs']} 个重触发前的重叠尾音。")
     elif action == "continue_midi":
-        reply = (f"MIDI-GPT 已新生成 {data['added_bars']} 小节。原片段 {data['original_bars']} 小节，"
+        reply = (f"续写已新生成 {data['added_bars']} 小节。原片段 {data['original_bars']} 小节，"
                  f"总计 {data['original_bars'] + data['added_bars']} 小节。\n"
                  "原 MIDI 事件流完整保留，新生成内容追加在原片段之后。")
         if data.get("continuation_postprocess"):
@@ -88,9 +137,33 @@ def _english_report(action: str, trace: list[dict]) -> tuple[str, str]:
         detail = str(events[-1].get("result", {}).get("error", "The tool did not complete")) if events else "The tool did not complete"
         return "Operation did not complete: " + detail, detail
     data = events[-1]["result"]
-    if action == "generate_draft" and "postprocess" in data:
+    if action == "list_capabilities":
+        capabilities = data.get("capabilities", {})
+        labels = {
+            "generate_draft": "Create MIDI from a musical idea",
+            "transform_midi": "Transpose, change velocity, quantize, repeat once, or add power chords",
+            "continue_midi": "Continue loaded MIDI with new bars",
+            "infill_midi": "Fill selected MIDI bars/tracks with continuation and fill",
+            "analyze_selected_midi": "Analyze loaded MIDI",
+            "analyze_audio": "Analyze loaded audio",
+            "separate_stems": "Separate loaded audio into stems",
+            "audio_to_midi": "Transcribe loaded audio to MIDI",
+            "inspect_project": "Read REAPER tempo and project context",
+            "undo": "Undo the previous MIDI edit",
+            "accept": "Keep a result and save feedback",
+            "reject": "Reject a result and save feedback",
+            "search_knowledge": "Search indexed manuals, project notes, and music knowledge",
+            "remember_fact": "Remember an explicit project preference",
+            "forget_fact": "Forget a saved project fact",
+            "status": "Check task status",
+            "cancel": "Cancel an active task",
+        }
+        items = [label for name, label in labels.items() if name in capabilities]
+        reply = "I can help with these REAPER music tasks:\n• " + "\n• ".join(items)
+        reply += "\n\nUse a button or describe the result in your own words. Load MIDI/audio first for file-based actions. I will state when a request is outside this scope."
+    elif action == "generate_draft" and "postprocess" in data:
         raw, final, changes = data["postprocess"]["raw_validation"], data["validation"], data["postprocess"]
-        reply = (f"MIDI-LLM generated MIDI. Raw output: {raw['note_count']} notes, including {raw['drum_notes']} drum notes.\n"
+        reply = (f"Text composition generated MIDI. Raw output: {raw['note_count']} notes, including {raw['drum_notes']} drum notes.\n"
                  f"Delivered: {final['note_count']} notes, including {final['drum_notes']} drum notes; {final['duration_seconds']} seconds.\n"
                  f"Postprocessing removed {changes['removed_drum_events']} drum events, changed {changes['changed_program_events']} "
                  f"program events and inserted {changes['inserted_program_events']} program settings.\n"
@@ -100,7 +173,7 @@ def _english_report(action: str, trace: list[dict]) -> tuple[str, str]:
             reply += (f"\nRetrigger cleanup merged {audit['merged_simultaneous_note_ons']} simultaneous same-key onsets "
                       f"and clipped {audit['clipped_overlapping_note_offs']} overlapping releases before retriggers.")
     elif action == "continue_midi":
-        reply = (f"MIDI-GPT generated {data['added_bars']} new bars. Original: {data['original_bars']} bars; "
+        reply = (f"Continuation generated {data['added_bars']} new bars. Original: {data['original_bars']} bars; "
                  f"total: {data['original_bars'] + data['added_bars']} bars.\n"
                  "Original MIDI event streams were preserved; new content was appended.")
         if data.get("continuation_postprocess"):

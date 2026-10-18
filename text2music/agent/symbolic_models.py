@@ -105,11 +105,16 @@ def generate_midi_llm(prompt: str, output_dir: Path, *, max_tokens: int = 768,
         raise RuntimeError("MIDI-LLM completed without producing a MIDI file")
     midi = created[-1]
     from mido import MidiFile
-    parsed = MidiFile(midi)
+    try:
+        parsed = MidiFile(midi)
+    except Exception as exc:
+        raise RuntimeError("MIDI-LLM produced an unreadable MIDI file") from exc
     notes = [event for track in parsed.tracks for event in track
              if event.type == "note_on" and event.velocity > 0]
-    if not notes or parsed.length <= 0:
-        raise RuntimeError("MIDI-LLM produced an empty or zero-duration MIDI clip")
+    if not notes:
+        raise RuntimeError("MIDI-LLM produced a MIDI file without playable notes")
+    if parsed.length <= 0:
+        raise RuntimeError("MIDI-LLM produced a zero-duration MIDI clip")
     measurement = output_dir / "runtime-device.json"
     runtime = json.loads(measurement.read_text()) if measurement.exists() else {}
     constrained = constrain_generated_midi(midi, constraints, normalize_retriggers=True)

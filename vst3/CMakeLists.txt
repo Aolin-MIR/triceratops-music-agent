@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.22)
-project(Triceratops VERSION 0.9.1 LANGUAGES C CXX)
+project(Triceratops VERSION 1.0.1 LANGUAGES C CXX)
 
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
@@ -31,6 +31,8 @@ juce_add_plugin(Triceratops
 )
 
 target_sources(Triceratops PRIVATE
+    Source/SettingsPanel.h
+    Source/SettingsPanel.cpp
     Source/UiStrings.h
     Source/BackendClient.cpp
     Source/BackendClient.h

@@ -83,6 +83,10 @@ juce::var BackendClient::status()
     return result.isVoid() ? openSession() : result;
 }
 
+juce::var BackendClient::settings() { return request("/settings", "GET"); }
+juce::var BackendClient::configureSettings(const juce::var& payload) { return request("/settings/task", "POST", payload); }
+juce::var BackendClient::cancelConfiguration() { return request("/settings/cancel", "POST", juce::var(new juce::DynamicObject())); }
+
 juce::var BackendClient::history()
 {
     return request("/history", "GET");
