@@ -267,14 +267,14 @@ TriceratopsAudioProcessorEditor::TriceratopsAudioProcessorEditor(TriceratopsAudi
         editor->setScrollbarsShown(true);
         addAndMakeVisible(editor);
     }
-    chatBackendSelector.addItem("Default / 默认", 1);
+    chatBackendSelector.addItem(juce::String::fromUTF8("Default / 默认"), 1);
     chatBackendSelector.addItem("API", 2);
-    chatBackendSelector.addItem("Local GPU / 本地", 3);
+    chatBackendSelector.addItem(juce::String::fromUTF8("Local GPU / 本地"), 3);
     chatBackendSelector.setSelectedId(1, juce::dontSendNotification);
-    chatBackendSelector.setTitle("Chat model / 聊天模型");
+    chatBackendSelector.setTitle(juce::String::fromUTF8("Chat model / 聊天模型"));
     addAndMakeVisible(chatBackendSelector);
     addAndMakeVisible(chatBackendStatus);
-    chatBackendStatus.setText("Default / 默认", juce::dontSendNotification);
+    chatBackendStatus.setText(juce::String::fromUTF8("Default / 默认"), juce::dontSendNotification);
     chatBackendStatus.setColour(juce::Label::textColourId, textSub);
     chatBackendSelector.onChange = [this] {
         selectedChatBackend = chatBackendSelector.getSelectedId() == 2 ? "remote"
@@ -283,7 +283,7 @@ TriceratopsAudioProcessorEditor::TriceratopsAudioProcessorEditor(TriceratopsAudi
         deferredChatVerify = true;
         chatSwitchPending = true;
         send.setEnabled(false);
-        chatBackendStatus.setText(chinese ? "切换中：准备并验证…" : "Switching: preparing & verifying...", juce::dontSendNotification);
+        chatBackendStatus.setText(chinese ? juce::String::fromUTF8("切换中：准备并验证…") : "Switching: preparing & verifying...", juce::dontSendNotification);
     };
     chatDisplay.setReadOnly(true);
     prompt.setTextToShowWhenEmpty(ui("Say anything: sad piano, continue this, more energy, analyze it..."), textSub.withAlpha(0.6f));
@@ -618,7 +618,7 @@ void TriceratopsAudioProcessorEditor::timerCallback()
             {
                 chatSwitchPending = false;
                 const auto error = response.getProperty("error", "Backend connection failed").toString();
-                chatBackendStatus.setText((chinese ? "切换失败：" : "Switch failed: ") + error, juce::dontSendNotification);
+                chatBackendStatus.setText((chinese ? juce::String::fromUTF8("切换失败：") : "Switch failed: ") + error, juce::dontSendNotification);
                 chatBackendStatus.setTooltip(error);
             }
             requestKind = RequestKind::none;
@@ -803,9 +803,9 @@ void TriceratopsAudioProcessorEditor::handleStatus(const juce::var& value)
         {
             chatSwitchPending = false;
             chatBackendReady = status == "ready";
-            const auto name = selectedChatBackend == "remote" ? "API" : selectedChatBackend == "local" ? (chinese ? "本地 GPU" : "Local GPU") : (chinese ? "默认模型" : "Default model");
-            const auto detail = chatBackendReady ? ((chinese ? "切换完成：" : "Ready: ") + juce::String(name))
-                : ((chinese ? "切换失败，请检查设置：" : "Switch failed; check Settings: ") + state.getProperty("error", "").toString());
+            const auto name = selectedChatBackend == "remote" ? "API" : selectedChatBackend == "local" ? (chinese ? juce::String::fromUTF8("本地 GPU") : "Local GPU") : (chinese ? juce::String::fromUTF8("默认模型") : "Default model");
+            const auto detail = chatBackendReady ? ((chinese ? juce::String::fromUTF8("切换完成：") : "Ready: ") + juce::String(name))
+                : ((chinese ? juce::String::fromUTF8("切换失败，请检查设置：") : "Switch failed; check Settings: ") + state.getProperty("error", "").toString());
             chatBackendStatus.setText(detail, juce::dontSendNotification);
             chatBackendStatus.setTooltip(detail);
         }

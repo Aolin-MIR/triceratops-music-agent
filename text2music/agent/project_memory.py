@@ -102,7 +102,8 @@ class ProjectMemory:
         needle = text.casefold().strip()
         facts = [item for item in self.load().get("facts", [])
                  if needle in str(item.get("fact", "")).casefold()]
-        return {"facts": facts, "storage_path": str(self.path)}
+        return {"facts": facts, "music_context": self.music_context(),
+                "music_revision": self.load().get("music_revision", 0), "storage_path": str(self.path)}
 
     def set_summary(self, summary: str) -> None:
         data = self.load()

@@ -117,6 +117,7 @@ def operation_report(action: str, trace: list[dict], *, language: str = "zh") ->
     elif action == "recall_facts":
         reply = (f"已从本机文件读取 {len(data['facts'])} 条已保存记忆：\n"
                  + "\n".join(str(item['fact']) for item in data['facts'])
+                 + "\n音乐要求：" + json.dumps(data.get("music_context", {}), ensure_ascii=False)
                  + "\n保存位置：" + data['storage_path'])
     elif action == "forget_fact":
         reply = f"已删除 {data.get('removed', 0)} 条项目记忆。"
@@ -214,6 +215,7 @@ def _english_report(action: str, trace: list[dict]) -> tuple[str, str]:
     elif action == "recall_facts":
         reply = (f"Read {len(data['facts'])} saved facts from local storage:\n"
                  + "\n".join(str(item['fact']) for item in data['facts'])
+                 + "\nMusical requirements: " + json.dumps(data.get("music_context", {}), ensure_ascii=False)
                  + "\nStorage: " + data['storage_path'])
     elif action == "forget_fact":
         reply = f"Removed {data.get('removed', 0)} project facts."
