@@ -37,11 +37,32 @@ public:
     void mouseDown(const juce::MouseEvent& event) override
     {
         AnimatedButton::mouseDown(event);
-        // Native drag sessions need the live down/drag event, never onClick's
-        // mouse-up event. Starting while held also works in Logic's AU view bridge.
-        if (event.mods.isLeftButtonDown() && onFileDrag)
-            onFileDrag();
+        dragStarted = false;
     }
+    void mouseDrag(const juce::MouseEvent& event) override
+    {
+        AnimatedButton::mouseDrag(event);
+        // Logic's AU view bridge requires a real pointer movement before it
+        // accepts an external file drag. Starting from mouseDown is treated as
+        // an ordinary click and produces no timeline region.
+        // JUCE only delivers mouseDrag while a button is held.  Some AU host
+        // bridges omit the button modifier on the forwarded drag event, so
+        // checking it here can silently prevent the native Cocoa session from
+        // ever starting.  The distance threshold still excludes a click.
+        if (!dragStarted && event.getDistanceFromDragStart() >= 6 && onFileDrag)
+        {
+            dragStarted = true;
+            onFileDrag();
+        }
+    }
+    void mouseUp(const juce::MouseEvent& event) override
+    {
+        AnimatedButton::mouseUp(event);
+        dragStarted = false;
+    }
+
+private:
+    bool dragStarted = false;
 };
 
 struct ChatTurn

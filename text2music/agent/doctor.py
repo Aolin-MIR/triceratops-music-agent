@@ -27,10 +27,14 @@ def check(config: Path) -> None:
     if not hosts:
         raise RuntimeError("No configured supported host executable exists; configure REAPER or macOS Logic Pro")
     print("Host executables found: " + ", ".join(hosts), flush=True)
-    if settings["device"] == "cuda" and not torch.cuda.is_available():
+    device = settings["resolved_model_policy"]["midi_llm_device"]
+    if device == "cuda" and not torch.cuda.is_available():
         raise RuntimeError("CUDA was selected but Torch cannot use your NVIDIA GPU; update the driver or explicitly select CPU")
-    if settings["device"] == "mps" and not torch.backends.mps.is_available():
+    if device == "mps" and not torch.backends.mps.is_available():
         raise RuntimeError("MPS was selected but is not available")
+    gpt_device = settings["resolved_model_policy"]["midi_gpt_device"]
+    if gpt_device == "mps" and not torch.backends.mps.is_available():
+        raise RuntimeError("MIDI-GPT MPS was selected but is not available")
     from text2music.agent.download_models import verify
     verify(Path(settings["model_home"]))
     from text2music.agent.symbolic_models import model_status

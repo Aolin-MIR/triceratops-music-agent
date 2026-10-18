@@ -16,7 +16,11 @@ def write_config(data: Path, python: Path, api_key: str = "") -> dict:
         raise ValueError("runtime.json must contain an object")
     defaults = dict(python=str(python), runs_dir=str(data / "runs"), model_home=str(data / "models"),
                     reaper="/Applications/REAPER.app/Contents/MacOS/REAPER",
-                    logic="/Applications/Logic Pro.app/Contents/MacOS/Logic Pro", device="cpu",
+                    logic="/Applications/Logic Pro.app/Contents/MacOS/Logic Pro", device="auto",
+                    model_policy="auto", midi_llm_device="auto", midi_gpt_device="auto",
+                    midi_llm_dtype="auto", audio_device="cpu", chat_deployment="remote",
+                    local_chat_available=False, local_chat_model="Qwen3.5-4B",
+                    local_chat_base_url="http://127.0.0.1:8000/v1",
                     base_url="https://dashscope.aliyuncs.com/compatible-mode/v1", chat_model="qwen-plus")
     for key, value in defaults.items():
         settings.setdefault(key, value)

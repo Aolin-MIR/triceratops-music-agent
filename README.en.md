@@ -54,6 +54,12 @@ Use **中文 / English** in the plug-in header to switch buttons, status text, h
 
 ## System requirements
 
+### Hardware-aware model deployment
+
+The installer reads the architecture and unified-memory capacity and chooses devices per model from validated paths. On an 8 GB Apple-Silicon Mac, MIDI-LLM defaults to CPU/float16, MIDI-GPT to CPU, and HTDemucs/Basic Pitch to CPU while chat remains on the configured remote Qwen service. Larger Apple-Silicon systems may select MPS for MIDI-GPT separately. MIDI-LLM does not switch to MPS just because MPS exists; the local default-model test was too slow to certify. When the Windows 1.0 local Qwen 4B OpenAI-compatible service is available, set `local_chat_available: true`, `local_chat_base_url`, and `local_chat_model` in `runtime.json` to select it.
+
+Use `model_policy: "custom"` to set `midi_llm_device`, `midi_llm_dtype`, `midi_gpt_device`, `audio_device`, and `chat_deployment` independently. The doctor reports an unavailable explicit device instead of silently changing it. A local Qwen service must already be running at the configured OpenAI-compatible endpoint.
+
 **Software constraints, suggested resource budgets and tested configurations are different.** A full-feature minimum has not been established by testing machines with different memory capacities; these recommendations are not certified minimums.
 
 | Item | Windows | macOS |
@@ -62,7 +68,7 @@ Use **中文 / English** in the plug-in header to switch buttons, status text, h
 | Host | REAPER x64; 7.80 tested, 7.80 or newer recommended | Native Apple Silicon REAPER, 7.80 or newer recommended; full physical-machine testing pending |
 | Python | Dedicated Python 3.11.9 included; no WSL required | User-installed native ARM64 Python 3.10 / 3.11; setup looks for `python3.11` by default |
 | Memory budget | Start with 16 GB for CPU use; 32 GB gives more room for instruments / longer audio; not a measured minimum | Start with 16 GB unified memory, preferably 32 GB; 8 GB A18 Pro measurements have started; default CPU/float32 MIDI-LLM showed severe resource pressure and timed out, so full-feature validation has not passed |
-| Graphics | No discrete GPU needed for CPU mode; the current CUDA path uses BF16, so a BF16-capable Ampere or newer NVIDIA GPU and a conservative 16 GB VRAM budget are recommended | Setup selects CPU; MIDI-GPT has separately run on MPS, while other model acceleration and MLX remain unvalidated |
+| Graphics | No discrete GPU needed for CPU mode; the current CUDA path uses BF16, so a BF16-capable Ampere or newer NVIDIA GPU and a conservative 16 GB VRAM budget are recommended | The policy selects devices per model: CPU by default on this 8 GB Mac; MIDI-GPT has separately run on MPS and may use it on larger Apple-Silicon systems; other model acceleration and MLX remain unvalidated |
 | Free storage budget | Reserve 20 GB for CPU or 30 GB for CUDA installation, plus download caches, audio and projects | Reserve 20 GB, plus download caches, audio and projects |
 | Network / API | Internet for initial dependencies / weights; current chat and button tool dispatch need a user-configured API with native tool calling | Same; the Mac ZIP includes neither Python nor model weights |
 

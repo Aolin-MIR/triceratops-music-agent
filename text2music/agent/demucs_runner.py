@@ -27,7 +27,7 @@ def main():
     import torch
     import demucs.api
     import demucs.separate
-    if os.environ.get("TRICERATOPS_DEVICE", "cpu") == "cpu":
+    if os.environ.get("TRICERATOPS_AUDIO_DEVICE", os.environ.get("TRICERATOPS_DEVICE", "cpu")) == "cpu":
         torch.set_num_threads(int(os.environ.get("TRICERATOPS_CPU_THREADS", "8")))
     demucs.api.get_model = load_pinned_model
     demucs.separate.main()

@@ -98,11 +98,15 @@ void ScoreStaveComponent::paint(juce::Graphics& g)
     // Draw notes on stave
     float noteStartX = staveArea.getX() + 45.0f;
     float availableW = staveArea.getWidth() - 60.0f;
-    size_t maxNotes = std::min(notes.size(), size_t(24));
-    float stepX = availableW / std::max(1.0f, float(maxNotes));
+    // Fit the complete note sequence into the overview.  The old fixed
+    // 24-note cap silently dropped the rest of longer MIDI files, making the
+    // preview look truncated even when the generated file was valid.
+    const size_t visibleNotes = notes.size();
+    const float stepX = availableW / std::max(1.0f, float(visibleNotes > 1 ? visibleNotes - 1 : 1));
+    const float noteRadius = juce::jlimit(1.5f, 4.0f, stepX * 0.35f);
 
     g.setColour(accentCyan);
-    for (size_t i = 0; i < maxNotes; ++i)
+    for (size_t i = 0; i < visibleNotes; ++i)
     {
         int pitch = notes[i].pitch;
         float pitchOffset = (pitch - 64) * (lineSpacing * 0.5f);
@@ -110,7 +114,8 @@ void ScoreStaveComponent::paint(juce::Graphics& g)
         float noteX = noteStartX + i * stepX;
 
         // Notehead
-        g.fillEllipse(noteX - 4.0f, noteY - 3.0f, 8.0f, 6.0f);
+        g.fillEllipse(noteX - noteRadius, noteY - noteRadius * 0.75f,
+                      noteRadius * 2.0f, noteRadius * 1.5f);
 
         // Stem
         g.setColour(accentCyan.withAlpha(0.85f));
@@ -224,10 +229,12 @@ TriceratopsAudioProcessorEditor::TriceratopsAudioProcessorEditor(TriceratopsAudi
     }
     setResizable(true, true);
    #if JucePlugin_Build_AU
+    // Keep the AU editor compact enough that Logic's arrange area remains
+    // visible as an external MIDI drag target on small displays.
     const auto* display = juce::Desktop::getInstance().getDisplays().getPrimaryDisplay();
-    const auto width = display != nullptr ? juce::jlimit(900, 1000, display->userArea.getWidth() - 40) : 1000;
-    const auto height = display != nullptr ? juce::jlimit(520, 600, display->userArea.getHeight() - 140) : 600;
-    setResizeLimits(900, 520, 1920, 1200);
+    const auto width = display != nullptr ? juce::jlimit(720, 820, display->userArea.getWidth() - 220) : 820;
+    const auto height = display != nullptr ? juce::jlimit(600, 620, display->userArea.getHeight() - 70) : 620;
+    setResizeLimits(700, 580, 1920, 1200);
     setSize(width, height);
    #else
     setResizeLimits(900, 650, 1920, 1200);
@@ -425,6 +432,13 @@ void TriceratopsAudioProcessorEditor::resized()
     sidebarToggleBtn.setBounds(header.removeFromRight(120).reduced(2, 0));
     autoImportBtn.setBounds(header.removeFromRight(140).reduced(2, 0));
     clearChatBtn.setBounds(header.removeFromRight(100).reduced(2, 0));
+    // Keep the native file drag affordance in the AU header. Logic may cap
+    // the editor height on small displays, which can otherwise hide the
+    // bottom dock where this button used to live.
+    // Keep the drag affordance in a stable, visible header slot.  Logic's AU
+    // wrapper may cap the editor width and its right-aligned controls can
+    // otherwise clip this button while still exposing it through AX.
+    dragMidi.setBounds(330, 0, 110, 48);
     languageBtn.setBounds(header.removeFromRight(80).reduced(2, 0));
 
     if (modelIsWarmingUp)
@@ -500,7 +514,8 @@ void TriceratopsAudioProcessorEditor::resized()
 
     importReaperBtn.setBounds(row1.removeFromRight(160).reduced(3, 2));
     playMidi.setBounds(row1.removeFromRight(85).reduced(2, 2));
-    dragMidi.setBounds(row1.removeFromRight(85).reduced(2, 2));
+    // dragMidi is placed in the header so it remains visible in compact AU
+    // windows; leave the bottom dock slot empty.
 
     auto row4 = inputDock.reduced(0, 2);
     auto sendArea = row4.removeFromRight(140);

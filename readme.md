@@ -68,6 +68,12 @@ REAPER 7.82 实机回归使用先前真实 MIDI-LLM 的 24 音符文件，另在
 
 ## 系统要求
 
+### 按硬件选择模型部署
+
+安装器会读取系统架构和统一内存，按每个模型的实测能力分别选择设备：8 GB Apple Silicon 默认使用 MIDI-LLM CPU/float16、MIDI-GPT CPU、HTDemucs/Basic Pitch CPU，并继续使用远程 Qwen；更大内存的 Apple Silicon 可为 MIDI-GPT 单独选择 MPS。MIDI-LLM 不会因为 MPS 可用就自动切换，避免把本机实测的超慢或失败路径当作 GPU 成功。Windows 1.0 若已验证本地 Qwen 4B 的 OpenAI 兼容服务，可在 `runtime.json` 设置 `local_chat_available: true`、`local_chat_base_url` 和 `local_chat_model`，由策略切换到本地聊天服务。
+
+用户可以使用 `model_policy: "custom"`，分别设置 `midi_llm_device`、`midi_llm_dtype`、`midi_gpt_device`、`audio_device` 和 `chat_deployment`。显式设备不可用时 doctor 会报错，不会静默换成另一设备；本地 Qwen 服务必须由用户先启动并提供 OpenAI 兼容地址。
+
 以下区分**软件限制、建议资源预算和实测环境**；尚未在不同内存容量的电脑上测出“全功能最低配置”。建议值不是已验证的最低门槛。
 
 | 项目 | Windows | macOS |
@@ -76,7 +82,7 @@ REAPER 7.82 实机回归使用先前真实 MIDI-LLM 的 24 音符文件，另在
 | 宿主 | REAPER x64；已实测 7.80，建议 7.80 或更新版本 | 原生 Apple Silicon REAPER，建议 7.80 或更新版本；完整实机测试待完成 |
 | Python | 安装包自带独立 Python 3.11.9，无需 WSL | 自行安装原生 ARM64 Python 3.10 / 3.11；脚本默认查找 `python3.11` |
 | 内存预算 | CPU 模式建议 16 GB 起，32 GB 更适合同时打开音源 / 较长音频；不是实测最低值 | 统一内存建议 16 GB 起、32 GB 更宽裕；8 GB A18 Pro 已开始实测，默认 CPU/float32 MIDI-LLM 发生严重资源压力和超时，未通过全功能验收 |
-| 图形设备 | CPU 模式不要求独显；当前 CUDA 路径使用 BF16，建议支持 BF16 的 Ampere 或更新 NVIDIA GPU，16 GB 显存作为保守预算 | 当前安装脚本选择 CPU；MIDI-GPT 已单独实测 MPS 推理，其余模型加速仍待验证；未验证 MLX |
+| 图形设备 | CPU 模式不要求独显；当前 CUDA 路径使用 BF16，建议支持 BF16 的 Ampere 或更新 NVIDIA GPU，16 GB 显存作为保守预算 | 自动策略按模型选择设备：本机 8 GB 默认 CPU；MIDI-GPT 的 MPS 已单独实测，更大内存的 Apple Silicon 可能启用它；其余模型加速仍待验证，未验证 MLX |
 | 可用空间预算 | CPU 安装预留 20 GB；CUDA 安装预留 30 GB，并为下载缓存、音频和工程另留空间 | 预留 20 GB，并为下载缓存、音频和工程另留空间 |
 | 网络 / API | 首次依赖和模型下载需要联网；当前聊天和按钮工具调度需要自配支持原生工具调用的 API | 同左；Mac 包不附带 Python，也不附带模型权重 |
 
