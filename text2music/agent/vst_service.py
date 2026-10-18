@@ -392,7 +392,9 @@ class TriceratopsState:
                 return
             SHUTDOWN.parent.mkdir(parents=True, exist_ok=True)
             SHUTDOWN.write_text("idle timeout\n", encoding="utf-8")
-        _write_status("ready", "0", "Agent ready; GPU model released after idle timeout")
+        # A legacy shutdown flag does not verify device type or worker exit.
+        # CPU model jobs may never have created a resident GPU worker at all.
+        _write_status("ready", "0", "Service ready")
 
     def session_watchdog(self) -> None:
         while self.server is not None:

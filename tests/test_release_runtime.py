@@ -224,3 +224,36 @@ def test_windows_cli_dispatches_the_prepared_request_script_not_a_shared_script(
     assert calls[0][:2] == ["reaper.exe", "-nonewinst"]
     assert Path(calls[0][-1]).parent == vst_service._import_request_dir(result["request_id"])
     assert not (tmp_path / "reaper-command.txt").exists()
+
+
+def test_idle_timeout_does_not_claim_gpu_or_verified_model_release(tmp_path, monkeypatch):
+    state = vst_service.TriceratopsState()
+    clock = {"now": 0.0}
+    monkeypatch.setattr(vst_service.time, "monotonic", lambda: clock["now"])
+    monkeypatch.setattr(vst_service.time, "sleep", lambda seconds: clock.update(now=clock["now"] + seconds))
+    monkeypatch.setenv("TRICERATOPS_GPU_IDLE_SECONDS", "5")
+    monkeypatch.setattr(vst_service, "SHUTDOWN", tmp_path / "worker" / "shutdown")
+    monkeypatch.setattr(vst_service, "STATUS", tmp_path / "status.txt")
+    state.last_activity = -10
+    state.stop_when_unused()
+    assert vst_service.SHUTDOWN.read_text() == "idle timeout\n"
+    status = vst_service._read_status()
+    assert status["state"] == "ready" and status["detail"] == "Service ready"
+
+
+def test_editor_reopening_during_idle_wait_prevents_shutdown_and_status_overwrite(tmp_path, monkeypatch):
+    state = vst_service.TriceratopsState()
+    clock = {"now": 0.0}
+    def reopen_during_wait(seconds):
+        clock["now"] += seconds
+        state.sessions["reopened-real-editor-unit-fixture"] = clock["now"]
+    monkeypatch.setattr(vst_service.time, "monotonic", lambda: clock["now"])
+    monkeypatch.setattr(vst_service.time, "sleep", reopen_during_wait)
+    monkeypatch.setenv("TRICERATOPS_GPU_IDLE_SECONDS", "5")
+    monkeypatch.setattr(vst_service, "SHUTDOWN", tmp_path / "worker" / "shutdown")
+    monkeypatch.setattr(vst_service, "STATUS", tmp_path / "status.txt")
+    vst_service._write_status("ready", "0", "existing editor status")
+    state.last_activity = -10
+    state.stop_when_unused()
+    assert not vst_service.SHUTDOWN.exists()
+    assert vst_service._read_status()["detail"] == "existing editor status"
