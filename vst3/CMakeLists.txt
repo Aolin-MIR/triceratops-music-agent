@@ -1,5 +1,6 @@
 cmake_minimum_required(VERSION 3.22)
-project(Triceratops VERSION 1.0.2 LANGUAGES C CXX)
+project(Triceratops VERSION 1.0.1 LANGUAGES C CXX)
+# Public hotfix label: 1.0.1a. JUCE requires a numeric plug-in version.
 
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)

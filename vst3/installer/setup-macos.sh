@@ -2,7 +2,7 @@
 # Install native files and register the in-plugin setup screen.
 set -euo pipefail
 if [[ "$(uname -m)" != "arm64" ]]; then
-  echo "Triceratops 1.0.2 requires Apple Silicon for its model runtime." >&2
+  echo "Triceratops 1.0.1a requires Apple Silicon for its model runtime." >&2
   exit 1
 fi
 root="$(cd -- "$(dirname -- "$0")" && pwd)"
@@ -22,8 +22,8 @@ for bundle in "$root/Triceratops.vst3" "$root"/*.component; do
   /usr/bin/codesign --verify --deep --strict "$bundle"
 done
 mkdir -p "$data" "$HOME/Library/Audio/Plug-Ins/VST3"
-"$python" -m venv "$data/venv-1.0.2"
-runtime="$data/venv-1.0.2/bin/python"
+"$python" -m venv "$data/venv-1.0.1a"
+runtime="$data/venv-1.0.1a/bin/python"
 export PYTHONPATH="$root/backend"
 "$runtime" "$root/backend/text2music/agent/macos_bootstrap.py" --data "$data" --source "${TRICERATOPS_DOWNLOAD_SOURCE:-auto}"
 "$runtime" "$root/configure_macos.py" "$data" "$runtime"
@@ -54,7 +54,7 @@ done
 import hashlib, json, os, sys, time
 from pathlib import Path
 root, data = map(Path, sys.argv[1:])
-receipt = {'version': '1.0.2', 'installer': 'online', 'completed_at': int(time.time()),
+receipt = {'version': '1.0.1a', 'installer': 'online', 'completed_at': int(time.time()),
            'backend': str(root / 'backend'), 'python': sys.executable,
            'download_source': os.environ.get('TRICERATOPS_DOWNLOAD_SOURCE', 'auto')}
 path = data / 'installation-online.json'
@@ -63,4 +63,4 @@ temporary.write_text(json.dumps(receipt, indent=2))
 temporary.chmod(0o600)
 os.replace(temporary, path)
 PYRECEIPT
-echo 'Triceratops 1.0.2 installed. Rescan VST3 / Audio Units. Open Settings to detect hardware, download and verify models, then apply. Keep this extracted directory in place.'
+echo 'Triceratops 1.0.1a installed. Rescan VST3 / Audio Units. Open Settings to detect hardware, download and verify models, then apply. Keep this extracted directory in place.'

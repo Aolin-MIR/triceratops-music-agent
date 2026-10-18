@@ -308,7 +308,7 @@ class TriceratopsState:
     def snapshot(self) -> dict[str, Any]:
         with self.lock:
             data = {
-                "service": "ready", "version": "1.0.2", "app_version": "1.0.2", "api_version": 2,
+                "service": "ready", "version": "1.0.1a", "app_version": "1.0.1a", "api_version": 2,
                 "backend_entry": str(Path(__file__).resolve()), "busy": self.busy, "sessions": len(self.sessions),
                 "reply": self.last_reply, "error": self.last_error,
                 "result": self.last_result, "history": _history(),
@@ -601,7 +601,7 @@ APP = TriceratopsState()
 
 
 class Handler(BaseHTTPRequestHandler):
-    server_version = "Triceratops/1.0.2"
+    server_version = "Triceratops/1.0.1a"
 
     def log_message(self, format: str, *args: Any) -> None:
         return

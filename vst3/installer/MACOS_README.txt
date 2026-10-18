@@ -1,4 +1,4 @@
-Triceratops 1.0.2 for REAPER and Logic Pro on Apple Silicon
+Triceratops 1.0.1a for REAPER and Logic Pro on Apple Silicon
 
 Requires macOS 14 or newer on Apple Silicon. Python is installed privately if needed.
 The model backend does not support Intel Macs or Python running under Rosetta.

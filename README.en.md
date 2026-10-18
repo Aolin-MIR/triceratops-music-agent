@@ -19,9 +19,9 @@ Describe style, mood, instruments and structure in Chinese or English without JS
 
 The Mac installer downloads native ARM64 Python and the local-chat runtime when needed. Intel / Rosetta model backends are unsupported. Audio devices are selected in the host.
 
-## ✨ From 1.0 to 1.0.2
+## ✨ From 1.0 to 1.0.1a
 
-- **Windows 1.0.2 update**: fixes text-to-MIDI generation and connection status. The smaller installer downloads local chat on demand inside the plug-in and keeps existing models and settings.
+- **Windows 1.0.1a update**: fixes text-to-MIDI generation and connection status. The smaller installer downloads local chat on demand inside the plug-in and keeps existing models and settings.
 - **Logic Pro support:** separate MIDI and Audio AUs, MIDI capture/output and audio recording.
 - **Local or cloud conversation:** native tool calling and compatibility checks; custom configuration remains available.
 - **Improved intent handling:** creation, edits, analysis and conversation use the appropriate route; results reflect actual tools.

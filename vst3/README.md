@@ -1,4 +1,4 @@
-# Triceratops 1.0.2 · REAPER VST3
+# Triceratops 1.0.1a · REAPER VST3
 
 User documentation: [中文](../readme.md) / [English](../README.en.md).
 
