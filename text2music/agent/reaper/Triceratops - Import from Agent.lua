@@ -1,5 +1,5 @@
 -- @description Triceratops: Import generated media from agent
--- @version 1.0.1b
+-- @version 1.1
 -- One-shot consumer for one request-private command folder.
 -- Run inside the owning REAPER instance; receipt includes this request and project.
 local ROOT = nil -- injected by vst_service

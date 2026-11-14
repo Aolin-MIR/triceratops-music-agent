@@ -2,7 +2,7 @@
 # Install native files and register the in-plugin setup screen.
 set -euo pipefail
 if [[ "$(uname -m)" != "arm64" ]]; then
-  echo "Triceratops 1.0.1b requires Apple Silicon for its model runtime." >&2
+  echo "Triceratops 1.1 requires Apple Silicon for its model runtime." >&2
   exit 1
 fi
 root="$(cd -- "$(dirname -- "$0")" && pwd)"
@@ -53,7 +53,7 @@ done
 import hashlib, json, os, sys, time
 from pathlib import Path
 root, data = map(Path, sys.argv[1:])
-receipt = {'version': '1.0.1b', 'installer': 'online', 'completed_at': int(time.time()),
+receipt = {'version': '1.1', 'installer': 'online', 'completed_at': int(time.time()),
            'backend': str(root / 'backend'), 'python': sys.executable,
            'download_source': os.environ.get('TRICERATOPS_DOWNLOAD_SOURCE', 'auto')}
 path = data / 'installation-online.json'
@@ -62,4 +62,4 @@ temporary.write_text(json.dumps(receipt, indent=2))
 temporary.chmod(0o600)
 os.replace(temporary, path)
 PYRECEIPT
-echo 'Triceratops 1.0.1b installed. Rescan VST3 / Audio Units. Open Settings to detect hardware, download and verify models, then apply. Keep this extracted directory in place.'
+echo 'Triceratops 1.1 installed. Rescan VST3 / Audio Units. Open Settings to detect hardware, download and verify models, then apply. Keep this extracted directory in place.'

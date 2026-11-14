@@ -373,7 +373,7 @@ class TriceratopsState:
     def snapshot(self) -> dict[str, Any]:
         with self.lock:
             data = {
-                "service": "ready", "version": "1.0.1b", "app_version": "1.0.1b", "api_version": 3,
+                "service": "ready", "version": "1.1", "app_version": "1.1", "api_version": 3,
                 "backend_entry": str(Path(__file__).resolve()), "workspace_id": self.workspace_id, "busy": self.busy, "sessions": len(self.sessions),
                 "reply": self.last_reply, "error": self.last_error,
                 "result": self.last_result, "history": _history(),
@@ -702,7 +702,7 @@ APP = TriceratopsState()
 
 
 class Handler(BaseHTTPRequestHandler):
-    server_version = "Triceratops/1.0.1b"
+    server_version = "Triceratops/1.1"
 
     def log_message(self, format: str, *args: Any) -> None:
         return
@@ -731,7 +731,7 @@ class Handler(BaseHTTPRequestHandler):
         from urllib.parse import urlsplit, parse_qs
         url = urlsplit(self.path)
         if url.path == "/health":
-            self._json(200, {"service":"ready", "version":"1.0.1b", "app_version":"1.0.1b", "api_version":3,
+            self._json(200, {"service":"ready", "version":"1.1", "app_version":"1.1", "api_version":3,
                              "busy":APP.task_owner is not None, "pid":os.getpid()})
             return
         if url.path == "/settings":
