@@ -26,7 +26,6 @@ The Mac installer downloads native ARM64 Python and the local-chat runtime when 
 - **Read selected REAPER MIDI:** load the selected item directly for analysis, editing, continuation and infill.
 - **Choose API / local GPU per message:** verification progress, draft retention on failure and explicit retry; memory is shared within the same workspace.
 - **Persistent musical context:** save, update or remove style, tempo, meter, key/mode, instruments and exclusions for downstream tasks.
-- **Project memory:** Hindsight keeps creative preferences in separate project banks; CPU embeddings work with either local GPU chat or the configured API.
 - **Long conversations and complete analysis:** original records remain available; large tool results can be retrieved as needed.
 - **Workflow fixes:** import receipts, duplicate-click protection, cancellation and reconnection. Lean installers download models on demand inside the plug-in.
 
@@ -47,7 +46,7 @@ Saved REAPER projects use their project path to separate records. Unsaved projec
 
 ## ⚙️ Install and configure
 
-Choose an actual platform attachment from [Releases](https://github.com/Aolin-MIR/triceratops-music-agent/releases). On Mac, extract and double-click `Install Triceratops.command`. Download sources are selected automatically, with verified alternatives on failure. The installer downloads and verifies Python; the local-chat runtime downloads only when selected in plug-in Settings. Use Settings to download and verify dependencies and model weights. Large runtimes and weights stay outside the small installer ZIP. Public-file proxies must match the pinned official SHA-256. Music weights support Hugging Face and HF-Mirror; local chat weights use the official registry. Windows uses its native installer without WSL.
+Choose an actual platform attachment from [Releases](https://github.com/Aolin-MIR/triceratops-music-agent/releases). On Mac, extract and double-click `Install Triceratops.command`. Download sources are selected automatically, with verified alternatives on failure. The installer downloads and verifies Python and the local-chat runtime; use plug-in Settings to download and verify dependencies and model weights. Large runtimes and weights stay outside the small installer ZIP. Public-file proxies must match the pinned official SHA-256. Music weights support Hugging Face and HF-Mirror; local chat weights use the official registry. Windows uses its native installer without WSL.
 
 | Function | Default weights | Recommended deployment |
 | --- | --- | --- |
@@ -56,7 +55,6 @@ Choose an actual platform attachment from [Releases](https://github.com/Aolin-MI
 | Four audio stems | ~80 MiB | Start with CPU; verify GPU separately |
 | Audio-to-MIDI | ~225 KiB | CPU |
 | Local conversation | Default 4B / 4-bit | Sufficient memory and GPU; tool calling and residency must pass |
-| Project memory search | ~449 MiB | Local CPU embeddings; downloaded during first setup |
 
 Mac text composition keeps the original device precision by default (FP32 on CPU); only the detected 8 GB low-memory tier automatically uses FP16. Advanced settings retain explicit precision overrides. Unknown RAM is not classified as low memory. These are deployment rules, not performance certification for other Macs or automatic approval of GPU paths.
 
@@ -76,7 +74,6 @@ Routes by network egress, with manual selection available. Mainland China checks
 | [MIDI-GPT Yellow Medium](https://huggingface.co/Metacreation/MIDI-GPT) | Continuation / infill, approximately 351 MB, pinned revision | Weights: CC BY-NC 4.0, noncommercial use |
 | [HTDemucs](https://huggingface.co/adefossez/HTDemucs) | Four-stem separation | See model card and Demucs upstream license |
 | [Basic Pitch](https://github.com/spotify/basic-pitch) | ONNX weights installed with the package | Apache 2.0 |
-| [Multilingual E5 Small](https://huggingface.co/intfloat/multilingual-e5-small) | Hindsight project-memory embeddings, pinned revision | MIT |
 
 The downloader checks SHA-256 for MIDI-LLM, MIDI-GPT, HTDemucs and decoder assets; Basic Pitch ONNX weights are also verified. Exact repositories, revisions and hashes are in [`download_models.py`](text2music/agent/download_models.py). Source availability does not give every model the same license. In particular, MIDI-GPT weights have a noncommercial restriction. See [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md).
 
