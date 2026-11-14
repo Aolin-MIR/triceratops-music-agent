@@ -6,9 +6,10 @@ The model backend does not support Intel Macs or Python running under Rosetta.
 1. Keep this extracted directory in a permanent location.
 2. Save and quit REAPER / Logic Pro, then double-click Install Triceratops.command.
    Downloads automatically retry verified alternate sources. The small ZIP does not
-   contain large runtimes or weights. Python (~27 MB) and the private local-chat
-   runtime (~174 MB) download once and are SHA-256 checked against pinned official
-   releases before installation. No Homebrew or administrator password is needed.
+   contain large runtimes or weights. Python (~27 MB) downloads once and is
+   SHA-256 checked against the pinned official release. The private local-chat
+   runtime downloads only if local chat is selected in plug-in Settings.
+   No Homebrew or administrator password is needed.
    Failed sources retry through the selected public-file proxies; no API key is
    sent to a mirror. Verified downloads are cached for retry.
    Advanced: TRICERATOPS_PYTHON=/absolute/path/to/python3.11 bash setup-macos.sh

@@ -15,17 +15,16 @@ data="${TRICERATOPS_DATA_DIR:-$HOME/Library/Application Support/Triceratops}"
 umask 077
 mkdir -p "$data"
 python="$(/bin/bash "$root/bootstrap-python.sh" "$data")"
-"$python" -c 'import sys,platform; assert platform.machine() == "arm64", "Use native ARM64 Python, not an x86 interpreter under Rosetta"; assert (3,10) <= sys.version_info < (3,12), "Use Python 3.10 or 3.11"; assert tuple(map(int,platform.mac_ver()[0].split(".")[:2])) >= (14,0), "The pinned Torch runtime requires macOS 14 or newer"'
+"$python" -c 'import sys,platform; assert platform.machine() == "arm64", "Use native ARM64 Python, not an x86 interpreter under Rosetta"; assert (3,11) <= sys.version_info < (3,12), "Use Python 3.11"; assert tuple(map(int,platform.mac_ver()[0].split(".")[:2])) >= (14,0), "The pinned Torch runtime requires macOS 14 or newer"'
 # Verify the distributed native bundles before changing installed files.
 for bundle in "$root/Triceratops.vst3" "$root"/*.component; do
   [[ -d "$bundle" ]] || continue
   /usr/bin/codesign --verify --deep --strict "$bundle"
 done
 mkdir -p "$data" "$HOME/Library/Audio/Plug-Ins/VST3"
-"$python" -m venv "$data/venv-1.0.1b"
-runtime="$data/venv-1.0.1b/bin/python"
+"$python" -m venv "$data/venv-hindsight-1"
+runtime="$data/venv-hindsight-1/bin/python"
 export PYTHONPATH="$root/backend"
-"$runtime" "$root/backend/text2music/agent/macos_bootstrap.py" --data "$data" --source "${TRICERATOPS_DOWNLOAD_SOURCE:-auto}"
 "$runtime" "$root/configure_macos.py" "$data" "$runtime"
 # Setup jobs install/check dependencies and models in the plug-in Settings UI.
 # Reuse existing configured paths and credentials; never print or prompt for keys.

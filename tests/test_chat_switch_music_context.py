@@ -19,7 +19,7 @@ def test_per_message_backend_keeps_config_environment(monkeypatch):
         ChatSettings.load('arbitrary')
 
 
-def test_music_requirements_survive_provider_switch_and_update(tmp_path):
+def test_music_requirements_survive_provider_switch_and_update(tmp_path, fake_hindsight):
     first = ProjectMemory(tmp_path, 'same-project')
     first.update_music_context({'tempo': 90, 'time_signature': '3/4', 'style': 'sparse piano', 'key': 'D', 'mode': 'minor'}, '90 BPM, 3/4 D minor sparse piano')
     # The next provider creates a fresh store object, not a model-specific memory.

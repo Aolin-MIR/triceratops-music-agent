@@ -477,7 +477,12 @@ class TriceratopsState:
                  PROJECT_ROOT / "knowledge", _workspace_path("RUNS_DIR") / "project_notes"],
             )
             context += "\n" + memory_context(load_memory(_workspace_path("MEMORY")))
-            context += "\n" + project_memory.context(include_summary=False)
+            if payload.get("action"):
+                musical = project_memory.music_context()
+                if musical:
+                    context += "\nActive musical requirements: " + json.dumps(musical, ensure_ascii=False)
+            else:
+                context += "\n" + project_memory.context(include_summary=False, query=message)
             result: dict[str, Any] = {}
             def execute(tool, arguments):
                 nonlocal result, midi

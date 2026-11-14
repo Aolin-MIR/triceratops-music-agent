@@ -21,7 +21,7 @@ def make_midi(path):
 
 
 @pytest.fixture
-def isolated_service(tmp_path, monkeypatch):
+def isolated_service(tmp_path, monkeypatch, fake_hindsight):
     monkeypatch.delenv("TRICERATOPS_CONFIG", raising=False)
     monkeypatch.setattr(vst_service, "RUNS_DIR", tmp_path)
     for name in ("STATUS", "HISTORY", "MEMORY", "CONVERSATION", "CONVERSATION_ARCHIVE"):

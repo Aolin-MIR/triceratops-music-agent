@@ -20,7 +20,7 @@
 
 - 硬件 / 系统：Apple Silicon（M1 或更新），macOS 14+；当前固定 Torch 运行环境不支持 Intel Mac。VST3 的 universal 架构不代表 Intel Mac 模型后端可用。
 - 宿主：原生 Apple Silicon REAPER，建议 7.80 或更新版本。Rosetta / x86 Python 混用不属于当前支持路径。
-- Python：自行安装原生 ARM64 Python 3.10 / 3.11。`setup-macos.sh` 默认执行 `python3.11`；只有 3.10 时，先设置 `TRICERATOPS_PYTHON` 为对应解释器路径。脚本创建独立 venv，不修改系统 Python。
+- Python：安装器使用原生 ARM64 Python 3.11；若系统没有合适版本，会自动下载经 SHA-256 校验的独立运行环境，并创建专用 venv，不修改系统 Python。
 - 计算设备：发行版脚本写入 `device=cpu`。代码中存在 MPS 设备选项，不等于所有音乐模型和音频依赖已验证支持 MPS；v0.9 没有已验证的 MPS / MLX 加速承诺。
 - 统一内存：建议 16 GB 起、32 GB 更宽裕。系统、REAPER、音源和模型共享这部分内存；尚未完成 Mac 实机内存峰值和速度测量，因此不发布“8 GB 可运行全部功能”或某款芯片的速度保证。
 - 空间：安装建议预留 20 GB，再为缓存、音频和工程保留余量；不是实测峰值。保留解压目录，后端启动路径引用其中的源码。
@@ -73,7 +73,7 @@ This page describes the v0.9 implementation. Installer constraints, planning bud
 
 - Apple Silicon (M1 or newer), macOS 14+. The pinned runtime does not support Intel Mac model execution, even though the VST3 binary is universal.
 - Native Apple Silicon REAPER, 7.80+ recommended. Mixing Rosetta / x86 Python with ARM64 dependencies is outside the supported path.
-- Install native ARM64 Python 3.10 / 3.11 yourself. Setup defaults to `python3.11`; set `TRICERATOPS_PYTHON` to the correct interpreter path when using 3.10. Setup creates a dedicated venv.
+- Setup uses native ARM64 Python 3.11. If unavailable, it downloads a SHA-256 verified private runtime and creates a dedicated venv without changing system Python.
 - The release script selects CPU. An MPS option in source is not proof of compatibility across the music models; MPS / MLX acceleration is not validated in v0.9.
 - Budget for 16 GB unified memory, preferably 32 GB. macOS, REAPER, instruments and models share this memory. No physical Mac peak-memory or speed results are available, and 8 GB full-feature operation is not certified.
 - Reserve 20 GB plus cache, audio and project space; this is not a measured peak. Keep the extracted directory because backend launch paths reference its source.

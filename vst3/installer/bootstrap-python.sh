@@ -5,15 +5,15 @@ data="$1"
 mode="${TRICERATOPS_DOWNLOAD_SOURCE:-auto}"
 case "$mode" in auto|official|china) ;; *) echo 'Invalid download source' >&2; exit 1;; esac
 valid_python() {
-  "$1" -c 'import platform,sys,tarfile; assert platform.machine()=="arm64"; assert (3,10)<=sys.version_info<(3,12); assert hasattr(tarfile,"data_filter")' >/dev/null 2>&1
+  "$1" -c 'import platform,sys,tarfile; assert platform.machine()=="arm64"; assert (3,11)<=sys.version_info<(3,12); assert hasattr(tarfile,"data_filter")' >/dev/null 2>&1
 }
 if [[ -n "${TRICERATOPS_PYTHON:-}" ]]; then
-  valid_python "$TRICERATOPS_PYTHON" || { echo 'Selected Python must be native ARM64 3.10/3.11 with current security updates.' >&2; exit 1; }
+  valid_python "$TRICERATOPS_PYTHON" || { echo 'Selected Python must be native ARM64 3.11 with current security updates.' >&2; exit 1; }
   command -v "$TRICERATOPS_PYTHON"
   exit
 fi
 if [[ "${TRICERATOPS_PORTABLE_PYTHON:-0}" != 1 ]]; then
-for candidate in python3.11 /opt/homebrew/bin/python3.11 /usr/local/bin/python3.11 python3.10; do
+for candidate in python3.11 /opt/homebrew/bin/python3.11 /usr/local/bin/python3.11; do
   if command -v "$candidate" >/dev/null 2>&1 && valid_python "$candidate"; then
     command -v "$candidate"
     exit
@@ -32,6 +32,10 @@ mkdir -p "$data/downloads" "$data/runtimes"
 archive="$data/downloads/$sha.tar.gz"
 verified() { [[ -f "$archive" ]] && [[ "$(/usr/bin/shasum -a 256 "$archive" | cut -d ' ' -f 1)" == "$sha" ]]; }
 urls=("$url" "https://ghfast.top/$url" "https://gh-proxy.com/$url")
+if [[ "$mode" == auto ]]; then
+  country="$(/usr/bin/curl --fail --silent --show-error --connect-timeout 4 --max-time 7 --noproxy '*' https://ipapi.co/country/ 2>/dev/null || true)"
+  if [[ "$country" == CN ]]; then mode=china; fi
+fi
 if [[ "$mode" == china ]]; then urls=("https://ghfast.top/$url" "https://gh-proxy.com/$url" "$url"); fi
 if [[ "$mode" == official ]]; then urls=("$url"); fi
 if ! verified; then

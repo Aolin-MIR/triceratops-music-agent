@@ -63,6 +63,8 @@ def configure(path: Path) -> dict:
         "TRICERATOPS_AUDIO_DEVICE": resolved["audio_device"],
         "TRICERATOPS_MIDI_LLM_DTYPE": resolved["midi_llm_dtype"],
         "TRICERATOPS_CHAT_DEPLOYMENT": resolved["chat_deployment"],
+        "TRICERATOPS_MEMORY_PROVIDER": config.get("memory_provider", "auto"),
+        "TRICERATOPS_HINDSIGHT_EMBED_PATH": str(model_home / "hindsight-embed"),
         "HF_ENDPOINT": config.get("hf_endpoint", "https://hf-mirror.com"),
         "TRICERATOPS_LLM_PROVIDER": config.get("llm_provider", "remote"),
         "TRICERATOPS_LLM_DEVICE": config.get("llm_device", "gpu" if config.get("llm_provider") in {"ollama", "llama_cpp"} else "cpu"),

@@ -24,6 +24,9 @@ PROXIES = ('https://ghfast.top/', 'https://gh-proxy.com/')
 def sources(url: str, mode: str = 'auto') -> list[str]:
     if mode not in {'auto', 'official', 'china'}:
         raise ValueError('Download source must be auto, official or china')
+    if mode == 'auto':
+        from text2music.agent.model_sources import detect_country
+        mode = 'china' if detect_country().get('country') == 'CN' else 'auto'
     mirrors = [prefix + url for prefix in PROXIES]
     return [url] if mode == 'official' else (mirrors + [url] if mode == 'china' else [url] + mirrors)
 

@@ -13,12 +13,17 @@ from pathlib import Path, PurePosixPath
 WEIGHTS = {
     "midi-llm/model.safetensors": "7da7f50fefa027208121661c799d3bde2a7c04ad01d40a3d4a597be3fdcaf2ae",
     "midi-gpt/yellow_medium-final.safetensors": "acd856168e87c640868ac20cf7523e5912e5171506101fbaebd8eea49a7c4f7c",
+    "hindsight-embed/model.safetensors": "1a55775f53449dac10a2bcbc312469fac40b96d53198c407081a831f81c98477",
 }
 REPOS = (
     ("slseanwu/MIDI-LLM_Llama-3.2-1B", "8b82ab9ec144348900e9ea4623b123e0b12f60b3", "midi-llm",
      ["*.json", "*.safetensors", "README.md"]),
     ("Metacreation/MIDI-GPT", "3aa5748ba68e32a43c70ddc66b5e595069484532", "midi-gpt",
      ["yellow_encoder.json", "yellow_medium-final.safetensors", "README.md"]),
+    ("intfloat/multilingual-e5-small", "614241f622f53c4eeff9890bdc4f31cfecc418b3", "hindsight-embed",
+     ["config.json", "model.safetensors", "modules.json", "1_Pooling/config.json",
+      "sentence_bert_config.json", "sentencepiece.bpe.model", "special_tokens_map.json",
+      "tokenizer.json", "tokenizer_config.json"]),
 )
 CODE_ARCHIVE_SHA256 = "dde5f0f654ca03e1528985b451dc0580adbec3a85ec54fcfcf5db9595e5848e9"
 CODE_REVISION = "93c660c7ce1e74c94a1cd8c3929b3d6f99e3039b"
@@ -30,6 +35,27 @@ DEMUCS_FILES = {
     "955717e8.json": "12540373de858920b60002ebfbe17738860dbf2e89df625dc3b7875af2d28491",
     "htdemucs.yaml": "239c445d0b14454d541ad8bd9bb271c9e536d267e8a4625208744cbb2e7bb66c",
 }
+
+
+def verified_github_archive(url: str, expected: str, target: Path, *, china: bool) -> None:
+    """Fetch pinned public source bytes from regional transports and verify them."""
+    mirrors = ["https://ghfast.top/" + url, "https://gh-proxy.com/" + url]
+    sources = mirrors + [url] if china else [url] + mirrors
+    temporary = target.with_suffix(target.suffix + ".part")
+    try:
+        for source in sources:
+            try:
+                with urllib.request.urlopen(source, timeout=120) as response, temporary.open("wb") as output:
+                    shutil.copyfileobj(response, output)
+                if sha256(temporary) == expected:
+                    temporary.replace(target)
+                    return
+            except OSError:
+                pass
+            temporary.unlink(missing_ok=True)
+        raise RuntimeError("Pinned GitHub source archive could not be downloaded and verified")
+    finally:
+        temporary.unlink(missing_ok=True)
 
 
 def sha256(path: Path) -> str:
@@ -77,24 +103,24 @@ def install(home: Path, endpoint: str = "auto", report=print) -> None:
                     if path.is_file(): size += path.stat().st_size
                 except FileNotFoundError:
                     continue
-            report(f'Music model files: {size//1048576} MiB cached / downloaded; checksums are verified before completion')
+            report(f'Model files: {size//1048576} MiB cached / downloaded; checksums are verified before completion')
     thread = threading.Thread(target=progress, daemon=True)
     thread.start()
     try:
         actual_sources = {}
         for repo, revision, folder, patterns in REPOS:
-            resolved = resolve_mirror(endpoint, repo, revision, "README.md")
+            key = next(name for name in WEIGHTS if name.startswith(folder + "/"))
+            resolved = resolve_mirror(endpoint, repo, revision, key.split("/", 1)[1])
             actual_sources[repo] = resolved
             print("MODEL_SOURCE: " + json.dumps({"repo": repo, **resolved}), flush=True)
             print(f"Downloading {repo}@{revision} from {resolved['endpoint']}", flush=True)
-            key = next(name for name in WEIGHTS if name.startswith(folder + "/"))
             existing = home / key
             valid = existing.is_file() and sha256(existing) == WEIGHTS[key]
             snapshot_download(repo, revision=revision, token=False, endpoint=resolved["endpoint"], local_dir=home / folder, allow_patterns=patterns,
                               ignore_patterns=["*.safetensors"] if valid else None,
                               force_download=existing.is_file() and not valid)
         # Prime Demucs' standard HF cache; runtime is kept offline at this revision.
-        resolved = resolve_mirror(endpoint, "adefossez/HTDemucs", DEMUCS_REVISION, "htdemucs.yaml")
+        resolved = resolve_mirror(endpoint, "adefossez/HTDemucs", DEMUCS_REVISION, "955717e8.safetensors")
         actual_sources["adefossez/HTDemucs"] = resolved
         print("MODEL_SOURCE: " + json.dumps({"repo": "adefossez/HTDemucs", **resolved}), flush=True)
         demucs = Path(snapshot_download("adefossez/HTDemucs", revision=DEMUCS_REVISION, token=False, endpoint=resolved["endpoint"]))
@@ -103,11 +129,9 @@ def install(home: Path, endpoint: str = "auto", report=print) -> None:
         print("Downloading pinned MIDI-LLM decoder source", flush=True)
         with tempfile.TemporaryDirectory() as temporary:
             archive = Path(temporary) / "decoder.tar.gz"
-            urllib.request.urlretrieve(
-                f"https://codeload.github.com/slSeanWU/MIDI-LLM/tar.gz/{CODE_REVISION}", archive
-            )
-            if sha256(archive) != CODE_ARCHIVE_SHA256:
-                raise RuntimeError("Pinned MIDI-LLM decoder archive checksum mismatch")
+            verified_github_archive(
+                f"https://codeload.github.com/slSeanWU/MIDI-LLM/tar.gz/{CODE_REVISION}",
+                CODE_ARCHIVE_SHA256, archive, china=route.get("music_models") == "china-mirror")
             destination = home / "MIDI-LLM-code"
             destination.mkdir(exist_ok=True)
             with tarfile.open(archive) as bundle:

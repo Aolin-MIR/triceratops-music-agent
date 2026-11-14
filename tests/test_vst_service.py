@@ -218,7 +218,7 @@ def test_discard_endpoint_removes_only_its_private_pending_import(service_api, t
     assert post("/discard_import_reaper", {"request_id": "../other"})[0] == 400
 
 
-def test_generation_dispatch_reaches_model_job_after_worker_cleanup(tmp_path, monkeypatch):
+def test_generation_dispatch_reaches_model_job_after_worker_cleanup(tmp_path, monkeypatch, fake_hindsight):
     """Dispatch regression only; does not fabricate a generated MIDI result."""
     from text2music.agent import model_job, symbolic_models, tool_loop
     for name in ('RUNS_DIR', 'STATUS', 'HISTORY', 'MEMORY', 'CONVERSATION', 'CONVERSATION_ARCHIVE'):

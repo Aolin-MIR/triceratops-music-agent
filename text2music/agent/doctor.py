@@ -19,7 +19,7 @@ def available_hosts(settings: dict) -> list[str]:
 def check(config: Path, *, check_chat: bool = True) -> None:
     settings = configure(config)
     import torch
-    for name in ("transformers", "accelerate", "openai", "mido", "music21", "librosa",
+    for name in ("transformers", "accelerate", "openai", "hindsight_embed", "sentence_transformers", "flashrank", "mido", "music21", "librosa",
                  "soundfile", "jsonschema", "demucs", "sphn", "basic_pitch", "onnxruntime", "midigpt", "anticipation"):
         importlib.import_module(name)
         print(f"Import OK: {name}", flush=True)

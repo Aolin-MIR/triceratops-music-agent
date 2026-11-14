@@ -111,18 +111,18 @@ def test_error_redaction_removes_credentials(monkeypatch):
     assert 'sk-regression-example-key' not in result
 
 
-def test_memory_updates_are_atomic_and_ambiguous_or_empty_edits_do_not_delete(tmp_path):
+def test_memory_updates_are_atomic_and_ambiguous_or_empty_edits_do_not_delete(tmp_path, fake_hindsight):
     from text2music.agent.project_memory import ProjectMemory
     memory = ProjectMemory(tmp_path, 'test')
     memory.remember('marker one velocity 70', 'preference')
     memory.remember('marker two piano', 'constraint')
-    before = memory.path.read_bytes()
+    before = memory.recall('')['facts']
     with pytest.raises(ValueError):memory.forget(' ')
     with pytest.raises(ValueError):memory.update('marker', 'replacement')
     with pytest.raises(ValueError):memory.update('missing', 'replacement')
-    assert memory.path.read_bytes() == before
+    assert memory.recall('')['facts'] == before
     memory.update('marker one', 'marker one velocity 64', 'preference')
-    facts = memory.load()['facts']
+    facts = memory.recall('')['facts']
     assert len(facts) == 2
     assert facts[0]['fact'] == 'marker one velocity 64'
     assert facts[1]['fact'] == 'marker two piano'

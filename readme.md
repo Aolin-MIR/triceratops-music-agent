@@ -26,6 +26,7 @@ Mac 安装器会按需联网配置原生 ARM64 Python 和本地聊天运行环�
 - **读取 REAPER 选中 MIDI**：直接载入选中片段，进行分析、编辑、续写与填充。
 - **逐条选择 API / 本地 GPU**：显示切换验证进度，失败保留草稿并支持重试；同一工作区共享记忆。
 - **持续的音乐上下文**：保存、更新或删除风格、速度、拍号、调性、乐器和排除要求，传给后续任务。
+- **工程记忆**：Hindsight 按工程保存和检索创作偏好；本地嵌入模型在 CPU 运行，可选本地 GPU 聊天或已配置 API 处理记忆。
 - **长对话和完整分析结果**：保留原始记录，大型工具结果可按需读取。
 - **工作流修复**：导入回执、重复点击保护、取消与重连；精简安装包，在插件内按需下载模型。
 
@@ -61,6 +62,7 @@ REAPER 已保存工程使用工程路径区分记录。未保存工程和 Logic 
 | 音频四分轨 | 约 80 MiB | CPU 起步，GPU 单独验证 |
 | 音频转 MIDI | 约 225 KiB | CPU |
 | 本地聊天 | 默认 4B / 4-bit | 足够内存及 GPU；须通过工具调用与设备驻留验证 |
+| 工程记忆检索 | 约 449 MiB | 本地 CPU 嵌入；首次配置时下载 |
 
 Mac 文本作曲默认保留原始设备精度（CPU 为 FP32），仅自动识别的 8 GB 低内存档使用 FP16；高级设置可手动覆盖。内存读取失败不会当成低配降精度。这是部署选择规则，不是高配实机性能认证，也不会自动启用未验证的 GPU 路径。
 
@@ -80,6 +82,7 @@ Mac 文本作曲默认保留原始设备精度（CPU 为 FP32），仅自动识�
 | [MIDI-GPT Yellow Medium](https://huggingface.co/Metacreation/MIDI-GPT) | 约 351 MB，续写 / 填充；固定 revision | 权重 CC BY-NC 4.0，非商业使用 |
 | [HTDemucs](https://huggingface.co/adefossez/HTDemucs) | 音频四分轨 | 见模型及 Demucs 上游许可 |
 | [Basic Pitch](https://github.com/spotify/basic-pitch) | ONNX 模型随依赖包安装 | Apache 2.0 |
+| [Multilingual E5 Small](https://huggingface.co/intfloat/multilingual-e5-small) | Hindsight 工程记忆嵌入；固定 revision | MIT |
 
 下载器核对 MIDI-LLM、MIDI-GPT、HTDemucs 和解码器资源的 SHA-256；Basic Pitch ONNX 权重也会校验。模型来源、版本和校验值见 [`download_models.py`](text2music/agent/download_models.py)。代码开源不代表所有模型权重具有同一许可；尤其 MIDI-GPT 权重有非商业限制。完整第三方说明见 [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md)。
 

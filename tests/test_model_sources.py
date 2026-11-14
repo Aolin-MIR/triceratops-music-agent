@@ -42,9 +42,16 @@ def test_failed_detection_reports_unknown_without_guessing_chinese_locale(monkey
     class Opener:
         def open(self, *args, **kwargs): raise TimeoutError()
     monkeypatch.setattr(sources, 'build_opener', lambda *a: Opener())
+    monkeypatch.setattr(sources, 'resolve_mirror', lambda *a: {'endpoint': sources.OFFICIAL})
     route = sources.model_sources('auto')
     assert route['geolocation'] == 'unavailable' and route['country'] == ''
     assert route['hf_endpoint'] == sources.OFFICIAL and route['reason']
+
+
+def test_failed_geolocation_uses_verified_domestic_endpoint(monkeypatch):
+    monkeypatch.setattr(sources, 'detect_country', lambda: {'country': '', 'geolocation': 'unavailable'})
+    monkeypatch.setattr(sources, 'resolve_mirror', lambda *a: {'endpoint': sources.CHINA_MIRROR})
+    assert sources.model_sources('auto')['hf_endpoint'] == sources.CHINA_MIRROR
 
 
 def hardware(ram=28, free=16):

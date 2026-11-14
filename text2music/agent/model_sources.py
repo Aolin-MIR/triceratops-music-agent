@@ -34,6 +34,10 @@ def model_sources(mode: str = 'auto', location: dict | None = None) -> dict:
         raise ValueError('model_source must be auto, official or china')
     region = detect_country() if mode == 'auto' and location is None else (location or {})
     mirror = mode == 'china' or (mode == 'auto' and region.get('country') == 'CN')
+    if mode == 'auto' and location is None and not region.get('country'):
+        probe = resolve_mirror(CHINA_MIRROR, 'intfloat/multilingual-e5-small',
+                               '614241f622f53c4eeff9890bdc4f31cfecc418b3', 'config.json')
+        mirror = probe['endpoint'] == CHINA_MIRROR
     return {'mode': mode, **region, 'hf_endpoint': CHINA_MIRROR if mirror else OFFICIAL,
             'music_models': 'china-mirror' if mirror else 'official',
             'local_chat_models': 'official-model-registry',
@@ -48,15 +52,18 @@ def resolve_mirror(endpoint: str, repo: str, revision: str, filename: str) -> di
     from urllib.request import HTTPRedirectHandler
     from urllib.parse import urlparse
     class Redirects(HTTPRedirectHandler):
+        commit = None
         def redirect_request(self, req, fp, code, msg, headers, newurl):
+            self.commit = self.commit or headers.get('X-Repo-Commit')
             return super().redirect_request(req, fp, 307 if code == 308 else code, msg, headers, newurl)
         http_error_308 = HTTPRedirectHandler.http_error_302
     request = Request(f'{endpoint}/{repo}/resolve/{revision}/{filename}', method='HEAD')
     try:
-        with build_opener(Redirects()).open(request, timeout=10) as response:
+        redirects = Redirects()
+        with build_opener(redirects).open(request, timeout=10) as response:
             host = urlparse(response.url).hostname
-            commit = response.headers.get('X-Repo-Commit')
-            if host == 'hf-mirror.com' and commit == revision:
+            commit = response.headers.get('X-Repo-Commit') or redirects.commit
+            if (host == 'hf-mirror.com' or (host or '').endswith('.hf-mirror.com')) and commit == revision:
                 return {'endpoint': endpoint, 'reason': 'pinned mirror metadata verified'}
             reason = 'Domestic mirror redirects overseas or lacks the pinned revision; official source selected.'
     except OSError as exc:

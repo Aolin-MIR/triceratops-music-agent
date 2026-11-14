@@ -8,10 +8,11 @@ import signal
 import subprocess
 import sys
 import threading
+import tempfile
 import uuid
 from pathlib import Path
 
-FIELDS = {'chat_policy', 'local_model', 'llm_choice', 'midi_llm_choice', 'midi_gpt_choice',
+FIELDS = {'chat_policy', 'memory_provider', 'local_model', 'llm_choice', 'midi_llm_choice', 'midi_gpt_choice',
           'stem_choice', 'midi_llm_dtype', 'model_source', 'llama_cpp_url', 'api_key', 'base_url', 'chat_model', 'llm_context'}
 
 
@@ -38,7 +39,8 @@ def validate_changes(changes: dict) -> None:
     for key, value in changes.items():
         if not isinstance(value, str) or len(value) > 2048:
             raise ValueError(f'Invalid settings value: {key}')
-    enums = {'chat_policy': {'auto', 'local', 'remote', 'disabled'}, 'llm_choice': {'auto', 'gpu'},
+    enums = {'chat_policy': {'auto', 'local', 'remote', 'disabled'},
+             'memory_provider': {'auto', 'local', 'remote'}, 'llm_choice': {'auto', 'gpu'},
              'model_source': {'auto', 'official', 'china'}, 'llm_context': {'4096', '8192', '16384'}}
     for key in ('midi_llm_choice', 'midi_gpt_choice', 'stem_choice'):
         enums[key] = {'auto', 'cpu', 'cuda'}
@@ -72,7 +74,8 @@ def public_config(path: Path) -> dict:
                   local_model=config.get('local_model', 'qwen3.5:4b-q4_K_M'),
                   llama_cpp_url=config.get('llama_cpp_url', 'http://127.0.0.1:1234/v1'),
                   base_url=config.get('base_url', 'https://dashscope.aliyuncs.com/compatible-mode/v1'),
-                  chat_model=config.get('chat_model', 'qwen-plus'), model_source=config.get('model_source', 'auto'))
+                  chat_model=config.get('chat_model', 'qwen-plus'), model_source=config.get('model_source', 'auto'),
+                  memory_provider=config.get('memory_provider', 'auto'))
     fields['llm_context'] = str(config.get('llm_context', 8192))
     for key in ('llm_choice', 'midi_llm_choice', 'midi_gpt_choice', 'stem_choice'):
         fields[key] = config.get(key, 'auto')
@@ -290,8 +293,10 @@ def worker(path: Path, request: Path, output: Path):
         report('Selecting model sources by public egress country')
         route = model_sources(config.get('model_source', 'auto'))
         if route['hf_endpoint'].endswith('hf-mirror.com'):
-            from text2music.agent.download_models import REPOS, DEMUCS_REVISION
-            targets = [(repo, rev, 'README.md') for repo, rev, *_ in REPOS] + [('adefossez/HTDemucs', DEMUCS_REVISION, 'htdemucs.yaml')]
+            from text2music.agent.download_models import REPOS, DEMUCS_REVISION, WEIGHTS
+            targets = [(repo, rev, next(name for name in WEIGHTS if name.startswith(folder + '/')).split('/', 1)[1])
+                       for repo, rev, folder, _ in REPOS]
+            targets.append(('adefossez/HTDemucs', DEMUCS_REVISION, '955717e8.safetensors'))
             route['actual_sources'] = {repo: resolve_mirror(route['hf_endpoint'], repo, rev, name) for repo, rev, name in targets}
             if all(item['endpoint'] == 'https://huggingface.co' for item in route['actual_sources'].values()):
                 route['hf_endpoint'] = 'https://huggingface.co'
@@ -304,29 +309,26 @@ def worker(path: Path, request: Path, output: Path):
             requirements = Path(__file__).with_name('requirements-runtime.txt')
             if not requirements.exists(): requirements = root / 'vst3' / 'installer' / 'requirements-runtime.txt'
             report('Installing dedicated Python dependencies')
-            if measured['system'] == 'Darwin':
-                # Keep the Windows deployment unchanged. Transport selection
-                # affects package downloads only, never API requests.
-                china = route.get('music_models') == 'china-mirror'
-                indexes = (['https://mirrors.aliyun.com/pypi/simple/', 'https://pypi.org/simple']
-                           if china else ['https://pypi.org/simple', 'https://mirrors.aliyun.com/pypi/simple/'])
-                for index_number, index in enumerate(indexes):
-                    try:
-                        report('Installing dependencies from ' + index)
-                        run([sys.executable, '-m', 'pip', 'install', '-r', str(requirements),
-                             '--disable-pip-version-check', '--timeout', '20', '--retries', '2', '--index-url', index])
-                        break
-                    except RuntimeError:
-                        if index_number == len(indexes)-1: raise
-                        report('Dependency source failed; retrying the alternate package index')
-                from text2music.agent.macos_bootstrap import download
-                decoder = download('https://github.com/jthickstun/anticipation/archive/af37397922665a0fb8d474d7988b0f3755a38d45.tar.gz',
-                    'a002ec7c4e5aa695eef8bc569d49612b950b27bf801fdf0e3408046167d2e90f', 38847,
-                    Path(config['model_home']).parent/'downloads', 'china' if china else 'auto', report)
+            china = route.get('music_models') == 'china-mirror'
+            indexes = (['https://pypi.tuna.tsinghua.edu.cn/simple', 'https://pypi.org/simple']
+                       if china else ['https://pypi.org/simple', 'https://pypi.tuna.tsinghua.edu.cn/simple'])
+            for index_number, index in enumerate(indexes):
+                try:
+                    report('Installing dependencies from ' + index)
+                    run([sys.executable, '-m', 'pip', 'install', '-r', str(requirements),
+                         '--disable-pip-version-check', '--timeout', '20', '--retries', '2', '--index-url', index])
+                    break
+                except RuntimeError:
+                    if index_number == len(indexes)-1: raise
+                    report('Dependency source failed; retrying the alternate package index')
+            from text2music.agent.download_models import verified_github_archive
+            with tempfile.TemporaryDirectory() as temporary:
+                decoder = Path(temporary) / 'anticipation.tar.gz'
+                verified_github_archive(
+                    'https://github.com/jthickstun/anticipation/archive/af37397922665a0fb8d474d7988b0f3755a38d45.tar.gz',
+                    'a002ec7c4e5aa695eef8bc569d49612b950b27bf801fdf0e3408046167d2e90f',
+                    decoder, china=china)
                 run([sys.executable, '-m', 'pip', 'install', '--no-deps', '--no-build-isolation', str(decoder)])
-            else:
-                run([sys.executable, '-m', 'pip', 'install', '-r', str(requirements), '--disable-pip-version-check'])
-                run([sys.executable, '-m', 'pip', 'install', '--no-deps', 'https://codeload.github.com/jthickstun/anticipation/tar.gz/af37397922665a0fb8d474d7988b0f3755a38d45'])
             report('Downloading pinned music models from '+route['hf_endpoint'])
             from text2music.agent.download_models import install
             install(Path(config['model_home']), route['hf_endpoint'], report=report)
@@ -384,6 +386,10 @@ def worker(path: Path, request: Path, output: Path):
         report('Verifying dependencies, selected devices and actual music models')
         from text2music.agent.doctor import check
         check(candidate, check_chat=False)
+        if config['llm_provider'] != 'disabled':
+            report('Checking project memory save, recall and removal')
+            from text2music.agent.memory_runtime import verify_memory
+            verify_memory()
         if revision(path) != data['revision']:
             raise RuntimeError('Configuration changed while this task ran; previous settings retained')
         config.update(setup_complete=True, version='1.0.1b', configuration_job=data['job_id'])

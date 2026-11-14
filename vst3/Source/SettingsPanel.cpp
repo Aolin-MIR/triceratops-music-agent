@@ -26,6 +26,7 @@ SettingsPanel::SettingsPanel(BackendClient& client) : backend(client)
     status.setColour(juce::TextEditor::outlineColourId, line);
     status.setFont(juce::FontOptions(13.0f));
     addField("chat_policy", "Conversation", juce::String::fromUTF8("对话方式"), {"auto", "local", "remote", "disabled"}, {"Recommended / hardware checked", "Local GPU", "Cloud service", "Direct buttons only"});
+    addField("memory_provider", "Project memory", juce::String::fromUTF8("工程记忆"), {"auto", "local", "remote"}, {"Follow setup choice", "Local GPU", "Configured API"});
     addField("local_model", "Custom chat model ID", juce::String::fromUTF8("自定义聊天模型标识"));
     addField("llm_context", "Chat context (tokens)", juce::String::fromUTF8("聊天上下文（token）"), {"4096", "8192", "16384"}, {"4096", "8192", "16384"});
     addField("llm_choice", juce::String::fromUTF8("Local chat · 4B / 4-bit*"), juce::String::fromUTF8("本地对话 · 4B / 4-bit*"), {"auto", "gpu"}, {"Recommended / GPU required", "GPU"});
@@ -115,6 +116,7 @@ void SettingsPanel::setChinese(bool value)
             const int id = field->choice.getSelectedId();
             juce::StringArray labels;
             if (field->key == "chat_policy") labels = chinese ? juce::StringArray{juce::String::fromUTF8("推荐 / 按硬件验证"), juce::String::fromUTF8("本地对话 / GPU"), juce::String::fromUTF8("云端对话"), juce::String::fromUTF8("仅操作按钮")} : juce::StringArray{"Recommended / hardware checked", "Local GPU", "Cloud service", "Direct buttons only"};
+            else if (field->key == "memory_provider") labels = chinese ? juce::StringArray{juce::String::fromUTF8("跟随已配置的对话方式"), juce::String::fromUTF8("本地 GPU"), juce::String::fromUTF8("已配置的 API")} : juce::StringArray{"Follow setup choice", "Local GPU", "Configured API"};
             else if (field->key == "model_source") labels = chinese ? juce::StringArray{juce::String::fromUTF8("自动 / 公网 IP"), juce::String::fromUTF8("官方源"), juce::String::fromUTF8("国内镜像（如有）")} : juce::StringArray{"Auto / IP country", "Official", "China mirror (if available)"};
            #if JUCE_MAC
             else if (field->key == "midi_llm_dtype") labels = chinese ? juce::StringArray{juce::String::fromUTF8("自动：原始优先 / 低内存 FP16"), juce::String::fromUTF8("原始精度（随设备）"), "FLOAT32", "FLOAT16", "BFLOAT16"} : juce::StringArray{"Auto: original / low-RAM FP16", "Original / device default", "FLOAT32", "FLOAT16", "BFLOAT16"};

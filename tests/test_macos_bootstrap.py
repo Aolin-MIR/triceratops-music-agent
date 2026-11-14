@@ -8,12 +8,16 @@ import pytest
 from text2music.agent import macos_bootstrap as bootstrap
 
 
-def test_source_choices_retain_fixed_official_asset():
+def test_source_choices_retain_fixed_official_asset(monkeypatch):
+    from text2music.agent import model_sources
+    monkeypatch.setattr(model_sources, 'detect_country', lambda: {'country': 'US'})
     url = bootstrap.OLLAMA_URL
     assert bootstrap.sources(url, 'official') == [url]
     assert bootstrap.sources(url, 'auto')[0] == url
     assert bootstrap.sources(url, 'china')[-1] == url
     assert all(source.endswith(url) for source in bootstrap.sources(url, 'china'))
+    monkeypatch.setattr(model_sources, 'detect_country', lambda: {'country': 'CN'})
+    assert bootstrap.sources(url, 'auto')[0].startswith('https://ghfast.top/')
     with pytest.raises(ValueError): bootstrap.sources(url, 'unknown')
 
 

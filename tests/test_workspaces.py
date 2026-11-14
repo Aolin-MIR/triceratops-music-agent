@@ -49,7 +49,7 @@ def test_full_project_identity_cannot_collide_on_sanitizing_or_truncated_prefix(
         project_key({"name": "VST3"})
 
 
-def test_projects_separate_chat_memory_results_history_cancel_and_import(workspace_api):
+def test_projects_separate_chat_memory_results_history_cancel_and_import(workspace_api, fake_hindsight):
     root, post = workspace_api
     host_a = {"project_path": "E:/Music/a.rpp"}
     host_b = {"project_path": "E:/Music/b.rpp"}

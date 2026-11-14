@@ -21,3 +21,8 @@ unidecode>=1,<2
 jellyfish>=1,<2
 pyyaml>=6,<7
 jsonschema>=4.23,<5
+# Native project memory (CPU embeddings; chat/music device policies remain separate).
+hindsight-api-slim[embedded-db]==1.2.1
+hindsight-embed==1.2.1
+sentence-transformers==5.7.0
+flashrank==0.2.10

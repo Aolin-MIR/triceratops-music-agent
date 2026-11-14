@@ -20,6 +20,8 @@ def profile(tmp_path, monkeypatch):
     from text2music.agent import model_policy
     monkeypatch.setattr(model_policy, 'detect_hardware', lambda: {'platform':'Windows', 'architecture':'AMD64', 'profile':'generic'})
     monkeypatch.setattr(doctor, 'check', lambda path, **kwargs: None)
+    from text2music.agent import memory_runtime
+    monkeypatch.setattr(memory_runtime, 'verify_memory', lambda: None)
     monkeypatch.setattr(local_runtime, 'ensure_llama_cpp', lambda *args, **kwargs: None)
     return path
 
@@ -120,6 +122,7 @@ def test_prepare_installs_cuda_after_local_failure_changes_the_final_music_plan(
     monkeypatch.setattr(config.subprocess, 'Popen', Process)
     from text2music.agent import download_models
     monkeypatch.setattr(download_models, 'install', lambda *args, **kwargs: None)
+    monkeypatch.setattr(download_models, 'verified_github_archive', lambda *args, **kwargs: None)
     def unavailable(*args): raise RuntimeError('local compatibility rejected')
     monkeypatch.setattr(local_runtime, 'ensure_llama_cpp', unavailable)
     monkeypatch.setattr(llm_backend, 'check_chat_backend', lambda: {'provider':'remote'})
